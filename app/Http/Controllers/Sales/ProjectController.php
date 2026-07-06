@@ -30,7 +30,7 @@ class ProjectController extends Controller
     public function create(Request $request)
     {
         $quotation = $request->get('quotation') ? Quotation::with('customer')->find($request->get('quotation')) : null;
-        $wonQuotations = Quotation::where('status', 'won')->whereDoesntHave('project')->get();
+        $wonQuotations = Quotation::whereIn('status', ['customer_accepted', 'request_po_created', 'won'])->whereDoesntHave('project')->get();
         $managers = User::whereIn('role', ['sales', 'sales_admin'])->where('is_active', true)->get();
         $team = User::where('is_active', true)->get();
         return view('sales.projects.create', compact('quotation', 'wonQuotations', 'managers', 'team'));

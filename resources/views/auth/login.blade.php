@@ -1,9 +1,14 @@
+@php($siteName = \App\Models\SystemSetting::value('company_name', config('app.name')))
+@php($siteTagline = \App\Models\SystemSetting::value('company_tagline', 'Sales CRM · Laboratory Furniture & Equipment'))
+@php($siteLogo = \App\Models\SystemSetting::assetUrl('company_logo'))
+@php($siteFavicon = \App\Models\SystemSetting::assetUrl('company_favicon', asset('favicon.ico')))
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login · {{ config('app.name') }}</title>
+    <title>Login · {{ $siteName }}</title>
+    <link rel="icon" href="{{ $siteFavicon }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,8 +19,12 @@
 <body>
 <div class="auth-wrap">
     <div class="auth-card">
-        <div class="auth-logo">ROBUST<span>®</span></div>
-        <div class="auth-sub">Sales CRM · Laboratory Furniture & Equipment</div>
+        @if($siteLogo)
+            <div class="auth-logo-img"><img src="{{ $siteLogo }}" alt="{{ $siteName }}"></div>
+        @else
+            <div class="auth-logo">{{ $siteName }}<span>®</span></div>
+        @endif
+        <div class="auth-sub">{{ $siteTagline }}</div>
 
         @if($errors->any())
             <div class="alert alert-danger py-2 small">{{ $errors->first() }}</div>

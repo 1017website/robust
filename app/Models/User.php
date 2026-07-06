@@ -30,6 +30,7 @@ class User extends Authenticatable
     public function isSalesAdmin(): bool { return $this->role === 'sales_admin'; }
     public function isSales(): bool { return $this->role === 'sales'; }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
+    public function isSalesSpv(): bool { return $this->role === 'sales_spv'; }
 
     /** True untuk administrator maupun sales_admin (level admin ke atas). */
     public function isAdminLevel(): bool
@@ -42,6 +43,7 @@ class User extends Authenticatable
         return match ($this->role) {
             'administrator' => 'Administrator',
             'sales_admin' => 'Sales Admin',
+            'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Produksi / Drafter',
             default => $this->role,
@@ -54,6 +56,7 @@ class User extends Authenticatable
         return [
             'administrator' => 'Administrator',
             'sales_admin' => 'Sales Admin',
+            'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Produksi / Drafter',
         ];

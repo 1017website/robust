@@ -11,11 +11,16 @@ a{text-decoration:none}
 /* Sidebar */
 .sidebar{width:248px;background:var(--nav);color:#aeb9cc;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:1040;transition:.25s}
 .brand{padding:20px 20px 14px}
-.brand-logo{font-size:22px;font-weight:800;color:#fff;letter-spacing:.5px}
+.brand-logo{font-size:22px;font-weight:800;color:#fff;letter-spacing:.5px;line-height:1.15}
+.brand-logo-img{display:block;max-width:168px;max-height:50px;object-fit:contain;margin-bottom:4px}
 .brand-logo span{color:var(--brand);font-size:13px;vertical-align:super}
 .brand-sub{font-size:10.5px;color:#6c7c93;margin-top:2px;letter-spacing:.3px}
 .side-label{font-size:10px;font-weight:700;color:#5e6f88;padding:8px 22px;letter-spacing:1px}
-.side-nav{display:flex;flex-direction:column;gap:2px;padding:0 12px;overflow-y:auto;flex:1}
+.side-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px 0 12px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:rgba(114,135,164,.65) transparent}
+.side-nav::-webkit-scrollbar{width:7px}
+.side-nav::-webkit-scrollbar-track{background:transparent;border-radius:12px}
+.side-nav::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(87,108,140,.8),rgba(29,111,224,.7));border-radius:999px;border:2px solid var(--nav)}
+.side-nav::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,rgba(130,151,181,.9),rgba(29,111,224,.95))}
 .side-nav a{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:9px;color:#aeb9cc;font-weight:500;transition:.15s}
 .side-nav a i{font-size:16px;width:18px;text-align:center}
 .side-nav a:hover{background:var(--nav-2);color:#fff}
@@ -156,3 +161,16 @@ a{text-decoration:none}
 /* dropdown harus di atas modal Bootstrap (modal z-index 1055/1056) */
 .select2-container{z-index:1060}
 .select2-container--open{z-index:1065}
+
+
+/* System settings */
+.brand-preview,.favicon-preview{border:1px dashed var(--line);background:var(--bg);border-radius:12px;min-height:90px;display:flex;align-items:center;justify-content:center;padding:14px}
+.brand-preview img{max-width:220px;max-height:72px;object-fit:contain}
+.favicon-preview{min-height:76px;justify-content:flex-start}
+.favicon-preview img{width:42px;height:42px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid var(--line);padding:6px}
+.brand-preview-empty{font-size:12px;color:var(--muted)}
+.command-card{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fff}
+.command-icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.command-output{white-space:pre-wrap;background:#0f1b2d;color:#dce8f7;border-radius:12px;padding:14px;font-size:12px;max-height:320px;overflow:auto;margin:0}
+.auth-logo-img{text-align:center;margin-bottom:8px}
+.auth-logo-img img{max-width:190px;max-height:78px;object-fit:contain}

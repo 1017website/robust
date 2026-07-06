@@ -11,6 +11,7 @@ use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\ProjectTerm;
+use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\User;
@@ -42,6 +43,11 @@ class DatabaseSeeder extends Seeder
             'name' => 'Dewi Lestari', 'email' => 'sales2@robust.test',
             'password' => Hash::make('password'), 'role' => 'sales',
             'job_title' => 'Sales Engineer', 'phone' => '081200000003', 'is_active' => true,
+        ]);
+        $spv = User::create([
+            'name' => 'Siti Rahma', 'email' => 'spv@robust.test',
+            'password' => Hash::make('password'), 'role' => 'sales_spv',
+            'job_title' => 'SPV Sales', 'phone' => '081200000005', 'is_active' => true,
         ]);
         $drafter = User::create([
             'name' => 'Andi Setiawan', 'email' => 'drafter@robust.test',
@@ -155,8 +161,9 @@ class DatabaseSeeder extends Seeder
             'discount_type' => 'percent', 'discount_value' => 5, 'discount_amount' => $discount,
             'tax_percent' => 11, 'tax_amount' => $tax,
             'additional_costs' => [['label' => 'Pengiriman & Instalasi', 'amount' => 15000000]],
-            'additional_total' => $add, 'grand_total' => $grand, 'target_margin' => 25, 'status' => 'sent',
-            'sent_at' => Carbon::now()->subDay(),
+            'additional_total' => $add, 'grand_total' => $grand, 'target_margin' => 25, 'status' => 'approved',
+            'submitted_for_approval_at' => Carbon::now()->subDays(2), 'approved_by' => $spv->id,
+            'approved_at' => Carbon::now()->subDay(), 'approval_note' => 'Seeder: nilai dan scope sudah disetujui.',
         ]);
         foreach ($dr->items as $i => $it) {
             QuotationItem::create([

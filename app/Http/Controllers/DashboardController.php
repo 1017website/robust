@@ -20,6 +20,7 @@ class DashboardController extends Controller
         return match ($user->role) {
             'administrator' => $this->adminDashboard(),
             'sales_admin' => $this->adminDashboard(),
+            'sales_spv' => $this->spvDashboard(),
             'drafter' => $this->drafterDashboard(),
             default => $this->salesDashboard(),
         };
@@ -61,16 +62,16 @@ class DashboardController extends Controller
 
         $stats = [
             'leads_aktif' => Lead::where('sales_id', $user->id)->where('status', 'aktif')->count(),
-            'penawaran_aktif' => Quotation::where('sales_id', $user->id)->whereIn('status', ['sent', 'negotiation'])->count(),
+            'penawaran_aktif' => Quotation::where('sales_id', $user->id)->whereIn('status', ['waiting_approval', 'approved', 'sent_to_customer'])->count(),
             'project_berjalan' => Project::whereHas('quotation', fn ($q) => $q->where('sales_id', $user->id))->whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
-            'deal_won' => Quotation::where('sales_id', $user->id)->where('status', 'won')->whereMonth('updated_at', now()->month)->count(),
+            'deal_won' => Quotation::where('sales_id', $user->id)->whereIn('status', ['customer_accepted', 'request_po_created', 'won'])->whereMonth('updated_at', now()->month)->count(),
         ];
 
         $pipeline = [
             'leads' => Lead::where('sales_id', $user->id)->where('stage', 'lead')->count(),
             'design_request' => Lead::where('sales_id', $user->id)->where('stage', 'design_request')->count(),
-            'penawaran' => Quotation::where('sales_id', $user->id)->whereIn('status', ['sent', 'negotiation'])->count(),
-            'won' => Quotation::where('sales_id', $user->id)->where('status', 'won')->count(),
+            'penawaran' => Quotation::where('sales_id', $user->id)->whereIn('status', ['waiting_approval', 'approved', 'sent_to_customer'])->count(),
+            'won' => Quotation::where('sales_id', $user->id)->whereIn('status', ['customer_accepted', 'request_po_created', 'won'])->count(),
         ];
 
         $recentLeads = Lead::where('sales_id', $user->id)->latest()->take(4)->get();
@@ -82,6 +83,24 @@ class DashboardController extends Controller
         return view('sales.dashboard', compact(
             'stats', 'pipeline', 'recentLeads', 'todayActivities', 'requestMasuk'
         ));
+    }
+
+    protected function spvDashboard()
+    {
+        $stats = [
+            'waiting_approval' => Quotation::where('status', 'waiting_approval')->count(),
+            'approved_month' => Quotation::where('status', 'approved')->whereMonth('approved_at', now()->month)->count(),
+            'revision' => Quotation::where('status', 'revision')->count(),
+            'rejected_month' => Quotation::where('status', 'rejected')->whereMonth('rejected_at', now()->month)->count(),
+        ];
+
+        $approvalQueue = Quotation::with('sales')
+            ->whereIn('status', ['waiting_approval', 'revision'])
+            ->latest('submitted_for_approval_at')
+            ->take(8)
+            ->get();
+
+        return view('spv.dashboard', compact('stats', 'approvalQueue'));
     }
 
     protected function drafterDashboard()

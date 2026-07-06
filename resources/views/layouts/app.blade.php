@@ -1,11 +1,15 @@
 @php($u = auth()->user())
+@php($calendarRoute = $u?->isDrafter() ? route('drafter.calendar.index') : route('calendar.index'))
+@php($siteName = \App\Models\SystemSetting::value('company_name', config('app.name')))
+@php($companyFavicon = \App\Models\SystemSetting::assetUrl('company_favicon', asset('favicon.ico')))
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
+    <title>@yield('title', 'Dashboard') · {{ $siteName }}</title>
+    <link rel="icon" href="{{ $companyFavicon }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +32,7 @@
             <div class="topbar-right">
                 <a href="#" class="topbar-icon"><i class="bi bi-bell"></i><span class="dot">3</span></a>
                 <a href="#" class="topbar-icon"><i class="bi bi-envelope"></i></a>
-                <a href="{{ route('calendar.index') }}" class="topbar-icon d-none d-md-inline-flex"><i class="bi bi-calendar3"></i></a>
+                <a href="{{ $calendarRoute }}" class="topbar-icon d-none d-md-inline-flex"><i class="bi bi-calendar3"></i></a>
                 <div class="dropdown">
                     <a href="#" class="user-chip" data-bs-toggle="dropdown">
                         <div class="avatar">{{ strtoupper(substr($u->name,0,1)) }}</div>

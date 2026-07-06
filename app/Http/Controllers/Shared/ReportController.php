@@ -23,8 +23,8 @@ class ReportController extends Controller
         $summary = [
             'total_leads' => $leadScope(Lead::query())->count(),
             'total_quotations' => $quoteScope(Quotation::query())->count(),
-            'won' => $quoteScope(Quotation::where('status', 'won'))->count(),
-            'total_value' => $quoteScope(Quotation::where('status', 'won'))->sum('grand_total'),
+            'won' => $quoteScope(Quotation::whereIn('status', ['customer_accepted', 'request_po_created', 'won']))->count(),
+            'total_value' => $quoteScope(Quotation::whereIn('status', ['customer_accepted', 'request_po_created', 'won']))->sum('grand_total'),
             'active_projects' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
         ];
 

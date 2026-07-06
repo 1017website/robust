@@ -25,7 +25,7 @@
                     <td>{{ $q->project_name }}</td>
                     <td>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
                     <td class="fw-num fw-semibold">{{ \App\Support\Format::rupiah($q->grand_total) }}</td>
-                    <td><x-status-badge :status="$q->status" /></td>
+                    <td><x-status-badge :status="$q->status" :label="$q->statusLabel()" /></td>
                     <td><a href="{{ route('sales.quotations.show',$q) }}" class="btn btn-sm btn-soft">Detail</a></td>
                 </tr>
             @empty
