@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -60,6 +61,29 @@ class User extends Authenticatable
             'sales' => 'Sales',
             'drafter' => 'Produksi / Drafter',
         ];
+    }
+
+    /**
+     * Query user sales aktif untuk dropdown assignment.
+     *
+     * Dibuat sedikit lebih toleran agar data lama yang is_active NULL tetap tampil,
+     * dan role dibandingkan secara case-insensitive. Ini mencegah dropdown sales kosong
+     * pada database yang sudah ada sebelum kolom role/is_active dirapikan.
+     */
+    public static function assignableSalesQuery(): Builder
+    {
+        return static::query()
+            ->whereRaw('LOWER(role) = ?', ['sales'])
+            ->where(function (Builder $query) {
+                $query->where('is_active', true)
+                    ->orWhereNull('is_active');
+            })
+            ->orderBy('name');
+    }
+
+    public static function assignableSales()
+    {
+        return static::assignableSalesQuery()->get();
     }
 
     public function leads(): HasMany { return $this->hasMany(Lead::class, 'sales_id'); }

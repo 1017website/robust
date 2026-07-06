@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Lead;
 use App\Models\PraLead;
+use App\Models\Project;
+use App\Models\Quotation;
 use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
@@ -30,8 +33,11 @@ class PraLeadController extends Controller
         if ($source = $request->get('source')) {
             $query->where('source', $source);
         }
+        if ($createdDate = $request->get('created_date')) {
+            $query->whereDate('created_at', $createdDate);
+        }
 
-        $praLeads = $query->paginate(10)->withQueryString();
+        $praLeads = $query->paginate(8)->withQueryString();
 
         $counts = [
             'all' => PraLead::count(),
@@ -41,19 +47,45 @@ class PraLeadController extends Controller
             'rejected' => PraLead::where('status', 'rejected')->count(),
         ];
 
-        $salesList = User::where('role', 'sales')->where('is_active', true)->get();
+        $salesList = User::assignableSales();
+        $salesWorkloads = $salesList->map(function (User $sales) {
+            $activeLeadCount = Lead::where('sales_id', $sales->id)->whereIn('status', ['aktif', 'active'])->count();
+            $waitingPraLeadCount = PraLead::where('assigned_sales_id', $sales->id)->where('status', 'waiting_acceptance')->count();
+            $quotationCount = Quotation::where('sales_id', $sales->id)->whereIn('status', ['draft', 'revision', 'waiting_approval', 'approved', 'sent_to_customer'])->count();
+            $projectCount = Project::whereHas('quotation', fn ($q) => $q->where('sales_id', $sales->id))->whereIn('status', ['planning', 'ongoing', 'finishing'])->count();
 
-        return view('admin.pra_leads.index', compact('praLeads', 'counts', 'salesList'));
+            return [
+                'sales' => $sales,
+                'active_leads' => $activeLeadCount,
+                'waiting_pra_leads' => $waitingPraLeadCount,
+                'total_workload' => $activeLeadCount + $waitingPraLeadCount + $quotationCount + $projectCount,
+            ];
+        })->sortBy('total_workload')->values();
+
+        return view('admin.pra_leads.index', compact('praLeads', 'counts', 'salesList', 'salesWorkloads'));
     }
 
     public function store(Request $request)
     {
         $data = $this->validateData($request);
+        $action = $request->input('action', 'save');
+
+        if ($action === 'send' && empty($data['assigned_sales_id'])) {
+            return back()->withErrors(['assigned_sales_id' => 'Pilih sales terlebih dahulu sebelum mengirim pra lead ke sales.'])->withInput();
+        }
+
         $data['code'] = CodeGenerator::next(PraLead::class, 'PRA', 4);
         $data['created_by'] = Auth::id();
-        $data['status'] = $request->input('action') === 'send' ? 'waiting_acceptance' : ($data['assigned_sales_id'] ? 'assigned' : 'draft');
-        if ($data['status'] === 'waiting_acceptance') {
+        if ($action === 'send') {
+            $data['status'] = 'waiting_acceptance';
             $data['sent_at'] = now();
+            $data['responded_at'] = null;
+        } elseif ($action === 'save' && ! empty($data['assigned_sales_id'])) {
+            $data['status'] = 'assigned';
+        } else {
+            $data['status'] = 'draft';
+            $data['sent_at'] = null;
+            $data['responded_at'] = null;
         }
 
         $praLead = PraLead::create($data);
@@ -65,10 +97,36 @@ class PraLeadController extends Controller
     public function update(Request $request, PraLead $praLead)
     {
         $data = $this->validateData($request);
-        if ($request->input('action') === 'send') {
+        $action = $request->input('action', 'save');
+
+        if ($action === 'send' && empty($data['assigned_sales_id'])) {
+            return back()->withErrors(['assigned_sales_id' => 'Pilih sales terlebih dahulu sebelum mengirim pra lead ke sales.'])->withInput();
+        }
+
+        if ($action === 'send') {
             $data['status'] = 'waiting_acceptance';
             $data['sent_at'] = now();
+            $data['responded_at'] = null;
+        } elseif ($action === 'draft') {
+            $data['status'] = 'draft';
+            $data['sent_at'] = null;
+            $data['responded_at'] = null;
+        } elseif (! empty($data['assigned_sales_id'])) {
+            if (in_array($praLead->status, ['draft', 'assigned', 'rejected'], true)) {
+                $data['status'] = 'assigned';
+            }
+            // Jika data lama sudah berstatus menunggu konfirmasi, cukup isi sales-nya
+            // dan biarkan tetap muncul di menu Request Masuk sales tersebut.
+            if ($praLead->status === 'waiting_acceptance') {
+                $data['status'] = 'waiting_acceptance';
+                $data['sent_at'] = $praLead->sent_at ?: now();
+            }
+        } elseif (in_array($praLead->status, ['draft', 'assigned', 'waiting_acceptance', 'rejected'], true)) {
+            $data['status'] = 'draft';
+            $data['sent_at'] = null;
+            $data['responded_at'] = null;
         }
+
         $praLead->update($data);
         Logger::record('updated', "Pra Lead {$praLead->instansi} diperbarui", $praLead);
 

@@ -15,7 +15,7 @@ class AssignmentController extends Controller
 {
     public function index()
     {
-        $salesList = User::where('role', 'sales')->where('is_active', true)->get();
+        $salesList = User::assignableSales();
 
         $workload = $salesList->map(function ($s) {
             return [

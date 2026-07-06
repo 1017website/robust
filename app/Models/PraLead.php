@@ -26,10 +26,10 @@ class PraLead extends Model
     {
         return [
             'draft' => 'Draft',
-            'assigned' => 'Assigned',
-            'waiting_acceptance' => 'Waiting Acceptance',
-            'accepted' => 'Accepted',
-            'rejected' => 'Rejected',
+            'assigned' => 'Ditugaskan',
+            'waiting_acceptance' => 'Menunggu Konfirmasi Sales',
+            'accepted' => 'Diterima Sales',
+            'rejected' => 'Ditolak Sales',
         ];
     }
 }
