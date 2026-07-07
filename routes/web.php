@@ -15,6 +15,8 @@ use App\Http\Controllers\Sales\QuotationController;
 use App\Http\Controllers\Sales\CustomerController;
 use App\Http\Controllers\Sales\ProjectController;
 use App\Http\Controllers\Drafter\DesignRequestController as DrafterDesignRequestController;
+use App\Http\Controllers\Drafter\ProjectController as DrafterProjectController;
+use App\Http\Controllers\Drafter\TaskController as DrafterTaskController;
 use App\Http\Controllers\Spv\QuotationApprovalController;
 use App\Http\Controllers\Shared\ActivityController;
 use App\Http\Controllers\Shared\CalendarController;
@@ -140,5 +142,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/design-requests/{designRequest}', [DrafterDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::put('/design-requests/{designRequest}/progress', [DrafterDesignRequestController::class, 'updateProgress'])->name('design-requests.progress');
         Route::post('/design-requests/{designRequest}/feedback', [DrafterDesignRequestController::class, 'submitFeedback'])->name('design-requests.feedback');
+        Route::get('/projects', [DrafterProjectController::class, 'index'])->name('projects.index');
+        Route::get('/tasks', [DrafterTaskController::class, 'index'])->name('tasks.index');
     });
 });

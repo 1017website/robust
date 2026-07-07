@@ -145,20 +145,66 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        $baseMine = DesignRequest::query()->where(function ($query) use ($user) {
+            $query->where('production_pic_id', $user->id)
+                ->orWhereNull('production_pic_id');
+        });
+
         $stats = [
-            'request_baru' => DesignRequest::where('status', 'assigned')->count(),
+            'request_baru' => DesignRequest::whereIn('status', ['assigned', 'draft'])->count(),
             'drafting' => DesignRequest::where('status', 'drafting')->count(),
             'waiting_approval' => DesignRequest::where('status', 'review')->count(),
-            'completed' => DesignRequest::where('status', 'completed')->count(),
+            'project_aktif' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
+            'qc_pending' => DesignRequest::where('status', 'costing')->count(),
+            'deadline_today' => DesignRequest::whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', today())->count(),
         ];
 
-        $myTasks = DesignRequest::where('production_pic_id', $user->id)
+        $myTasks = (clone $baseMine)
+            ->with('sales')
             ->whereNotIn('status', ['completed', 'rejected'])
-            ->orderBy('deadline')->take(8)->get();
+            ->orderByRaw('deadline is null, deadline asc')
+            ->take(6)
+            ->get();
 
-        $queue = DesignRequest::with('sales')->whereIn('status', ['assigned', 'drafting', 'costing', 'review'])
-            ->latest()->take(6)->get();
+        $queue = DesignRequest::with('sales')
+            ->whereIn('status', ['assigned', 'drafting', 'costing', 'review'])
+            ->orderByRaw('deadline is null, deadline asc')
+            ->take(6)
+            ->get();
 
-        return view('drafter.dashboard', compact('stats', 'myTasks', 'queue'));
+        $progress = [
+            'Material Ready' => DesignRequest::whereIn('status', ['assigned', 'drafting', 'costing', 'review', 'completed'])->count(),
+            'Produksi' => DesignRequest::whereIn('status', ['drafting', 'costing', 'review', 'completed'])->count(),
+            'Finishing' => DesignRequest::whereIn('status', ['review', 'completed'])->count(),
+            'QC' => DesignRequest::where('status', 'review')->count(),
+            'Ready Delivery' => DesignRequest::where('status', 'completed')->count(),
+        ];
+
+        $deadlineAlerts = DesignRequest::with('sales')
+            ->whereNotIn('status', ['completed', 'rejected'])
+            ->whereNotNull('deadline')
+            ->whereDate('deadline', '<=', today()->addDays(3))
+            ->orderBy('deadline')
+            ->take(4)
+            ->get();
+
+        $revisions = DesignRequest::with('sales')
+            ->whereIn('status', ['review', 'rejected'])
+            ->latest('updated_at')
+            ->take(3)
+            ->get();
+
+        $approvalQueue = DesignRequest::where('status', 'completed')
+            ->whereNotNull('submitted_at')
+            ->latest('submitted_at')
+            ->take(3)
+            ->get();
+
+        $timeline = DesignRequest::with('sales')
+            ->latest('updated_at')
+            ->take(5)
+            ->get();
+
+        return view('drafter.dashboard', compact('stats', 'myTasks', 'queue', 'progress', 'deadlineAlerts', 'revisions', 'approvalQueue', 'timeline'));
     }
 }

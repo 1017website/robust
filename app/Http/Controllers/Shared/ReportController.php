@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\DesignRequest;
 use App\Models\Project;
 use App\Models\Quotation;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,58 @@ class ReportController extends Controller
 {
     public function index()
     {
+        if (Auth::user()->isDrafter()) {
+            $user = Auth::user();
+            $base = DesignRequest::query()->where(function ($query) use ($user) {
+                $query->where('production_pic_id', $user->id)->orWhereNull('production_pic_id');
+            });
+
+            $summary = [
+                'active_projects' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
+                'completed_projects' => Project::where('status', 'done')->count(),
+                'completed_tasks' => (clone $base)->where('status', 'completed')->count(),
+                'revisi' => (clone $base)->whereIn('status', ['review', 'rejected'])->count(),
+                'overdue' => (clone $base)->whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
+                'on_time' => 0,
+            ];
+            $totalFinished = max(1, (clone $base)->whereIn('status', ['completed', 'rejected'])->count());
+            $onTime = (clone $base)->where('status', 'completed')->whereColumn('submitted_at', '<=', 'deadline')->count();
+            $summary['on_time'] = round($onTime / $totalFinished * 100);
+
+            $statusSummary = collect(['assigned','drafting','costing','review','completed'])->mapWithKeys(fn ($status) => [
+                $status => (clone $base)->where('status', $status)->count(),
+            ]);
+
+            $monthlyCompleted = DesignRequest::selectRaw('MONTH(submitted_at) as m, count(*) as total')
+                ->whereNotNull('submitted_at')
+                ->whereYear('submitted_at', now()->year)
+                ->groupBy('m')
+                ->get()
+                ->keyBy('m');
+
+            $productivity = DesignRequest::selectRaw('production_pic_id, count(*) as total')
+                ->with('productionPic')
+                ->where('status', 'completed')
+                ->whereNotNull('production_pic_id')
+                ->groupBy('production_pic_id')
+                ->orderByDesc('total')
+                ->take(5)
+                ->get();
+
+            $upcomingDeadlines = (clone $base)->whereNotIn('status', ['completed', 'rejected'])
+                ->whereNotNull('deadline')
+                ->orderBy('deadline')
+                ->take(6)
+                ->get();
+
+            $activeProjects = Project::whereIn('status', ['planning', 'ongoing', 'finishing'])
+                ->orderByDesc('progress')
+                ->take(5)
+                ->get();
+
+            return view('drafter.reports.index', compact('summary', 'statusSummary', 'monthlyCompleted', 'productivity', 'upcomingDeadlines', 'activeProjects'));
+        }
+
         $isSales = Auth::user()->isSales();
         $uid = Auth::id();
 

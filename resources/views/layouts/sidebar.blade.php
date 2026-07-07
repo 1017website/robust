@@ -53,9 +53,13 @@
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
         @elseif($role === 'drafter')
             <a href="{{ route('drafter.design-requests.index') }}" class="{{ request()->routeIs('drafter.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
-            <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-folder2-open"></i> Documents</a>
+            <a href="{{ route('drafter.projects.index') }}" class="{{ request()->routeIs('drafter.projects.*') ? 'active' : '' }}"><i class="bi bi-box-seam"></i> Projects</a>
+            <a href="{{ route('drafter.tasks.index') }}" class="{{ request()->routeIs('drafter.tasks.*') ? 'active' : '' }}"><i class="bi bi-ui-checks"></i> Tasks</a>
+            <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Documents</a>
             <a href="{{ route('drafter.calendar.index') }}" class="{{ request()->routeIs('drafter.calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
             <a href="{{ route('drafter.reports.index') }}" class="{{ request()->routeIs('drafter.reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
+            <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'active' : '' }}"><i class="bi bi-gear"></i> Settings</a>
+            <form method="POST" action="{{ route('logout') }}" class="m-0">@csrf<button type="submit" class="side-logout"><i class="bi bi-box-arrow-right"></i> Logout</button></form>
         @else
             <a href="{{ route('sales.request-masuk.index') }}" class="{{ request()->routeIs('sales.request-masuk.*') ? 'active' : '' }}"><i class="bi bi-inbox"></i> Request Masuk</a>
             <a href="{{ route('sales.leads.index') }}" class="{{ request()->routeIs('sales.leads.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Leads</a>

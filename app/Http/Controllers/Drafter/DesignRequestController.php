@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Drafter;
 
 use App\Http\Controllers\Controller;
 use App\Models\DesignRequest;
+use App\Models\User;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,29 +14,46 @@ class DesignRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DesignRequest::with('sales', 'productionPic')->latest();
+        $query = DesignRequest::with('sales', 'productionPic', 'documents')
+            ->orderByRaw('deadline is null, deadline asc')
+            ->latest();
+
         if ($status = $request->get('status')) {
             $query->where('status', $status);
         }
-        if ($s = $request->get('q')) {
-            $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")->orWhere('code', 'like', "%$s%"));
+        if ($sales = $request->get('sales_id')) {
+            $query->where('sales_id', $sales);
         }
+        if ($priority = $request->get('priority')) {
+            $query->where('priority', $priority);
+        }
+        if ($date = $request->get('date')) {
+            $query->whereDate('request_date', $date);
+        }
+        if ($s = $request->get('q')) {
+            $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")
+                ->orWhere('project_name', 'like', "%$s%")
+                ->orWhere('code', 'like', "%$s%"));
+        }
+
         $designRequests = $query->paginate(8)->withQueryString();
+        $selected = $designRequests->first()?->load('sales', 'documents', 'lead', 'items');
+        $salesUsers = User::assignableSales();
 
         $stats = [
-            'baru' => DesignRequest::where('status', 'assigned')->count(),
+            'baru' => DesignRequest::whereIn('status', ['assigned', 'draft'])->count(),
             'drafting' => DesignRequest::where('status', 'drafting')->count(),
             'review' => DesignRequest::where('status', 'review')->count(),
             'completed' => DesignRequest::where('status', 'completed')->count(),
             'terlambat' => DesignRequest::whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
         ];
 
-        return view('drafter.design_requests.index', compact('designRequests', 'stats'));
+        return view('drafter.design_requests.index', compact('designRequests', 'stats', 'selected', 'salesUsers'));
     }
 
     public function show(DesignRequest $designRequest)
     {
-        $designRequest->load('items', 'sales', 'documents', 'lead');
+        $designRequest->load('items', 'sales', 'documents', 'lead', 'customer');
         return view('drafter.design_requests.show', compact('designRequest'));
     }
 
@@ -76,9 +94,17 @@ class DesignRequestController extends Controller
                 'cost_installation' => $data['cost_installation'] ?? 0,
                 'cost_total' => ($data['cost_material'] ?? 0) + ($data['cost_production'] ?? 0) + ($data['cost_installation'] ?? 0),
                 'technical_note' => $data['technical_note'] ?? null,
-                'status' => $request->input('action') === 'submit' ? 'completed' : 'review',
-                'progress' => $request->input('action') === 'submit' ? 100 : $designRequest->progress,
-                'submitted_at' => $request->input('action') === 'submit' ? now() : null,
+                'status' => match ($request->input('action')) {
+                    'submit' => 'completed',
+                    'review' => 'review',
+                    default => $designRequest->status ?: 'drafting',
+                },
+                'progress' => match ($request->input('action')) {
+                    'submit' => 100,
+                    'review' => max((int) $designRequest->progress, 75),
+                    default => max((int) $designRequest->progress, 25),
+                },
+                'submitted_at' => $request->input('action') === 'submit' ? now() : $designRequest->submitted_at,
             ]);
 
             if ($request->input('action') === 'submit' && ! empty($data['items'])) {
@@ -99,7 +125,12 @@ class DesignRequestController extends Controller
             }
         });
 
-        Logger::record('submitted', "DR {$designRequest->code} disubmit ke sales", $designRequest);
-        return redirect()->route('drafter.design-requests.index')->with('success', 'Berhasil dikirim ke sales.');
+        Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh drafter", $designRequest);
+
+        $message = $request->input('action') === 'submit'
+            ? 'Berhasil submit final ke sales.'
+            : 'Feedback design request berhasil disimpan.';
+
+        return redirect()->route('drafter.design-requests.index')->with('success', $message);
     }
 }
