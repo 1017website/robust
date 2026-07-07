@@ -10,6 +10,7 @@ use App\Services\CodeGenerator;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class DesignRequestController extends Controller
 {
@@ -41,7 +42,7 @@ class DesignRequestController extends Controller
 
     public function create(Request $request)
     {
-        $lead = $request->get('lead') ? Lead::find($request->get('lead')) : null;
+        $lead = $request->get('lead') ? $this->leadQuery()->findOrFail($request->get('lead')) : null;
         $drafters = User::where('role', 'drafter')->where('is_active', true)->get();
         return view('sales.design_requests.create', compact('lead', 'drafters'));
     }
@@ -49,7 +50,7 @@ class DesignRequestController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'lead_id' => ['nullable', 'exists:leads,id'],
+            'lead_id' => ['nullable', Rule::exists('leads', 'id')->where(fn ($query) => $this->scopeLeadExistsRule($query))],
             'customer_name' => ['required', 'string', 'max:255'],
             'pic_name' => ['nullable', 'string', 'max:255'],
             'project_name' => ['required', 'string', 'max:255'],
@@ -63,7 +64,7 @@ class DesignRequestController extends Controller
             'scope_checklist' => ['nullable', 'array'],
             'outputs' => ['nullable', 'array'],
             'extra_note' => ['nullable', 'string', 'max:500'],
-            'production_pic_id' => ['required', 'exists:users,id'],
+            'production_pic_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'drafter')->where('is_active', true))],
             'production_note' => ['nullable', 'string', 'max:300'],
         ]);
 
@@ -71,7 +72,7 @@ class DesignRequestController extends Controller
         $data['sales_id'] = Auth::id();
         $data['created_by'] = Auth::id();
         $data['status'] = $request->input('action') === 'send' ? 'assigned' : 'draft';
-        if ($lead = Lead::find($data['lead_id'] ?? null)) {
+        if ($lead = $this->leadQuery()->find($data['lead_id'] ?? null)) {
             $data['customer_id'] = $lead->customer_id;
             $lead->update(['stage' => 'design_request']);
         }
@@ -84,7 +85,29 @@ class DesignRequestController extends Controller
 
     public function show(DesignRequest $designRequest)
     {
+        abort_unless($this->canViewDesignRequest($designRequest), 403);
         $designRequest->load('items', 'productionPic', 'documents', 'sales');
         return view('sales.design_requests.show', compact('designRequest'));
+    }
+
+    protected function leadQuery()
+    {
+        return Lead::query()
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+    }
+
+    protected function scopeLeadExistsRule($query)
+    {
+        if (Auth::user()->isSales()) {
+            $query->where('sales_id', Auth::id());
+        }
+
+        return $query;
+    }
+
+    protected function canViewDesignRequest(DesignRequest $designRequest): bool
+    {
+        return ! Auth::user()->isSales()
+            || (int) $designRequest->sales_id === (int) Auth::id();
     }
 }

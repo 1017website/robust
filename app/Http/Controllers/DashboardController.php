@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\Document;
 use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
@@ -33,7 +34,7 @@ class DashboardController extends Controller
             'assigned' => PraLead::where('status', 'assigned')->count(),
             'waiting' => PraLead::where('status', 'waiting_acceptance')->count(),
             'rejected' => PraLead::where('status', 'rejected')->count(),
-            'leads_aktif' => Lead::where('status', 'aktif')->count(),
+            'leads_aktif' => Lead::whereIn('status', Lead::activeStatuses())->count(),
             'project_aktif' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
         ];
 
@@ -50,9 +51,19 @@ class DashboardController extends Controller
             ->get();
 
         $recentPraLeads = PraLead::with('assignedSales')->latest()->take(5)->get();
+        $recentActivities = Activity::with('sales', 'customer', 'lead')
+            ->latest('updated_at')
+            ->take(5)
+            ->get();
+        $upcomingActivities = Activity::with('sales', 'customer', 'lead')
+            ->whereDate('activity_date', '>=', today())
+            ->orderBy('activity_date')
+            ->orderBy('activity_time')
+            ->take(3)
+            ->get();
 
         return view('admin.dashboard', compact(
-            'stats', 'praLeadByStatus', 'praLeadBySource', 'distribution', 'recentPraLeads'
+            'stats', 'praLeadByStatus', 'praLeadBySource', 'distribution', 'recentPraLeads', 'recentActivities', 'upcomingActivities'
         ));
     }
 
@@ -61,8 +72,8 @@ class DashboardController extends Controller
         $user = Auth::user();
         $uid = $user->id;
 
-        $activeQuotationStatuses = ['draft', 'waiting_approval', 'revision', 'approved', 'sent_to_customer'];
-        $wonStatuses = ['customer_accepted', 'request_po_created', 'won'];
+        $activeQuotationStatuses = Quotation::activeSalesStatuses();
+        $wonStatuses = Quotation::wonStatuses();
 
         $wonValue = (float) Quotation::where('sales_id', $uid)
             ->whereIn('status', $wonStatuses)
@@ -71,7 +82,7 @@ class DashboardController extends Controller
         $target = 12500000000;
 
         $stats = [
-            'leads_aktif' => Lead::where('sales_id', $uid)->where('status', 'aktif')->count(),
+            'leads_aktif' => Lead::where('sales_id', $uid)->whereIn('status', Lead::activeStatuses())->count(),
             'penawaran_aktif' => Quotation::where('sales_id', $uid)->whereIn('status', $activeQuotationStatuses)->count(),
             'project_berjalan' => Project::whereHas('quotation', fn ($q) => $q->where('sales_id', $uid))->whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
             'deal_won' => Quotation::where('sales_id', $uid)->whereIn('status', $wonStatuses)->whereMonth('updated_at', now()->month)->count(),
@@ -144,67 +155,68 @@ class DashboardController extends Controller
     protected function drafterDashboard()
     {
         $user = Auth::user();
-
-        $baseMine = DesignRequest::query()->where(function ($query) use ($user) {
-            $query->where('production_pic_id', $user->id)
-                ->orWhereNull('production_pic_id');
-        });
+        $activeStatuses = ['assigned', 'drafting', 'costing', 'review'];
 
         $stats = [
-            'request_baru' => DesignRequest::whereIn('status', ['assigned', 'draft'])->count(),
-            'drafting' => DesignRequest::where('status', 'drafting')->count(),
+            'request_baru' => DesignRequest::where('status', 'assigned')->count(),
+            'drawing_progress' => DesignRequest::whereIn('status', ['drafting', 'costing'])->count(),
             'waiting_approval' => DesignRequest::where('status', 'review')->count(),
             'project_aktif' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
-            'qc_pending' => DesignRequest::where('status', 'costing')->count(),
-            'deadline_today' => DesignRequest::whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', today())->count(),
+            'qc_pending' => DesignRequest::whereIn('status', ['review', 'costing'])->count(),
+            'deadline_today' => DesignRequest::whereIn('status', $activeStatuses)->whereDate('deadline', today())->count(),
         ];
 
-        $myTasks = (clone $baseMine)
-            ->with('sales')
-            ->whereNotIn('status', ['completed', 'rejected'])
-            ->orderByRaw('deadline is null, deadline asc')
-            ->take(6)
+        $myTasks = DesignRequest::with('sales')
+            ->where(function ($q) use ($user) {
+                $q->where('production_pic_id', $user->id)->orWhereNull('production_pic_id');
+            })
+            ->whereIn('status', $activeStatuses)
+            ->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('deadline')
+            ->take(8)
             ->get();
 
         $queue = DesignRequest::with('sales')
             ->whereIn('status', ['assigned', 'drafting', 'costing', 'review'])
-            ->orderByRaw('deadline is null, deadline asc')
+            ->latest()
             ->take(6)
             ->get();
 
-        $progress = [
+        $progressStages = collect([
             'Material Ready' => DesignRequest::whereIn('status', ['assigned', 'drafting', 'costing', 'review', 'completed'])->count(),
             'Produksi' => DesignRequest::whereIn('status', ['drafting', 'costing', 'review', 'completed'])->count(),
-            'Finishing' => DesignRequest::whereIn('status', ['review', 'completed'])->count(),
-            'QC' => DesignRequest::where('status', 'review')->count(),
+            'Finishing' => DesignRequest::whereIn('status', ['costing', 'review', 'completed'])->count(),
+            'QC' => DesignRequest::whereIn('status', ['review', 'completed'])->count(),
             'Ready Delivery' => DesignRequest::where('status', 'completed')->count(),
-        ];
+        ]);
 
         $deadlineAlerts = DesignRequest::with('sales')
-            ->whereNotIn('status', ['completed', 'rejected'])
+            ->whereIn('status', $activeStatuses)
             ->whereNotNull('deadline')
-            ->whereDate('deadline', '<=', today()->addDays(3))
+            ->whereDate('deadline', '<=', today()->addDays(2))
             ->orderBy('deadline')
-            ->take(4)
+            ->take(3)
             ->get();
 
-        $revisions = DesignRequest::with('sales')
-            ->whereIn('status', ['review', 'rejected'])
+        $revisionRequests = DesignRequest::with('sales')
+            ->whereIn('status', ['rejected', 'review'])
             ->latest('updated_at')
             ->take(3)
             ->get();
 
-        $approvalQueue = DesignRequest::where('status', 'completed')
-            ->whereNotNull('submitted_at')
+        $waitingSalesApproval = DesignRequest::with('sales')
+            ->where('status', 'completed')
             ->latest('submitted_at')
             ->take(3)
             ->get();
 
-        $timeline = DesignRequest::with('sales')
+        $activityTimeline = DesignRequest::with('sales')
             ->latest('updated_at')
             ->take(5)
             ->get();
 
-        return view('drafter.dashboard', compact('stats', 'myTasks', 'queue', 'progress', 'deadlineAlerts', 'revisions', 'approvalQueue', 'timeline'));
+        return view('drafter.dashboard', compact(
+            'stats', 'myTasks', 'queue', 'progressStages', 'deadlineAlerts', 'revisionRequests', 'waitingSalesApproval', 'activityTimeline'
+        ));
     }
 }

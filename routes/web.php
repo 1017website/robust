@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\PraLeadController;
 use App\Http\Controllers\Admin\AssignmentController;
@@ -34,6 +35,7 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/search', [GlobalSearchController::class, 'index'])->name('global-search.index');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

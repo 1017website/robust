@@ -2,7 +2,6 @@
 @section('title', 'Leads')
 @section('content')
 @php
-    use App\Support\Format;
     $selected = $selectedLead;
     $stageLabel = fn($s) => match($s) {'lead'=>'Lead','design_request'=>'Design Request','penawaran'=>'Penawaran','negosiasi'=>'Negosiasi','won'=>'Won / Closing','lost'=>'Lost', default => ucfirst(str_replace('_',' ',$s ?? '-'))};
 @endphp
@@ -63,7 +62,7 @@
                     <div class="small text-muted-2 mb-3">{{ $selected->instansi_type }} · {{ $selected->source }}</div>
                     <div class="info-card mb-3"><h6>Informasi Customer</h6><div class="kv"><div class="k">PIC</div><div class="v">{{ $selected->pic_name }}</div></div><div class="kv"><div class="k">Email</div><div class="v">{{ $selected->email ?: '-' }}</div></div><div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $selected->phone ?: '-' }}</div></div><div class="kv"><div class="k">Alamat</div><div class="v">{{ $selected->location ?: '-' }}</div></div></div>
                     <div class="info-card mb-3"><h6>Kebutuhan Awal</h6><div class="fw-bold mb-2">{{ $selected->lab_name ?: '-' }}</div><div class="small text-muted-2">{{ $selected->need_description ?: '-' }}</div>@foreach(($selected->scope_items ?? []) as $item)<span class="tag-pill">{{ $item }}</span>@endforeach</div>
-                    <div class="info-card mb-3"><h6>Ringkasan Lead</h6><div class="kv"><div class="k">Prioritas</div><div class="v">{{ ucfirst($selected->priority) }}</div></div><div class="kv"><div class="k">Estimasi</div><div class="v">{{ Format::rupiahShort($selected->est_value_min) }} - {{ Format::rupiahShort($selected->est_value_max) }}</div></div><div class="kv"><div class="k">Tahap</div><div class="v">{{ $stageLabel($selected->stage) }}</div></div></div>
+                    <div class="info-card mb-3"><h6>Ringkasan Lead</h6><div class="kv"><div class="k">Prioritas</div><div class="v">{{ ucfirst($selected->priority) }}</div></div><div class="kv"><div class="k">Estimasi</div><div class="v">{{ \App\Support\Format::rupiahShort($selected->est_value_min) }} - {{ \App\Support\Format::rupiahShort($selected->est_value_max) }}</div></div><div class="kv"><div class="k">Tahap</div><div class="v">{{ $stageLabel($selected->stage) }}</div></div></div>
                     <div class="d-grid gap-2"><a href="{{ route('sales.design-requests.create',['lead'=>$selected->id]) }}" class="btn btn-primary"><i class="bi bi-pencil-square me-1"></i>Buat Design Request</a><a href="{{ route('activities.create') }}" class="btn btn-soft"><i class="bi bi-calendar-plus me-1"></i>Buat Aktivitas</a></div>
                 </div>
             @else

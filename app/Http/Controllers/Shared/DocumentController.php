@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Shared;
 
 use App\Http\Controllers\Controller;
-use App\Models\Document;
+use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\Document;
+use App\Models\Lead;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
@@ -57,7 +61,7 @@ class DocumentController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'documentable_type' => ['required', 'string'],
+            'documentable_type' => ['required', 'string', Rule::in(array_keys($this->documentableTypes()))],
             'documentable_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:50'],
@@ -65,11 +69,15 @@ class DocumentController extends Controller
             'file' => ['required', 'file', 'max:10240'],
         ]);
 
+        $documentableClass = $this->documentableTypes()[$data['documentable_type']];
+        $documentable = $documentableClass::findOrFail($data['documentable_id']);
+        abort_unless($this->canAccessDocumentable($documentable), 403);
+
         $path = $request->file('file')->store('documents', 'public');
 
         Document::create([
-            'documentable_type' => $data['documentable_type'],
-            'documentable_id' => $data['documentable_id'],
+            'documentable_type' => $documentableClass,
+            'documentable_id' => $documentable->id,
             'name' => $data['name'],
             'category' => $data['category'] ?? 'lainnya',
             'description' => $data['description'] ?? null,
@@ -84,7 +92,68 @@ class DocumentController extends Controller
 
     public function destroy(Document $document)
     {
+        abort_unless($this->canManageDocument($document), 403);
+        if ($document->file_path) {
+            Storage::disk('public')->delete($document->file_path);
+        }
         $document->delete();
         return back()->with('success', 'Dokumen dihapus.');
+    }
+
+    protected function documentableTypes(): array
+    {
+        return [
+            Customer::class => Customer::class,
+            DesignRequest::class => DesignRequest::class,
+            Lead::class => Lead::class,
+            Project::class => Project::class,
+        ];
+    }
+
+    protected function canAccessDocumentable($documentable): bool
+    {
+        $user = Auth::user();
+
+        if ($user->isAdminLevel() || $user->isSalesSpv()) {
+            return true;
+        }
+
+        if ($user->isSales()) {
+            return match (true) {
+                $documentable instanceof Customer => (int) $documentable->sales_id === (int) $user->id,
+                $documentable instanceof DesignRequest => (int) $documentable->sales_id === (int) $user->id,
+                $documentable instanceof Lead => (int) $documentable->sales_id === (int) $user->id,
+                $documentable instanceof Project => (int) $documentable->project_manager_id === (int) $user->id
+                    || (int) ($documentable->quotation?->sales_id) === (int) $user->id,
+                default => false,
+            };
+        }
+
+        if ($user->isDrafter()) {
+            return $documentable instanceof DesignRequest
+                && (
+                    (int) $documentable->production_pic_id === (int) $user->id
+                    || $documentable->production_pic_id === null
+                );
+        }
+
+        return false;
+    }
+
+    protected function canManageDocument(Document $document): bool
+    {
+        $user = Auth::user();
+
+        if ($user->isAdminLevel()) {
+            return true;
+        }
+
+        if ((int) $document->uploaded_by === (int) $user->id) {
+            return true;
+        }
+
+        $document->loadMissing('documentable');
+
+        return $document->documentable && $this->canAccessDocumentable($document->documentable);
     }
 }

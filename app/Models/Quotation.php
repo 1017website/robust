@@ -63,6 +63,26 @@ class Quotation extends Model
         ];
     }
 
+    public static function activeSalesStatuses(): array
+    {
+        return [
+            'draft',
+            'waiting_approval',
+            'revision',
+            'approved',
+            'sent_to_customer',
+
+            // Kompatibilitas data lama.
+            'sent',
+            'negotiation',
+        ];
+    }
+
+    public static function wonStatuses(): array
+    {
+        return ['customer_accepted', 'request_po_created', 'won'];
+    }
+
     public function statusLabel(): string
     {
         return self::statuses()[$this->status] ?? str($this->status)->headline()->toString();
@@ -111,4 +131,3 @@ class Quotation extends Model
         return $grandTotal > 0 ? round($this->estimatedGrossProfit() / $grandTotal * 100, 2) : 0.0;
     }
 }
-

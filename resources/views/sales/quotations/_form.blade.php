@@ -97,7 +97,7 @@
                     </select>
                 </div>
                 <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label small fw-semibold">Target Margin (%)</label><input name="target_margin" type="number" step="0.01" value="{{ old('target_margin', $quotation?->target_margin) }}" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label small fw-semibold">Target Margin (%)</label><input name="target_margin" type="text" inputmode="decimal" data-qty value="{{ old('target_margin', $quotation?->target_margin) }}" class="form-control"></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
             </div>
         </div>
@@ -125,8 +125,8 @@
                     <div class="card-head"><h2>Diskon & Pajak</h2></div>
                     <div class="row g-3">
                         <div class="col-md-4"><label class="form-label small fw-semibold">Tipe Diskon</label><select name="discount_type" id="discType" class="form-select"><option value="percent" @selected(old('discount_type', $quotation?->discount_type ?? 'percent') === 'percent')>Persen (%)</option><option value="nominal" @selected(old('discount_type', $quotation?->discount_type) === 'nominal')>Nominal (Rp)</option></select></div>
-                        <div class="col-md-4"><label class="form-label small fw-semibold">Nilai Diskon</label><input name="discount_value" id="discValue" type="number" value="{{ old('discount_value', $quotation?->discount_value ?? 0) }}" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label small fw-semibold">PPN (%)</label><input name="tax_percent" id="taxPercent" type="number" value="{{ old('tax_percent', $quotation?->tax_percent ?? 11) }}" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label small fw-semibold">Nilai Diskon</label><input name="discount_value" id="discValue" type="text" inputmode="decimal" value="{{ old('discount_value', $quotation?->discount_value ?? 0) }}" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label small fw-semibold">PPN (%)</label><input name="tax_percent" id="taxPercent" type="text" inputmode="decimal" data-qty value="{{ old('tax_percent', $quotation?->tax_percent ?? 11) }}" class="form-control"></div>
                         <div class="col-12"><label class="form-label small fw-semibold">Alasan Diskon</label><input name="discount_reason" value="{{ old('discount_reason', $quotation?->discount_reason) }}" class="form-control"></div>
                     </div>
                 </div>
@@ -208,19 +208,20 @@ function addItem(data={}){
         <td><input name="items[${i}][name]" class="form-control form-control-sm" value="${esc(data.name)}" required>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
         <td><input name="items[${i}][specification]" class="form-control form-control-sm" value="${esc(data.specification)}"></td>
-        <td><input name="items[${i}][qty]" type="number" step="0.01" min="0.01" class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
+        <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
-        <td><input name="items[${i}][unit_price]" type="number" min="0" class="form-control form-control-sm it-price" value="${data.unit_price||0}"></td>
-        <td><input name="items[${i}][margin]" type="number" step="0.01" min="0" class="form-control form-control-sm" value="${data.margin||0}"></td>
+        <td><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-price" value="${data.unit_price||0}"></td>
+        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm" value="${data.margin||0}"></td>
         <td class="fw-num it-total">Rp 0</td>
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
+    bindNumberInputs(tr);
     tr.querySelectorAll('.it-qty,.it-price').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);
 }
 function rowTotal(tr){
-    const q=+tr.querySelector('.it-qty').value||0, p=+tr.querySelector('.it-price').value||0;
+    const q=numberValue(tr.querySelector('.it-qty')), p=numberValue(tr.querySelector('.it-price'));
     tr.querySelector('.it-total').textContent = rupiah(q*p);
 }
 document.getElementById('addItem').onclick=()=>addItem();
@@ -232,9 +233,10 @@ function addCost(data={}){
     div.className='row g-2 mb-2';
     div.innerHTML=`
         <div class="col-7"><input name="additional_costs[${i}][label]" class="form-control form-control-sm" placeholder="mis. Pengiriman" value="${esc(data.label)}"></div>
-        <div class="col-4"><input name="additional_costs[${i}][amount]" type="number" class="form-control form-control-sm cost-amt" placeholder="0" value="${data.amount||0}"></div>
+        <div class="col-4"><input name="additional_costs[${i}][amount]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm cost-amt" placeholder="0" value="${data.amount||0}"></div>
         <div class="col-1"><button type="button" class="btn btn-sm btn-soft text-danger cost-del"><i class="bi bi-x"></i></button></div>`;
     document.getElementById('costList').appendChild(div);
+    bindNumberInputs(div);
     div.querySelector('.cost-amt').addEventListener('input',recalc);
     div.querySelector('.cost-del').onclick=()=>{ div.remove(); recalc(); };
 }
@@ -253,13 +255,13 @@ customerSelect?.addEventListener('change', function(){
 function recalc(){
     let sub=0;
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
-        sub += (+tr.querySelector('.it-qty').value||0)*(+tr.querySelector('.it-price').value||0);
+        sub += numberValue(tr.querySelector('.it-qty'))*numberValue(tr.querySelector('.it-price'));
     });
-    const dType=document.getElementById('discType').value, dVal=+document.getElementById('discValue').value||0;
+    const dType=document.getElementById('discType').value, dVal=numberValue(document.getElementById('discValue'));
     let disc = dType==='percent' ? sub*dVal/100 : dVal; disc=Math.min(disc,sub);
     const afterDisc = sub-disc;
-    const tax = afterDisc*(+document.getElementById('taxPercent').value||0)/100;
-    let add=0; document.querySelectorAll('.cost-amt').forEach(el=>add+=+el.value||0);
+    const tax = afterDisc*numberValue(document.getElementById('taxPercent'))/100;
+    let add=0; document.querySelectorAll('.cost-amt').forEach(el=>add+=numberValue(el));
     const grand = afterDisc+tax+add;
     document.getElementById('sumSubtotal').textContent=rupiah(sub);
     document.getElementById('sumDiscount').textContent='- '+rupiah(disc);
@@ -273,7 +275,7 @@ function buildReview(){
     const g=v=>document.querySelector(`[name="${v}"]`)?.value||'-';
     let rows='';
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
-        const n=tr.querySelector('[name$="[name]"]').value, q=tr.querySelector('.it-qty').value, p=+tr.querySelector('.it-price').value||0;
+        const n=tr.querySelector('[name$="[name]"]').value, q=numberValue(tr.querySelector('.it-qty')), p=numberValue(tr.querySelector('.it-price'));
         rows+=`<tr><td>${esc(n)}</td><td>${q}</td><td class="fw-num">${rupiah(p)}</td><td class="fw-num">${rupiah(q*p)}</td></tr>`;
     });
     document.getElementById('reviewBox').innerHTML=`

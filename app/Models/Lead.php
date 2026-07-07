@@ -28,4 +28,9 @@ class Lead extends Model
     public function designRequests(): HasMany { return $this->hasMany(DesignRequest::class); }
     public function quotations(): HasMany { return $this->hasMany(Quotation::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
+
+    public static function activeStatuses(): array
+    {
+        return ['aktif', 'active'];
+    }
 }

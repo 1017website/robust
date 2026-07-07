@@ -2,7 +2,6 @@
 @section('title', 'Design Request')
 @section('content')
 @php
-    use App\Support\Format;
     $selected = $selectedRequest;
     $statusClass = fn($s) => match($s) {'completed'=>'st-green','drafting'=>'st-blue','costing'=>'st-yellow','review'=>'st-purple','assigned'=>'st-yellow','rejected'=>'st-red', default=>'st-gray'};
 @endphp

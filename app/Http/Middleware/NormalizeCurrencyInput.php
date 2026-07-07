@@ -19,8 +19,15 @@ class NormalizeCurrencyInput
     /** Nama field eksak yang dinormalkan. */
     protected array $exact = [
         'est_value_min', 'est_value_max', 'project_value', 'tax_amount',
-        'discount_value', 'subtotal', 'grand_total', 'target_margin',
-        'probability',
+        'discount_value', 'subtotal', 'grand_total', 'total', 'total_value',
+        'probability', 'target_margin', 'qty', 'margin', 'tax_percent',
+        'percentage', 'percent', 'progress', 'duration_minutes',
+    ];
+
+    /** Field decimal/non-rupiah yang boleh mempertahankan pecahan. */
+    protected array $decimalExact = [
+        'probability', 'target_margin', 'qty', 'margin', 'tax_percent',
+        'percentage', 'percent', 'progress', 'duration_minutes',
     ];
 
     /** Pola akhiran nama field yang dinormalkan. */
@@ -47,7 +54,7 @@ class NormalizeCurrencyInput
                 continue;
             }
             if (is_string($value) && $this->shouldNormalize((string) $key)) {
-                $value = $this->clean($value);
+                $value = $this->clean($value, (string) $key);
             }
         }
     }
@@ -71,7 +78,7 @@ class NormalizeCurrencyInput
     }
 
     /** Hapus pemisah ribuan titik; pertahankan koma desimal -> titik. */
-    protected function clean(string $value): string
+    protected function clean(string $value, string $key): string
     {
         $value = trim($value);
         if ($value === '') {
@@ -79,6 +86,25 @@ class NormalizeCurrencyInput
         }
         // Buang semua kecuali digit, titik, koma, minus
         $value = preg_replace('/[^0-9.,\-]/', '', $value);
+
+        if (in_array($key, $this->decimalExact, true)) {
+            if (str_contains($value, ',')) {
+                $value = str_replace('.', '', $value);
+                return str_replace(',', '.', $value);
+            }
+
+            $parts = explode('.', $value);
+            if (count($parts) > 2) {
+                $decimal = array_pop($parts);
+                return str_replace('.', '', implode('.', $parts)).'.'.$decimal;
+            }
+            if (count($parts) === 2 && strlen($parts[1]) === 3 && strlen($parts[0]) > 1) {
+                return str_replace('.', '', $value);
+            }
+
+            return $value;
+        }
+
         // Format Indonesia: titik = ribuan, koma = desimal
         if (str_contains($value, ',')) {
             $value = str_replace('.', '', $value);   // hapus ribuan

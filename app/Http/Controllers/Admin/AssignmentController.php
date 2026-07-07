@@ -21,9 +21,9 @@ class AssignmentController extends Controller
             return [
                 'sales' => $s,
                 'request_masuk' => PraLead::where('assigned_sales_id', $s->id)->where('status', 'waiting_acceptance')->count(),
-                'leads_aktif' => Lead::where('sales_id', $s->id)->where('status', 'aktif')->count(),
+                'leads_aktif' => Lead::where('sales_id', $s->id)->whereIn('status', Lead::activeStatuses())->count(),
                 'design_request' => Lead::where('sales_id', $s->id)->where('stage', 'design_request')->count(),
-                'penawaran_aktif' => Quotation::where('sales_id', $s->id)->whereIn('status', ['sent', 'negotiation'])->count(),
+                'penawaran_aktif' => Quotation::where('sales_id', $s->id)->whereIn('status', Quotation::activeSalesStatuses())->count(),
                 'project_aktif' => Project::whereHas('quotation', fn ($q) => $q->where('sales_id', $s->id))->whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
             ];
         });
@@ -48,7 +48,10 @@ class AssignmentController extends Controller
             'acceptance_rate' => $acceptance->avg('rate') ? round($acceptance->avg('rate')) : 0,
         ];
 
-        return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats'));
+        $leads = Lead::with('sales')->latest()->take(60)->get();
+        $projects = Project::with('quotation.sales', 'quotation.customer')->latest()->take(6)->get();
+
+        return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats', 'leads', 'projects'));
     }
 
     public function reassign(Request $request)

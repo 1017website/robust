@@ -2,8 +2,7 @@
 @section('title', 'Dashboard Sales')
 @section('content')
 @php
-    use App\Support\Format;
-    $fmtShort = fn($v) => Format::rupiahShort($v ?? 0);
+    $fmtShort = fn($v) => \App\Support\Format::rupiahShort($v ?? 0);
     $targetPercent = $stats['target_percent'] ?? 0;
 @endphp
 <div class="sales-ui">

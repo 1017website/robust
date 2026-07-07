@@ -75,7 +75,7 @@ class ReportController extends Controller
         $customerScope = fn ($q) => $isSales ? $q->where('sales_id', $uid) : $q;
         $activityScope = fn ($q) => $isSales ? $q->where('sales_id', $uid) : $q;
 
-        $wonStatuses = ['customer_accepted', 'request_po_created', 'won'];
+        $wonStatuses = Quotation::wonStatuses();
         $totalQuotes = $quoteScope(Quotation::query())->count();
         $won = $quoteScope(Quotation::whereIn('status', $wonStatuses))->count();
 

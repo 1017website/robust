@@ -22,16 +22,43 @@
 <body>
 <div class="layout">
     @include('layouts.sidebar')
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
     <div class="main">
         <header class="topbar">
-            <button class="btn btn-sm btn-light d-xl-none" id="sidebarToggle"><i class="bi bi-list"></i></button>
-            <div class="search-box">
+            <button type="button" class="btn btn-sm btn-light d-xl-none" id="sidebarToggle" aria-label="Buka menu"><i class="bi bi-list"></i></button>
+            <form class="search-box" method="GET" action="{{ route('global-search.index') }}">
                 <i class="bi bi-search"></i>
-                <input type="text" placeholder="Cari customer, PIC, proyek, atau aktivitas...">
-            </div>
+                <input type="text" name="q" value="{{ request()->routeIs('global-search.*') ? request('q') : '' }}" placeholder="Cari customer, PIC, proyek, atau aktivitas..." autocomplete="off">
+            </form>
             <div class="topbar-right">
-                <a href="#" class="topbar-icon"><i class="bi bi-bell"></i><span class="dot">3</span></a>
-                <a href="#" class="topbar-icon"><i class="bi bi-envelope"></i></a>
+                <div class="dropdown">
+                    <button type="button" class="topbar-icon topbar-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifikasi">
+                        <i class="bi bi-bell"></i>
+                        @if(($topbarNotificationCount ?? 0) > 0)
+                            <span class="dot">{{ $topbarNotificationCount > 9 ? '9+' : $topbarNotificationCount }}</span>
+                        @endif
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end topbar-notifications">
+                        <div class="topbar-notifications-head">
+                            <strong>Notifikasi</strong>
+                            <span>{{ $topbarNotificationCount ?? 0 }} item</span>
+                        </div>
+                        @forelse(($topbarNotifications ?? []) as $notification)
+                            <a class="notification-item" href="{{ $notification['href'] }}">
+                                <i class="bi {{ $notification['icon'] }} {{ $notification['tone'] ?? '' }}"></i>
+                                <span>
+                                    <strong>{{ $notification['title'] }}</strong>
+                                    <small>{{ $notification['detail'] }}</small>
+                                </span>
+                            </a>
+                        @empty
+                            <div class="notification-empty">
+                                <i class="bi bi-check2-circle"></i>
+                                <span>Tidak ada notifikasi baru.</span>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
                 <a href="{{ $calendarRoute }}" class="topbar-icon d-none d-md-inline-flex"><i class="bi bi-calendar3"></i></a>
                 <div class="dropdown">
                     <a href="#" class="user-chip" data-bs-toggle="dropdown">

@@ -9,6 +9,7 @@ use App\Models\Quotation;
 use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -29,8 +30,10 @@ class ProjectController extends Controller
 
     public function create(Request $request)
     {
-        $quotation = $request->get('quotation') ? Quotation::with('customer')->find($request->get('quotation')) : null;
-        $wonQuotations = Quotation::whereIn('status', ['customer_accepted', 'request_po_created', 'won'])->whereDoesntHave('project')->get();
+        $quotation = $request->get('quotation')
+            ? $this->eligibleQuotationQuery()->with('customer')->findOrFail($request->get('quotation'))
+            : null;
+        $wonQuotations = $this->eligibleQuotationQuery()->get();
         $managers = User::whereIn('role', ['sales', 'sales_admin'])->where('is_active', true)->get();
         $team = User::where('is_active', true)->get();
         return view('sales.projects.create', compact('quotation', 'wonQuotations', 'managers', 'team'));
@@ -46,7 +49,7 @@ class ProjectController extends Controller
             'category' => ['nullable', 'string', 'max:100'],
             'type' => ['nullable', 'string', 'max:100'],
             'priority' => ['required', 'in:low,medium,high'],
-            'status' => ['required', 'string'],
+            'status' => ['required', 'in:'.implode(',', array_keys(Project::statuses()))],
             'start_date' => ['required', 'date'],
             'target_date' => ['required', 'date'],
             'work_method' => ['nullable', 'string', 'max:100'],
@@ -59,7 +62,7 @@ class ProjectController extends Controller
             'note' => ['nullable', 'string'],
         ]);
 
-        $quotation = Quotation::findOrFail($data['quotation_id']);
+        $quotation = $this->eligibleQuotationQuery()->findOrFail($data['quotation_id']);
         $data['code'] = $data['code'] ?: CodeGenerator::next(Project::class, 'PRJ', 4, true);
         $data['customer_id'] = $quotation->customer_id;
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
@@ -76,7 +79,30 @@ class ProjectController extends Controller
 
     public function show(Project $project)
     {
+        abort_unless($this->canViewProject($project), 403);
         $project->load('customer', 'projectManager', 'quotation', 'terms', 'activities', 'documents');
         return view('sales.projects.show', compact('project'));
+    }
+
+    protected function eligibleQuotationQuery(): Builder
+    {
+        return Quotation::with('sales')
+            ->whereIn('status', Quotation::wonStatuses())
+            ->whereDoesntHave('project')
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+            ->latest();
+    }
+
+    protected function canViewProject(Project $project): bool
+    {
+        $user = Auth::user();
+        if (! $user->isSales()) {
+            return true;
+        }
+
+        $project->loadMissing('quotation');
+
+        return (int) $project->project_manager_id === (int) $user->id
+            || (int) ($project->quotation?->sales_id) === (int) $user->id;
     }
 }

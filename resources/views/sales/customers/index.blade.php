@@ -2,7 +2,117 @@
 @section('title', 'Customers')
 @section('content')
 @php
-    use App\Support\Format;
+    $selected = $selectedCustomer;
+    $isSalesAdminLayout = auth()->user()->isSalesAdmin() || auth()->user()->isAdministrator();
+    $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
+    $activeCustomer = max(0, ($stats['total'] ?? 0) - ($stats['lost'] ?? 0));
+    $repeatCustomer = \App\Models\Customer::has('projects', '>=', 2)->count();
+    $totalProject = \App\Models\Project::count();
+@endphp
+@if($isSalesAdminLayout)
+<div class="sales-admin-ui">
+    <div class="sa-customer-grid">
+        <main>
+            <div class="sa-page-head">
+                <div>
+                    <h1 class="page-title mb-1">Customers</h1>
+                    <div class="page-subtitle">Database seluruh customer yang sudah menjadi klien.</div>
+                </div>
+                <div class="page-actions"><a href="{{ route('sales.customers.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Customer</a></div>
+            </div>
+
+            <div class="sa-stats four mb-3">
+                <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-people"></i></div><div><small>Total Customer</small><strong>{{ $stats['total'] }}</strong><span>100% dari total</span></div></div>
+                <div class="sa-stat"><div class="sa-ico green"><i class="bi bi-person-check"></i></div><div><small>Active Customer</small><strong>{{ $activeCustomer }}</strong><span>{{ $stats['total'] ? round($activeCustomer / max(1,$stats['total']) * 100) : 0 }}% dari total</span></div></div>
+                <div class="sa-stat"><div class="sa-ico purple"><i class="bi bi-arrow-repeat"></i></div><div><small>Repeat Customer</small><strong>{{ $repeatCustomer }}</strong><span>{{ $stats['total'] ? round($repeatCustomer / max(1,$stats['total']) * 100) : 0 }}% dari total</span></div></div>
+                <div class="sa-stat"><div class="sa-ico orange"><i class="bi bi-briefcase"></i></div><div><small>Total Project</small><strong>{{ $totalProject }}</strong><span>100% dari total</span></div></div>
+            </div>
+
+            <div class="sa-three-col mb-3">
+                <section class="sa-card">
+                    <div class="sa-card-head"><h2>Customer Segmentation</h2></div>
+                    <div class="sa-chart-donut small"><div class="chart-box"><canvas id="saCustomerSeg"></canvas><div class="donut-center"><small>Total</small><b>{{ $stats['total'] }}</b></div></div><div class="sa-legend-list"><div><i></i><span>Identify</span><strong>{{ $stats['identify'] }}</strong></div><div><i></i><span>Approaching</span><strong>{{ $stats['approaching'] }}</strong></div><div><i></i><span>Follow Up</span><strong>{{ $stats['follow_up'] }}</strong></div><div><i></i><span>Won / Closing</span><strong>{{ $stats['won'] }}</strong></div></div></div>
+                    <a class="sa-link" href="#">Lihat Semua <i class="bi bi-arrow-right"></i></a>
+                </section>
+                <section class="sa-card">
+                    <div class="sa-card-head"><h2>Top Customer (Berdasarkan Total Project)</h2></div>
+                    <div class="sa-ranked-list">
+                        @foreach($customers->take(5) as $cust)
+                            <div><span>{{ $loop->iteration }}</span><strong>{{ $cust->name }}</strong><b>{{ $cust->projects()->count() }}</b></div>
+                        @endforeach
+                    </div>
+                    <a class="sa-link" href="#">Lihat Semua <i class="bi bi-arrow-right"></i></a>
+                </section>
+                <section class="sa-card">
+                    <div class="sa-card-head"><h2>Potensi Repeat Order</h2></div>
+                    <div class="sa-repeat-list">
+                        @foreach($customers->take(3) as $cust)
+                            <div><i class="bi bi-building-check"></i><span><strong>{{ $cust->name }}</strong><small>Terakhir project: {{ $cust->updated_at?->translatedFormat('M Y') }}</small></span><em>{{ $cust->probability >= 70 ? 'Tinggi' : 'Sedang' }}</em></div>
+                        @endforeach
+                    </div>
+                    <a class="sa-link" href="#">Lihat Semua <i class="bi bi-arrow-right"></i></a>
+                </section>
+            </div>
+
+            <section class="sa-card p-0 overflow-hidden">
+                <form class="sa-filter-row p-3" method="GET">
+                    <div class="sa-search"><i class="bi bi-search"></i><input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari customer..."></div>
+                    <select name="category" class="form-select"><option value="">Jenis Customer</option><option>Pendidikan</option><option>Industri</option><option>Kesehatan</option></select>
+                    <select class="form-select"><option>Sales PIC</option></select>
+                    <select name="status" class="form-select"><option value="">Status</option>@foreach(\App\Models\Customer::stages() as $k=>$v)<option value="{{ $k }}" @selected(request('status')==$k)>{{ $v }}</option>@endforeach</select>
+                    <button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button>
+                </form>
+                <div class="table-wrap">
+                    <table class="sa-table">
+                        <thead><tr><th>No</th><th>Customer</th><th>Jenis Customer</th><th>PIC Utama</th><th>Sales PIC</th><th>Total Project</th><th>Total Nilai (Rp)</th><th>Last Project</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <tbody>
+                        @forelse($customers as $cust)
+                            <tr class="{{ $selected && $selected->id === $cust->id ? 'selected' : '' }}">
+                                <td>{{ $customers->firstItem()+$loop->index }}</td>
+                                <td><a href="{{ route('sales.customers.show',$cust) }}" class="fw-bold">{{ $cust->name }}</a></td>
+                                <td>{{ $cust->category ?: '-' }}</td>
+                                <td>{{ $cust->primaryPic?->name ?? $cust->pic_name ?? '-' }}</td>
+                                <td>{{ $cust->sales?->name ?? '-' }}</td>
+                                <td>{{ $cust->projects()->count() }}</td>
+                                <td>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</td>
+                                <td>{{ $cust->updated_at?->translatedFormat('M Y') }}</td>
+                                <td><span class="status-soft {{ $stageClass($cust->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$cust->pipeline_stage] ?? $cust->pipeline_stage }}</span></td>
+                                <td><a href="{{ route('sales.customers.show',$cust) }}" class="btn btn-sm btn-link">...</a></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="10"><x-empty text="Belum ada customer." /></td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-3 d-flex flex-wrap justify-content-between gap-3"><span class="small text-muted-2">Menampilkan {{ $customers->firstItem() ?? 0 }} - {{ $customers->lastItem() ?? 0 }} dari {{ $customers->total() }} data</span>{{ $customers->links() }}</div>
+            </section>
+        </main>
+
+        <aside class="sa-customer-side">
+            @if($selected)
+                <div class="sa-card">
+                    <div class="d-flex justify-content-between align-items-start"><div><h2 class="mb-2">{{ $selected->name }}</h2><span class="status-soft {{ $stageClass($selected->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$selected->pipeline_stage] ?? $selected->pipeline_stage }}</span></div><a class="btn btn-sm btn-link text-dark" href="#"><i class="bi bi-x-lg"></i></a></div>
+                    <div class="sa-detail-tabs"><span class="active">Overview</span><span>Projects</span><span>Penawaran</span><span>Activities</span><span>Documents</span><span>Contacts</span></div>
+                    <div class="sa-info-card"><h6>Informasi Customer</h6><div class="sa-info-grid"><div><i class="bi bi-building"></i><span>Jenis Customer</span><strong>{{ $selected->category ?: '-' }}</strong></div><div><i class="bi bi-globe"></i><span>Website</span><strong>{{ $selected->website ?: '-' }}</strong></div><div><i class="bi bi-geo-alt"></i><span>Alamat</span><strong>{{ $selected->address ?: '-' }}</strong></div><div><i class="bi bi-envelope"></i><span>Email</span><strong>{{ $selected->email ?: '-' }}</strong></div><div><i class="bi bi-telephone"></i><span>Telepon</span><strong>{{ $selected->phone ?: '-' }}</strong></div><div><i class="bi bi-calendar"></i><span>Tahun Kerja Sama</span><strong>{{ $selected->partner_since?->format('Y') ?? '-' }}</strong></div></div></div>
+                    <div class="sa-two-col mt-3"><div class="sa-info-card"><h6>PIC Customer</h6>@forelse($selected->pics()->take(2)->get() as $pic)<div class="sa-pic-row"><span>{{ $loop->iteration }}</span><strong>{{ $pic->name }}<small>{{ $pic->position }}</small></strong><em>{{ $pic->phone }}</em></div>@empty<div class="small text-muted-2">Belum ada PIC.</div>@endforelse</div><div class="sa-info-card"><h6>Sales Owner</h6><div class="sa-person"><span class="sa-avatar">{{ strtoupper(substr($selected->sales?->name ?? 'S',0,1)) }}</span><strong>{{ $selected->sales?->name ?? '-' }}<small>{{ $selected->sales?->job_title ?? 'Sales' }}</small></strong></div></div></div>
+                    <div class="sa-info-card mt-3"><h6>Statistik</h6><div class="sa-mini-stat-grid"><div><strong>{{ $selected->projects()->count() }}</strong><span>Total Project</span></div><div><strong>{{ \App\Support\Format::rupiahShort($selected->quotations()->sum('grand_total')) }}</strong><span>Total Nilai</span></div><div><strong>{{ $selected->quotations()->count() }}</strong><span>Total Penawaran</span></div><div><strong>{{ $selected->probability }}%</strong><span>Win Rate</span></div></div></div>
+                    <div class="sa-info-card mt-3"><h6>Timeline Project</h6>@forelse($selected->projects()->latest()->take(4)->get() as $project)<div class="sa-timeline-row"><i></i><span>{{ $project->created_at?->translatedFormat('M Y') }}<strong>{{ $project->name }}</strong></span><em>{{ $project->status }}</em></div>@empty<div class="small text-muted-2">Belum ada project.</div>@endforelse</div>
+                    <div class="sa-detail-actions"><a href="{{ route('sales.customers.edit',$selected) }}" class="btn btn-soft"><i class="bi bi-pencil"></i>Edit</a><a href="#" class="btn btn-soft"><i class="bi bi-plus-lg"></i>Project Baru</a><a href="#" class="btn btn-primary"><i class="bi bi-file-earmark-plus"></i>Buat Penawaran</a></div>
+                </div>
+            @else
+                <div class="sa-card"><x-empty text="Belum ada customer." /></div>
+            @endif
+        </aside>
+    </div>
+</div>
+@push('scripts')
+<script>
+    robustChart('saCustomerSeg','doughnut',['Identify','Approaching','Follow Up','Won'],[{{ $stats['identify'] }},{{ $stats['approaching'] }},{{ $stats['follow_up'] }},{{ $stats['won'] }}],['#60a5fa','#f59e0b','#8b5cf6','#10b981']);
+</script>
+@endpush
+@else
+@php
     $selected = $selectedCustomer;
     $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
 @endphp
@@ -16,11 +126,12 @@
         <aside class="sales-detail">
             @if($selected)
                 <div class="sales-detail-head"><div class="text-center w-100"><div class="logo-avatar mx-auto mb-2" style="width:64px;height:64px"><i class="bi bi-building fs-3"></i></div><h4 class="fw-black mb-1">{{ $selected->name }}</h4><span class="status-soft {{ $stageClass($selected->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$selected->pipeline_stage] ?? $selected->pipeline_stage }}</span><a href="{{ route('sales.customers.edit',$selected) }}" class="btn btn-soft w-100 mt-3"><i class="bi bi-pencil me-1"></i>Edit Customer</a></div></div>
-                <div class="sales-detail-body"><div class="info-card mb-3"><h6>Informasi Utama</h6><div class="kv"><div class="k">PIC Utama</div><div class="v">{{ $selected->primaryPic?->name ?? '-' }}</div></div><div class="kv"><div class="k">Email</div><div class="v">{{ $selected->email ?: '-' }}</div></div><div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $selected->phone ?: '-' }}</div></div><div class="kv"><div class="k">Alamat</div><div class="v">{{ $selected->address ?: '-' }}</div></div></div><div class="info-card mb-3"><h6>Status Customer</h6><div class="sales-chip-row">@foreach(\App\Models\Customer::stages() as $k=>$v)<span class="status-soft {{ $stageClass($k) }} {{ $selected->pipeline_stage===$k?'':'opacity-50' }}">{{ $v }}</span>@endforeach</div><div class="kv mt-3"><div class="k">Probabilitas</div><div class="v">{{ $selected->probability }}%<div class="sales-progress mt-1"><span style="width:{{ $selected->probability }}%"></span></div></div></div></div><div class="info-card"><h6>Ringkasan Aktivitas</h6><div class="kv"><div class="k">Total Penawaran</div><div class="v">{{ $selected->quotations_count ?? $selected->quotations()->count() }}</div></div><div class="kv"><div class="k">Total Project</div><div class="v">{{ $selected->projects()->count() }}</div></div><div class="kv"><div class="k">Total Nilai Penawaran</div><div class="v">{{ Format::rupiahShort($selected->quotations()->sum('grand_total')) }}</div></div><a href="{{ route('sales.customers.show',$selected) }}" class="btn btn-soft w-100 mt-3">Lihat Semua Aktivitas <i class="bi bi-arrow-right"></i></a></div></div>
+                <div class="sales-detail-body"><div class="info-card mb-3"><h6>Informasi Utama</h6><div class="kv"><div class="k">PIC Utama</div><div class="v">{{ $selected->primaryPic?->name ?? '-' }}</div></div><div class="kv"><div class="k">Email</div><div class="v">{{ $selected->email ?: '-' }}</div></div><div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $selected->phone ?: '-' }}</div></div><div class="kv"><div class="k">Alamat</div><div class="v">{{ $selected->address ?: '-' }}</div></div></div><div class="info-card mb-3"><h6>Status Customer</h6><div class="sales-chip-row">@foreach(\App\Models\Customer::stages() as $k=>$v)<span class="status-soft {{ $stageClass($k) }} {{ $selected->pipeline_stage===$k?'':'opacity-50' }}">{{ $v }}</span>@endforeach</div><div class="kv mt-3"><div class="k">Probabilitas</div><div class="v">{{ $selected->probability }}%<div class="sales-progress mt-1"><span style="width:{{ $selected->probability }}%"></span></div></div></div></div><div class="info-card"><h6>Ringkasan Aktivitas</h6><div class="kv"><div class="k">Total Penawaran</div><div class="v">{{ $selected->quotations_count ?? $selected->quotations()->count() }}</div></div><div class="kv"><div class="k">Total Project</div><div class="v">{{ $selected->projects()->count() }}</div></div><div class="kv"><div class="k">Total Nilai Penawaran</div><div class="v">{{ \App\Support\Format::rupiahShort($selected->quotations()->sum('grand_total')) }}</div></div><a href="{{ route('sales.customers.show',$selected) }}" class="btn btn-soft w-100 mt-3">Lihat Semua Aktivitas <i class="bi bi-arrow-right"></i></a></div></div>
             @else
                 <div class="sales-detail-body"><x-empty text="Belum ada customer." /></div>
             @endif
         </aside>
     </div>
 </div>
+@endif
 @endsection

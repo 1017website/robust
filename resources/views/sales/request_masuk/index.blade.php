@@ -2,7 +2,6 @@
 @section('title', 'Request Masuk')
 @section('content')
 @php
-    use App\Support\Format;
     $selected = $selectedRequest;
     $sourceClass = fn($source) => match(strtolower($source ?? '')) {
         'whatsapp' => 'st-green', 'website' => 'st-blue', 'email' => 'st-red', 'referensi' => 'st-purple', default => 'st-gray'
@@ -87,7 +86,7 @@
                             <div class="small text-muted-2">{{ $selected->initial_need ?: 'Belum ada deskripsi kebutuhan.' }}</div>
                         </div></div>
                         <div class="col-md-6"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-card h-100"><h6>Estimasi Potensi</h6><div class="text-success fw-bold fs-5">{{ Format::rupiah($selected->est_value_min ?? 0) }}</div><div class="text-center fw-bold my-1">-</div><div class="text-success fw-bold fs-5">{{ Format::rupiah($selected->est_value_max ?? 0) }}</div></div></div>
+                        <div class="col-md-6"><div class="info-card h-100"><h6>Estimasi Potensi</h6><div class="text-success fw-bold fs-5">{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</div><div class="text-center fw-bold my-1">-</div><div class="text-success fw-bold fs-5">{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</div></div></div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">

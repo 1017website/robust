@@ -33,7 +33,7 @@ class PipelineController extends Controller
             ],
             [
                 'label' => 'Lead Aktif',
-                'count' => $salesScope(Lead::query())->where('status', 'aktif')->count(),
+                'count' => $salesScope(Lead::query())->whereIn('status', Lead::activeStatuses())->count(),
                 'route' => $canOpenSales ? route('sales.leads.index') : '#',
                 'icon' => 'bi-person-lines-fill',
             ],

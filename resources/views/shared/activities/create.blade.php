@@ -11,6 +11,7 @@
                 <div class="row g-3">
                     <div class="col-md-6"><label class="form-label small fw-semibold">Tipe *</label><select name="type" class="form-select" required>@foreach(\App\Models\Activity::types() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Customer</label><select name="customer_id" class="form-select select2"><option value="">—</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">Pipeline Stage</label><select name="pipeline_stage" class="form-select"><option value="">Ikuti stage customer</option>@foreach(\App\Models\Customer::stages() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
                     <div class="col-12"><label class="form-label small fw-semibold">Judul *</label><input name="title" class="form-control" required></div>
                     <div class="col-12"><label class="form-label small fw-semibold">Deskripsi</label><textarea name="description" rows="3" class="form-control"></textarea></div>
                     <div class="col-md-4"><label class="form-label small fw-semibold">Tanggal *</label><input name="activity_date" type="date" value="{{ date('Y-m-d') }}" class="form-control" required></div>

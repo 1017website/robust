@@ -114,7 +114,7 @@ class DatabaseSeeder extends Seeder
             'need_description' => 'Pembangunan lab riset material dengan island bench dan fume hood.',
             'scope_items' => ['Island Bench', 'Fume Hood', 'Wall Cabinet', 'Sink Unit'],
             'est_value_min' => 400000000, 'est_value_max' => 550000000, 'priority' => 'high',
-            'stage' => 'penawaran', 'status' => 'active', 'sales_id' => $sales->id,
+            'stage' => 'penawaran', 'status' => 'aktif', 'sales_id' => $sales->id,
         ]);
 
         // ---------- Design Request (completed) ----------
