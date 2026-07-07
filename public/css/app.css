@@ -180,3 +180,382 @@ a{text-decoration:none}
 .pra-lead-main{min-width:0}.pra-lead-detail-panel{position:sticky;top:82px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:0;box-shadow:0 10px 32px rgba(15,27,45,.04);overflow:hidden}.detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}.detail-header h5{margin:0;font-size:17px;font-weight:800;color:var(--nav)}.pra-lead-detail-panel form,.pra-preview{padding:18px}.section-title{font-size:12px;font-weight:800;color:var(--nav);margin-bottom:12px}.detail-actions{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:10px;margin-top:20px}.pra-card-flat{padding:16px}.mini-stat-grid{display:grid;grid-template-columns:repeat(5,minmax(155px,1fr));gap:12px}.mini-stat-grid .stat-card{padding:16px;min-height:104px}.mini-stat-grid .stat-icon{width:46px;height:46px}.mini-stat-grid .stat-value{font-size:25px}.pra-filter{display:grid;grid-template-columns:minmax(260px,1fr) 150px 145px 155px auto;gap:10px;align-items:center}.pra-filter .form-control,.pra-filter .form-select{max-width:none;height:39px}.filter-search{position:relative}.filter-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);z-index:1}.filter-search .form-control{padding-left:38px}.pra-table th,.pra-table td{font-size:12px}.text-truncate-cell{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.source-pill{font-size:10.5px}.source-whatsapp{background:rgba(26,165,99,.12);color:var(--success)}.source-website{background:rgba(29,111,224,.12);color:var(--primary)}.source-referensi{background:rgba(149,92,246,.13);color:#7547dc}.source-telepon{background:rgba(58,160,201,.14);color:var(--info)}.source-email{background:rgba(224,82,74,.12);color:var(--danger)}.sales-recommend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.sales-recommend-card{position:relative;border:1px solid var(--line);border-radius:12px;padding:10px 8px;display:flex;gap:8px;align-items:center;cursor:pointer;background:#fff;transition:.15s;min-height:74px}.sales-recommend-card:hover{border-color:var(--brand);background:rgba(29,111,224,.03)}.sales-recommend-card input{position:absolute;opacity:0;pointer-events:none}.sales-recommend-card:has(input:checked){border-color:var(--brand);box-shadow:0 0 0 2px rgba(29,111,224,.08)}.avatar-sm{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#62a2ff);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0}.recommend-badge{display:inline-flex;font-size:9px;font-weight:800;color:#0d9957;background:rgba(26,165,99,.13);border-radius:99px;padding:2px 7px;margin-bottom:3px}.info-box{border:1px solid var(--line);border-radius:13px;padding:14px;background:#fff}.info-row{display:grid;grid-template-columns:135px 1fr;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px}.info-row:last-child{border-bottom:0}.info-row span{color:var(--muted)}.info-row strong{font-weight:700;color:var(--ink)}
 @media(max-width:1399px){.pra-lead-shell{grid-template-columns:1fr}.pra-lead-detail-panel{position:static}.mini-stat-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.pra-filter{grid-template-columns:1fr 150px 145px 155px auto}}
 @media(max-width:767px){.pra-filter{grid-template-columns:1fr}.detail-actions{grid-template-columns:1fr}.sales-recommend-grid{grid-template-columns:1fr}.pra-lead-detail-panel form,.pra-preview{padding:14px}.detail-header{flex-direction:column}}
+
+/* ---------- Sales role high fidelity layout ---------- */
+.sales-ui{--sales-blue:#0b5cff;--sales-navy:#071b4b;--sales-line:#dfe8f7;--sales-soft:#f6f9ff;--sales-ink:#071b4b;--sales-muted:#66749b;color:var(--sales-ink)}
+.sales-ui .page-title{font-size:24px;font-weight:850;color:var(--sales-ink)}
+.sales-ui .page-subtitle{font-size:13px;color:#4f5f87}.sales-ui .card-r{border-color:var(--sales-line);box-shadow:0 10px 28px rgba(20,59,121,.035);border-radius:16px}.sales-ui .btn-primary{background:var(--sales-blue);border-color:var(--sales-blue);box-shadow:0 8px 18px rgba(11,92,255,.14)}
+.sales-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap}.sales-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.sales-title-wrap{display:flex;gap:14px;align-items:flex-start}.sales-title-icon{width:48px;height:48px;border-radius:14px;background:#edf4ff;color:#0b5cff;display:grid;place-items:center;font-size:24px}.sales-chip-row{display:flex;gap:8px;flex-wrap:wrap}.sales-chip{border:1px solid var(--sales-line);border-radius:10px;background:#fff;padding:9px 14px;font-weight:700;font-size:12px;color:#0b285d}.sales-chip.active{background:#0b5cff;color:#fff;border-color:#0b5cff}.sales-grid-5{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:14px;margin-bottom:18px}.sales-grid-4{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:14px;margin-bottom:18px}.sales-stat{background:#fff;border:1px solid var(--sales-line);border-radius:15px;padding:18px;display:flex;gap:14px;align-items:center;min-height:100px}.sales-stat .ico{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;font-size:23px}.sales-stat .label{font-size:12px;font-weight:800;color:#23365f}.sales-stat .value{font-size:28px;font-weight:900;color:#061b49;line-height:1;margin-top:5px}.sales-stat .sub{font-size:11.5px;color:#607096;margin-top:5px}.sales-stat.up .sub{color:#10a561}.sales-stat.down .sub{color:#ef4444}.sblue{background:#eaf2ff;color:#0b5cff}.sgreen{background:#eafaf2;color:#10a561}.sorange{background:#fff4e3;color:#ff9300}.spurple{background:#f3ecff;color:#854dff}.sred{background:#fff0f0;color:#f04444}.steal{background:#e8fbff;color:#0e9cb4}.sales-main-grid{display:grid;grid-template-columns:minmax(0,1fr) 365px;gap:18px;align-items:start}.sales-detail{position:sticky;top:82px;background:#fff;border:1px solid var(--sales-line);border-radius:16px;min-height:360px;overflow:hidden}.sales-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--sales-line)}.sales-detail-body{padding:18px 20px}.sales-detail-title{font-size:24px;font-weight:900;color:#061b49;margin:8px 0 6px}.sales-filter-row{display:grid;grid-template-columns:minmax(260px,1fr) 160px 160px 160px auto;gap:10px;margin-bottom:16px;align-items:center}.sales-filter-row .form-control,.sales-filter-row .form-select{height:41px;border-color:var(--sales-line);border-radius:10px;font-size:13px}.sales-search{position:relative}.sales-search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#7d8bae}.sales-search input{padding-left:40px}.sales-table{width:100%;border-collapse:separate;border-spacing:0}.sales-table th{font-size:11px;color:#5c6d95;text-transform:none;font-weight:850;padding:14px 14px;border-bottom:1px solid var(--sales-line);background:#fff}.sales-table td{padding:16px 14px;border-bottom:1px solid var(--sales-line);vertical-align:middle;font-size:12.5px}.sales-table tbody tr:hover,.sales-table tbody tr.selected{background:#f3f8ff;box-shadow:inset 0 0 0 1px rgba(11,92,255,.16)}.sales-row-card{border:1px solid var(--sales-line);border-radius:14px;padding:14px;background:#fff;margin-bottom:10px;transition:.15s}.sales-row-card:hover,.sales-row-card.active{border-color:#8cbcff;background:#f6faff}.mini-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0b5cff,#55a6ff);color:#fff;display:grid;place-items:center;font-weight:900;font-size:13px;flex:0 0 auto}.logo-avatar{width:42px;height:42px;border-radius:50%;background:#eef4ff;border:1px solid var(--sales-line);display:grid;place-items:center;color:#0b5cff;font-weight:900}.status-soft{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:800}.st-blue{background:#eaf2ff;color:#0b5cff}.st-green{background:#eafaf2;color:#0b8f51}.st-yellow{background:#fff5df;color:#c37400}.st-red{background:#fff0f0;color:#dc2626}.st-purple{background:#f3ecff;color:#7547dc}.st-gray{background:#eff3f8;color:#53627d}.info-card{border:1px solid var(--sales-line);border-radius:14px;padding:16px;background:#fff}.info-card h6{font-size:13px;font-weight:900;color:#061b49;margin:0 0 13px}.kv{display:grid;grid-template-columns:120px 1fr;gap:10px;font-size:12.5px;padding:7px 0}.kv .k{color:#637197}.kv .v{font-weight:700;color:#0b2052}.sales-funnel{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:230px;justify-content:center}.funnel-step{height:45px;color:#fff;font-weight:900;text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.15;font-size:12px;clip-path:polygon(8% 0,92% 0,82% 100%,18% 100%);box-shadow:0 8px 16px rgba(11,92,255,.12)}.funnel-step small{display:block;font-weight:700;opacity:.95}.funnel-1{width:240px;background:#0b5cff}.funnel-2{width:210px;background:#15b86a}.funnel-3{width:180px;background:#ff9d18}.funnel-4{width:150px;background:#8b5cf6}.funnel-5{width:120px;background:#14b8a6}.timeline-list{position:relative}.timeline-item{display:grid;grid-template-columns:54px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid #edf2fb;align-items:center}.timeline-item:last-child{border-bottom:0}.time-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:7px}.todo-item{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #edf2fb}.todo-item:last-child{border-bottom:0}.donut-wrap{display:flex;align-items:center;gap:20px}.sales-progress{height:9px;border-radius:99px;background:#e7eefc;overflow:hidden}.sales-progress span{display:block;height:100%;background:#0b5cff;border-radius:99px}.wizard-line{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}.wizard-step{height:54px;border:1px solid var(--sales-line);border-radius:14px;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:850;background:#fff}.wizard-step .n{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#eef4ff;color:#0b5cff}.wizard-step.active{border-color:#0b5cff;background:#f6faff}.wizard-step.active .n{background:#0b5cff;color:#fff}.wizard-step.done .n{background:#1fb66d;color:#fff}.sales-form-card{background:#fff;border:1px solid var(--sales-line);border-radius:16px;padding:20px;margin-bottom:16px}.sales-form-title{font-size:16px;font-weight:900;margin:0 0 18px;color:#061b49}.upload-box{border:1.5px dashed #b9cbef;border-radius:14px;background:#f8fbff;min-height:96px;display:grid;place-items:center;text-align:center;color:#66749b}.tag-pill{display:inline-flex;align-items:center;gap:6px;background:#eafaf2;color:#087d47;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:800;margin:3px}.sales-kanban{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:14px;overflow-x:auto;padding-bottom:4px}.kanban-col{border-radius:15px;border:1px solid var(--sales-line);background:#fff;padding:12px;min-height:240px}.kanban-col .kh{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.2px;margin-bottom:10px;display:flex;justify-content:space-between}.kanban-card{border:1px solid #e5edf8;border-radius:12px;padding:11px;background:#fff;margin-bottom:8px;font-size:12px}.calendar-page-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}.sales-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--sales-line);border-radius:16px;overflow:hidden;background:#fff}.sales-cal-head{font-size:12px;font-weight:900;text-align:center;padding:12px;border-bottom:1px solid var(--sales-line);background:#fbfdff}.sales-cal-cell{min-height:130px;border-right:1px solid var(--sales-line);border-bottom:1px solid var(--sales-line);padding:10px}.sales-cal-cell:nth-child(7n){border-right:0}.sales-cal-day{font-size:13px;font-weight:850;color:#334466;margin-bottom:7px}.sales-cal-event{border-radius:8px;padding:6px 8px;font-size:11px;font-weight:800;margin-bottom:6px;background:#eef4ff;color:#0b5cff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.report-grid .wide{grid-column:span 2}.sales-metric-list .rowx{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #e4ebf6}.sales-metric-list .rowx:last-child{border-bottom:0}@media(max-width:1400px){.sales-grid-5{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.sales-main-grid,.calendar-page-grid{grid-template-columns:1fr}.sales-detail{position:static}.sales-kanban{grid-template-columns:repeat(3,minmax(190px,1fr))}.report-grid{grid-template-columns:1fr}.report-grid .wide{grid-column:auto}}@media(max-width:900px){.sales-filter-row{grid-template-columns:1fr}.sales-grid-4{grid-template-columns:1fr}.wizard-line{grid-template-columns:1fr}.sales-kanban{grid-template-columns:1fr}.sales-calendar-grid{grid-template-columns:1fr}.sales-cal-head{display:none}.sales-cal-cell{min-height:auto;border-right:0}.sales-page-head{flex-direction:column}.sales-table th,.sales-table td{white-space:nowrap}}
+.side-logout{width:100%;display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:9px;color:#aeb9cc;font-weight:500;background:transparent;border:0;text-align:left;transition:.15s}.side-logout i{font-size:16px;width:18px;text-align:center}.side-logout:hover{background:var(--nav-2);color:#fff}
+
+/* =========================================================
+   ROBUST responsive polish patch
+   Tujuan: layout tidak gepeng di tablet/phone dan area kanban/tabel tidak memaksa kolom mengecil.
+   ========================================================= */
+html,body{max-width:100%;overflow-x:hidden}
+.main,.content,.sales-ui{min-width:0}
+.table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-wrap>.sales-table,.table-wrap>.table-r{min-width:980px}
+.sales-table th,.sales-table td{line-height:1.35}
+
+/* Header/action responsive */
+.sales-page-head{min-width:0}
+.sales-page-head>div:first-child{min-width:0}
+.sales-page-head .page-actions{align-items:center}
+.sales-page-head .page-actions .form-select{min-width:170px}
+
+/* Kanban harus horizontal-scroll, bukan kolom dipaksa mengecil */
+.sales-kanban{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    gap:14px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden;
+    padding:0 2px 10px 2px;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+}
+.sales-kanban::-webkit-scrollbar{height:8px}
+.sales-kanban::-webkit-scrollbar-track{background:#eef3fb;border-radius:999px}
+.sales-kanban::-webkit-scrollbar-thumb{background:#b7c8e8;border-radius:999px}
+.sales-kanban::-webkit-scrollbar-thumb:hover{background:#8da8db}
+.kanban-col{
+    flex:0 0 238px!important;
+    width:238px!important;
+    min-width:238px!important;
+    scroll-snap-align:start;
+}
+.kanban-col .kh{display:flex;align-items:flex-start;gap:8px;line-height:1.25;min-height:32px}
+.kanban-col .kh .kh-title{min-width:0;word-break:break-word;flex:1}
+.kanban-col .kh .kh-count{white-space:nowrap;font-size:11px;margin-left:auto;text-align:right}
+.kanban-card{overflow:hidden}
+.kanban-card .fw-bold{word-break:break-word}
+.kanban-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* Filter tidak boleh overflow karena inline grid lama */
+.sales-filter-row{
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr))!important;
+    align-items:end!important;
+}
+.sales-filter-row .btn{min-height:41px}
+
+/* Detail side panel: desktop kecil/tablet diturunkan ke bawah agar konten utama tidak gepeng */
+@media(max-width:1600px){
+    .sales-main-grid,.calendar-page-grid{grid-template-columns:1fr!important}
+    .sales-detail{position:static!important;width:100%!important;min-height:auto!important}
+    .sales-detail-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .sales-detail-body>.text-center{grid-column:1/-1}
+    .sales-detail .info-card{margin-bottom:0!important}
+}
+
+/* Tablet */
+@media(max-width:1024px){
+    .content{padding:18px}
+    .topbar{padding:0 16px;height:58px}
+    .search-box{max-width:none;flex:1}
+    .topbar-icon{width:34px;height:34px}
+    .user-chip .name,.user-chip .role{display:none}
+    .sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px}
+    .sales-stat,.stat-card{padding:14px;min-height:84px}
+    .sales-stat .ico,.stat-icon{width:44px;height:44px;font-size:20px}
+    .sales-stat .value,.stat-value{font-size:22px}
+    .sales-kanban{margin-left:-2px;margin-right:-2px}
+    .kanban-col{flex-basis:260px!important;width:260px!important;min-width:260px!important}
+    .sales-detail-body{grid-template-columns:1fr 1fr}
+    .report-grid{grid-template-columns:1fr!important}
+    .report-grid .wide{grid-column:auto!important}
+    .wizard-line{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    .sales-calendar-grid{min-width:820px}
+}
+
+/* Phone */
+@media(max-width:767px){
+    body{font-size:13px}
+    .content{padding:14px 12px}
+    .topbar{gap:8px;padding:0 12px}
+    .topbar-right{gap:2px}
+    .search-box input{font-size:12px;padding-top:8px;padding-bottom:8px}
+    .page-header,.sales-page-head{flex-direction:column!important;align-items:stretch!important;gap:12px!important;margin-bottom:14px}
+    .page-title,.sales-ui .page-title{font-size:20px}
+    .page-subtitle,.sales-ui .page-subtitle{font-size:12px}
+    .page-actions,.sales-page-head .page-actions{width:100%;display:grid!important;grid-template-columns:1fr;gap:8px}
+    .page-actions .btn,.page-actions .form-select,.sales-page-head .page-actions .btn,.sales-page-head .page-actions .form-select{width:100%!important;min-width:0!important}
+    .sales-chip-row{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+    .sales-chip{white-space:nowrap;padding:8px 12px}
+    .sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:1fr!important}
+    .sales-stat,.stat-card{min-height:auto}
+    .sales-form-card,.card-r,.info-card{border-radius:12px;padding:14px}
+    .sales-filter-row{grid-template-columns:1fr!important}
+    .kanban-col{flex-basis:82vw!important;width:82vw!important;min-width:82vw!important;max-width:330px}
+    .sales-detail-body{display:block!important;padding:14px}
+    .sales-detail .info-card{margin-bottom:12px!important}
+    .kv{grid-template-columns:1fr!important;gap:2px}
+    .timeline-item{grid-template-columns:1fr!important;gap:4px!important}
+    .todo-item{grid-template-columns:26px 1fr!important}
+    .donut-wrap{flex-direction:column;align-items:flex-start}
+    .wizard-line{grid-template-columns:1fr!important}
+    .wizard-step{height:auto;min-height:48px;justify-content:flex-start;padding:10px 12px}
+    .sales-form-title{font-size:15px}
+    .upload-box{min-height:82px}
+    .sales-funnel{transform:scale(.88);transform-origin:center top;margin-bottom:-20px}
+    .funnel-1{width:220px}.funnel-2{width:195px}.funnel-3{width:170px}.funnel-4{width:145px}.funnel-5{width:120px}
+    .sales-calendar-grid{display:block!important;min-width:0!important;border-radius:12px}
+    .sales-cal-head{display:none!important}
+    .sales-cal-cell{min-height:auto;border-right:0!important;padding:10px 12px}
+    .sales-cal-cell:empty{display:none}
+    .sales-cal-day{font-size:12px;margin-bottom:6px}
+    .sales-cal-event{white-space:normal}
+    .table-wrap>.sales-table,.table-wrap>.table-r{min-width:850px}
+    .p-3.d-flex.justify-content-between{flex-direction:column;gap:10px;align-items:flex-start!important}
+}
+
+@media(max-width:420px){
+    .content{padding:12px 10px}
+    .kanban-col{flex-basis:88vw!important;width:88vw!important;min-width:88vw!important}
+    .table-wrap>.sales-table,.table-wrap>.table-r{min-width:760px}
+    .sales-table th,.sales-table td{padding:11px 10px;font-size:12px}
+}
+
+
+/* =========================================================
+   ROBUST all-menu responsive hardening
+   Scope: semua menu administrator, sales admin, sales, SPV, drafter.
+   Fokus: panel kanan tidak memampatkan tabel/form, kartu tidak gepeng, tabel tetap bisa dibaca di tablet/phone.
+   ========================================================= */
+.layout,.main,.content,.card-r,.info-card,.sales-form-card,.pra-lead-main,.sales-ui{min-width:0}
+.card-r,.info-card,.sales-form-card,.pra-lead-detail-panel,.sales-detail{max-width:100%}
+.table-wrap{max-width:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
+.table-wrap>.table-r,.table-wrap>.sales-table{min-width:1080px}
+.table-wrap>.pra-table{min-width:1120px}
+.table-r th,.table-r td,.sales-table th,.sales-table td{vertical-align:middle}
+.text-truncate-cell{max-width:280px}
+
+/* Stat cards: biarkan wrap otomatis, jangan dipaksa 5/7 kolom saat ruang sempit */
+.mini-stat-grid,.sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))!important}
+.sales-grid-5[style],.sales-grid-4[style]{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))!important}
+.sales-stat,.stat-card{min-width:0}
+.sales-stat .label,.stat-label{line-height:1.25}
+
+/* Filter umum tidak boleh membuat halaman melar */
+.filter-bar,.pra-filter,.sales-filter-row{max-width:100%}
+.pra-filter,.sales-filter-row{grid-template-columns:repeat(auto-fit,minmax(175px,1fr))!important}
+.filter-bar .form-control,.filter-bar .form-select,.pra-filter .form-control,.pra-filter .form-select,.sales-filter-row .form-control,.sales-filter-row .form-select{width:100%;max-width:none}
+.filter-search,.sales-search{min-width:0}
+
+/* Side-detail pattern: pada laptop kecil/tablet, panel kanan turun ke bawah agar konten utama tidak gepeng. */
+@media(max-width:1700px){
+    .pra-lead-shell,.sales-main-grid,.calendar-page-grid{grid-template-columns:1fr!important}
+    .pra-lead-detail-panel,.sales-detail{position:static!important;width:100%!important;max-width:none!important;top:auto!important}
+    .pra-lead-detail-panel{order:2}
+    .pra-lead-main{order:1}
+    .sales-detail-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .sales-detail-body>.text-center{grid-column:1/-1}
+    .sales-detail .info-card{margin-bottom:0!important}
+    .detail-actions{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important}
+}
+
+/* Sidebar tablet: di layar tablet sidebar jadi drawer, bukan mengambil 248px ruang konten. */
+@media(max-width:1199.98px){
+    .sidebar{transform:translateX(-100%);box-shadow:18px 0 38px rgba(0,0,0,.18)}
+    .sidebar.show{transform:none}
+    .main{margin-left:0!important;width:100%}
+    .content{padding:18px}
+    .topbar{padding:0 16px;height:60px}
+    .topbar .search-box{max-width:none}
+
+    .page-header,.sales-page-head{align-items:stretch!important}
+    .page-actions,.sales-page-head .page-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .page-actions .btn,.sales-page-head .page-actions .btn{white-space:nowrap}
+
+    .pra-card-flat,.card-r{overflow:hidden}
+    .pra-filter,.sales-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    .pra-filter .filter-search,.sales-filter-row .sales-search{grid-column:1/-1}
+
+    .table-wrap>.table-r,.table-wrap>.sales-table{min-width:980px}
+    .table-wrap>.pra-table{min-width:1050px}
+
+    .calendar-page-grid>div:first-child{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .calendar-page-grid .sales-calendar-grid{min-width:860px}
+}
+
+/* Tablet portrait / phone besar */
+@media(max-width:991.98px){
+    .content{padding:16px 14px}
+    .user-chip .name,.user-chip .role{display:none}
+    .mini-stat-grid,.sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+    .sales-detail-body{grid-template-columns:1fr 1fr}
+    .sales-page-head,.page-header{gap:12px}
+    .sales-title-wrap{min-width:0}
+    .sales-title-wrap>div:last-child{min-width:0}
+    .sales-title-icon{width:42px;height:42px;font-size:20px;flex-shrink:0}
+    .wizard-line{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+/* Phone */
+@media(max-width:767.98px){
+    html,body{overflow-x:hidden}
+    .content{padding:14px 12px}
+    .topbar{gap:8px;padding:0 10px}
+    .topbar-icon{width:32px;height:32px}
+    .topbar-right{gap:2px}
+    .search-box input{font-size:12px}
+
+    .page-header,.sales-page-head{flex-direction:column!important;align-items:stretch!important}
+    .page-actions,.sales-page-head .page-actions{display:grid!important;grid-template-columns:1fr!important;width:100%!important}
+    .page-actions .btn,.page-actions .form-select,.sales-page-head .page-actions .btn,.sales-page-head .page-actions .form-select{width:100%!important;min-width:0!important}
+
+    .mini-stat-grid,.sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:1fr!important}
+    .stat-card,.sales-stat{padding:14px;min-height:auto}
+    .stat-icon,.sales-stat .ico{width:42px;height:42px;font-size:19px}
+    .stat-value,.sales-stat .value{font-size:22px}
+
+    .pra-filter,.sales-filter-row{grid-template-columns:1fr!important}
+    .sales-recommend-grid{grid-template-columns:1fr!important}
+    .detail-header{flex-direction:column;align-items:stretch!important}
+    .detail-header .btn{width:100%}
+    .detail-actions{grid-template-columns:1fr!important}
+    .info-row{grid-template-columns:1fr;gap:2px}
+
+    .sales-detail-body{display:block!important;padding:14px}
+    .sales-detail .info-card{margin-bottom:12px!important}
+    .sales-chip-row,.tabs{flex-wrap:nowrap!important;overflow-x:auto;padding-bottom:5px;-webkit-overflow-scrolling:touch}
+    .sales-chip,.tabs a{white-space:nowrap;flex:0 0 auto}
+
+    .wizard-line{grid-template-columns:1fr!important}
+    .wizard-step{height:auto;min-height:48px;justify-content:flex-start;padding:10px 12px}
+
+    .calendar-page-grid>div:first-child{overflow-x:visible}
+    .calendar-page-grid .sales-calendar-grid{display:block!important;min-width:0!important}
+    .sales-cal-head{display:none!important}
+    .sales-cal-cell{min-height:auto;border-right:0!important;border-bottom:1px solid var(--sales-line)!important}
+    .sales-cal-cell:empty{display:none}
+    .sales-cal-event{white-space:normal}
+
+    .table-wrap>.table-r,.table-wrap>.sales-table{min-width:820px}
+    .table-wrap>.pra-table{min-width:930px}
+    .p-3.d-flex.justify-content-between{flex-direction:column;align-items:flex-start!important;gap:10px}
+    .pagination{flex-wrap:wrap}
+}
+
+@media(max-width:420px){
+    .content{padding:12px 10px}
+    .table-wrap>.table-r,.table-wrap>.sales-table{min-width:760px}
+    .table-wrap>.pra-table{min-width:850px}
+    .sales-table th,.sales-table td,.table-r th,.table-r td{padding:10px 9px;font-size:12px}
+}
+
+/* =========================================================
+   ROBUST viewport-safe responsive fix v2
+   Masalah yang diperbaiki:
+   - Pada laptop kecil/tablet, sidebar fixed membuat area konten sempit.
+   - Kanban / table / panel detail terpotong karena masih memakai layout desktop.
+   - Header action/filter melebar keluar viewport.
+   ========================================================= */
+@media (max-width:1536px){
+    /* anggap laptop kecil sebagai tablet layout agar ruang konten penuh */
+    .sidebar{
+        transform:translateX(-100%)!important;
+        box-shadow:18px 0 42px rgba(0,0,0,.22);
+    }
+    .sidebar.show{transform:translateX(0)!important}
+    .main{margin-left:0!important;width:100%!important;max-width:100%!important}
+    .topbar #sidebarToggle{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto}
+    .content{width:100%!important;max-width:100%!important;overflow-x:hidden;padding:20px 22px}
+
+    /* header tidak boleh membuat konten keluar kanan */
+    .sales-page-head,.page-header{
+        display:flex!important;
+        flex-wrap:wrap!important;
+        align-items:flex-start!important;
+        gap:12px!important;
+        max-width:100%!important;
+    }
+    .sales-page-head>div:first-child,.page-header>div:first-child{flex:1 1 420px;min-width:0!important}
+    .sales-page-head .page-actions,.page-header .page-actions{
+        flex:0 1 auto!important;
+        max-width:100%!important;
+        margin-left:0!important;
+    }
+    .sales-page-head .page-actions .form-select,
+    .page-header .page-actions .form-select{max-width:220px!important}
+
+    /* panel kanan selalu turun; jangan kompres konten utama */
+    .sales-main-grid,.pra-lead-shell,.calendar-page-grid{
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr)!important;
+        gap:16px!important;
+        width:100%!important;
+        max-width:100%!important;
+    }
+    .sales-detail,.pra-lead-detail-panel{
+        position:static!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-height:auto!important;
+        top:auto!important;
+    }
+
+    /* Kanban Activities: wrap ke beberapa baris, bukan terpotong kanan */
+    .sales-kanban{
+        display:grid!important;
+        grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;
+        gap:14px!important;
+        overflow-x:visible!important;
+        overflow-y:visible!important;
+        width:100%!important;
+        max-width:100%!important;
+        padding:0!important;
+        scroll-snap-type:none!important;
+    }
+    .kanban-col{
+        flex:initial!important;
+        width:100%!important;
+        min-width:0!important;
+        max-width:none!important;
+    }
+
+    /* filter panjang menjadi wrap rapi */
+    .sales-filter-row,.pra-filter{
+        display:grid!important;
+        grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important;
+        gap:10px!important;
+        width:100%!important;
+        max-width:100%!important;
+    }
+    .sales-filter-row>* , .pra-filter>*{min-width:0!important;max-width:100%!important}
+    .sales-filter-row .btn,.pra-filter .btn{width:100%}
+
+    /* tabel tetap di dalam card dengan scroll internal */
+    .card-r,.sales-form-card,.info-card,.pra-card-flat{max-width:100%!important;overflow:hidden}
+    .table-wrap{
+        display:block!important;
+        width:100%!important;
+        max-width:100%!important;
+        overflow-x:auto!important;
+        overflow-y:visible!important;
+        -webkit-overflow-scrolling:touch;
+    }
+    .table-wrap>.sales-table,.table-wrap>.table-r,.table-wrap>.pra-table{
+        width:max-content!important;
+        min-width:980px!important;
+        max-width:none!important;
+    }
+}
+
+@media (max-width:1199.98px){
+    .content{padding:18px 16px!important}
+    .sales-page-head,.page-header{flex-direction:column!important;align-items:stretch!important}
+    .sales-page-head>div:first-child,.page-header>div:first-child{flex:auto!important}
+    .sales-page-head .page-actions,.page-header .page-actions{width:100%!important;display:grid!important;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))!important;gap:8px!important}
+    .sales-page-head .page-actions .form-select,.page-header .page-actions .form-select{max-width:none!important;width:100%!important}
+    .sales-kanban{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))!important}
+    .mini-stat-grid,.sales-grid-5,.sales-grid-4,.stat-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}
+}
+
+@media (max-width:767.98px){
+    .content{padding:14px 12px!important}
+    .sales-kanban{grid-template-columns:1fr!important}
+    .sales-filter-row,.pra-filter{grid-template-columns:1fr!important}
+    .table-wrap>.sales-table,.table-wrap>.table-r,.table-wrap>.pra-table{min-width:760px!important}
+    .sales-chip-row,.tabs{max-width:100%;overflow-x:auto;flex-wrap:nowrap!important}
+}

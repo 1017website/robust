@@ -1,47 +1,30 @@
 @extends('layouts.app')
 @section('title', 'Design Request')
 @section('content')
-<x-page-header title="Design Request" subtitle="Permintaan desain ke tim produksi">
-    <a href="{{ route('sales.design-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Design Request Baru</a>
-</x-page-header>
-
-<div class="stat-grid">
-    <x-stat-card icon="bi-collection" color="primary" label="Total" :value="$stats['total']" />
-    <x-stat-card icon="bi-hourglass" color="info" label="Menunggu Produksi" :value="$stats['waiting']" />
-    <x-stat-card icon="bi-gear" color="warning" label="Dikerjakan" :value="$stats['progress']" />
-    <x-stat-card icon="bi-check2-circle" color="success" label="Completed" :value="$stats['completed']" />
-</div>
-
-<div class="card-r">
-    <form class="filter-bar" method="GET">
-        <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari customer / proyek...">
-        <select name="status" class="form-select">
-            <option value="">Semua Status</option>
-            @foreach(\App\Models\DesignRequest::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')==$k)>{{ $v }}</option>@endforeach
-        </select>
-        <button class="btn btn-soft btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
-    </form>
-    <div class="table-wrap">
-        <table class="table-r">
-            <thead><tr><th>Kode</th><th>Customer</th><th>Proyek</th><th>Drafter</th><th>Deadline</th><th>Progress</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-            @forelse($designRequests as $dr)
-                <tr>
-                    <td class="fw-semibold">{{ $dr->code }}</td>
-                    <td>{{ $dr->customer_name }}</td>
-                    <td>{{ $dr->project_name }}</td>
-                    <td>{{ $dr->productionPic?->name ?? '—' }}</td>
-                    <td>{{ $dr->deadline?->format('d M Y') ?? '—' }}</td>
-                    <td style="min-width:110px"><div class="prog"><span style="width:{{ $dr->progress }}%"></span></div></td>
-                    <td><x-status-badge :status="$dr->status" /></td>
-                    <td><a href="{{ route('sales.design-requests.show',$dr) }}" class="btn btn-sm btn-soft">Detail</a></td>
-                </tr>
-            @empty
-                <tr><td colspan="8"><x-empty text="Belum ada design request." /></td></tr>
-            @endforelse
-            </tbody>
-        </table>
+@php
+    use App\Support\Format;
+    $selected = $selectedRequest;
+    $statusClass = fn($s) => match($s) {'completed'=>'st-green','drafting'=>'st-blue','costing'=>'st-yellow','review'=>'st-purple','assigned'=>'st-yellow','rejected'=>'st-red', default=>'st-gray'};
+@endphp
+<div class="sales-ui">
+    <div class="sales-main-grid">
+        <div>
+            <div class="sales-page-head"><div><h1 class="page-title mb-1">Design Request</h1><div class="page-subtitle">Kelola permintaan desain dan spesifikasi teknis ke tim produksi.</div></div><a href="{{ route('sales.design-requests.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Design Request Baru</a></div>
+            <div class="sales-grid-4"><div class="sales-stat"><div class="ico sblue"><i class="bi bi-calendar2-check"></i></div><div><div class="label">Total Request</div><div class="value">{{ $stats['total'] }}</div><div class="sub">Semua Request</div></div></div><div class="sales-stat"><div class="ico sorange"><i class="bi bi-clock"></i></div><div><div class="label">Menunggu Produksi</div><div class="value">{{ $stats['waiting'] }}</div><div class="sub">Menunggu assignment</div></div></div><div class="sales-stat"><div class="ico spurple"><i class="bi bi-arrow-repeat"></i></div><div><div class="label">Sedang Dikerjakan</div><div class="value">{{ $stats['progress'] }}</div><div class="sub">Dalam proses</div></div></div><div class="sales-stat"><div class="ico sgreen"><i class="bi bi-check-circle"></i></div><div><div class="label">Selesai</div><div class="value">{{ $stats['completed'] }}</div><div class="sub">Completed</div></div></div></div>
+            <div class="card-r p-0 overflow-hidden">
+                <form class="sales-filter-row p-3 pb-0" method="GET" style="grid-template-columns:160px 160px 180px minmax(240px,1fr) auto"><select name="status" class="form-select"><option value="">Semua Status</option>@foreach(\App\Models\DesignRequest::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')==$k)>{{ $v }}</option>@endforeach</select><select class="form-select"><option>Semua Sales</option></select><select class="form-select"><option>Semua Produksi PIC</option></select><div class="sales-search"><i class="bi bi-search"></i><input name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari design request..."></div><button class="btn btn-soft"><i class="bi bi-funnel"></i></button></form>
+                <div class="table-wrap"><table class="sales-table"><thead><tr><th>No</th><th>Customer / Project</th><th>Kebutuhan</th><th>Status</th><th>PIC Produksi</th><th>Deadline</th><th>Progress</th><th>Terakhir Update</th><th></th></tr></thead><tbody>@forelse($designRequests as $dr)<tr class="{{ $selected && $selected->id===$dr->id?'selected':'' }}"><td class="fw-bold">{{ $dr->code }}</td><td><a class="fw-bold" href="{{ route('sales.design-requests.show',$dr) }}">{{ $dr->customer_name }}</a><div class="small text-muted-2">{{ $dr->project_name }}</div></td><td class="text-truncate-cell">{{ implode(', ', $dr->scope_checklist ?? []) ?: $dr->detail_need }}</td><td><span class="status-soft {{ $statusClass($dr->status) }}">{{ \App\Models\DesignRequest::statuses()[$dr->status] ?? $dr->status }}</span></td><td><div class="d-flex align-items-center gap-2">@if($dr->productionPic)<div class="mini-avatar">{{ strtoupper(substr($dr->productionPic->name,0,1)) }}</div><div>{{ $dr->productionPic->name }}<div class="small text-muted-2">Drafter</div></div>@else<span class="text-muted-2">Belum ditugaskan</span>@endif</div></td><td>{{ $dr->deadline?->translatedFormat('d M Y') ?: '-' }}</td><td><strong>{{ $dr->progress }}%</strong><div class="sales-progress mt-1"><span style="width:{{ $dr->progress }}%"></span></div></td><td>{{ $dr->updated_at->translatedFormat('d M Y') }}<div class="small text-muted-2">{{ $dr->updated_at->format('H:i') }}</div></td><td><a href="{{ route('sales.design-requests.show',$dr) }}" class="btn btn-sm btn-soft"><i class="bi bi-three-dots"></i></a></td></tr>@empty<tr><td colspan="9"><x-empty text="Belum ada design request." /></td></tr>@endforelse</tbody></table></div>
+                <div class="p-3 d-flex justify-content-between"><span class="small text-muted-2">Menampilkan {{ $designRequests->firstItem() ?? 0 }} - {{ $designRequests->lastItem() ?? 0 }} dari {{ $designRequests->total() }} request</span>{{ $designRequests->links() }}</div>
+            </div>
+        </div>
+        <aside class="sales-detail">
+            @if($selected)
+                <div class="sales-detail-head"><div><h4 class="fw-black mb-0">{{ $selected->code }}</h4><div class="small text-muted-2">{{ $selected->customer_name }}</div></div><a href="{{ route('sales.design-requests.show',$selected) }}" class="btn btn-sm btn-soft"><i class="bi bi-chevron-right"></i></a></div>
+                <div class="sales-detail-body"><span class="status-soft {{ $statusClass($selected->status) }}">{{ \App\Models\DesignRequest::statuses()[$selected->status] ?? $selected->status }}</span><div class="row g-3 mt-1"><div class="col-12"><div class="info-card"><h6>Informasi Customer</h6><div class="kv"><div class="k">Customer</div><div class="v">{{ $selected->customer_name }}</div></div><div class="kv"><div class="k">PIC</div><div class="v">{{ $selected->pic_name ?: '-' }}</div></div><div class="kv"><div class="k">Sales</div><div class="v">{{ $selected->sales?->name ?? '-' }}</div></div></div></div><div class="col-12"><div class="info-card"><h6>Kebutuhan Customer</h6><div class="fw-bold mb-2">{{ $selected->project_name }}</div>@foreach(($selected->scope_checklist ?? []) as $item)<div class="small mb-1"><i class="bi bi-check text-success me-1"></i>{{ $item }}</div>@endforeach<div class="small mt-2">{{ $selected->detail_need }}</div></div></div><div class="col-12"><div class="info-card"><h6>Output yang Diminta</h6>@foreach(($selected->outputs ?? []) as $out)<div class="small mb-1"><i class="bi bi-check-square text-success me-1"></i>{{ strtoupper(str_replace('_',' ',$out)) }}</div>@endforeach</div></div><div class="col-12"><div class="info-card"><h6>Assignment Produksi</h6><div class="d-flex gap-2 align-items-center">@if($selected->productionPic)<div class="mini-avatar">{{ strtoupper(substr($selected->productionPic->name,0,1)) }}</div><div><strong>{{ $selected->productionPic->name }}</strong><div class="small text-muted-2">Deadline {{ $selected->deadline?->translatedFormat('d M Y') }}</div></div>@else<span class="text-muted-2">Belum ditugaskan</span>@endif</div></div></div><div class="col-12"><div class="info-card"><h6>Progress Pekerjaan</h6><div class="d-flex align-items-center gap-3"><strong class="fs-3">{{ $selected->progress }}%</strong><div class="sales-progress flex-grow-1"><span style="width:{{ $selected->progress }}%"></span></div></div></div></div></div><div class="d-flex gap-2 mt-3"><a href="{{ route('sales.design-requests.show',$selected) }}" class="btn btn-soft flex-fill">Lihat Progress</a>@if($selected->status==='completed')<a href="{{ route('sales.quotations.create',['dr'=>$selected->id]) }}" class="btn btn-primary flex-fill">Generate Penawaran</a>@endif</div></div>
+            @else
+                <div class="sales-detail-body"><x-empty text="Belum ada design request." /></div>
+            @endif
+        </aside>
     </div>
-    <div class="mt-3">{{ $designRequests->links() }}</div>
 </div>
 @endsection

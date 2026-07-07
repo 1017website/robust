@@ -31,17 +31,19 @@ class CustomerController extends Controller
 
         $customers = $query->paginate(10)->withQueryString();
 
+        $scope = fn () => Customer::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
-            'total' => Customer::count(),
-            'identify' => Customer::where('pipeline_stage', 'identify')->count(),
-            'approaching' => Customer::where('pipeline_stage', 'approaching')->count(),
-            'follow_up' => Customer::where('pipeline_stage', 'follow_up')->count(),
-            'won' => Customer::where('pipeline_stage', 'won_closing')->count(),
-            'lost' => Customer::where('pipeline_stage', 'lost')->count(),
-            'maintaining' => Customer::where('pipeline_stage', 'maintaining')->count(),
+            'total' => $scope()->count(),
+            'identify' => $scope()->where('pipeline_stage', 'identify')->count(),
+            'approaching' => $scope()->where('pipeline_stage', 'approaching')->count(),
+            'follow_up' => $scope()->where('pipeline_stage', 'follow_up')->count(),
+            'won' => $scope()->where('pipeline_stage', 'won_closing')->count(),
+            'lost' => $scope()->where('pipeline_stage', 'lost')->count(),
+            'maintaining' => $scope()->where('pipeline_stage', 'maintaining')->count(),
         ];
+        $selectedCustomer = $customers->first();
 
-        return view('sales.customers.index', compact('customers', 'stats'));
+        return view('sales.customers.index', compact('customers', 'stats', 'selectedCustomer'));
     }
 
     public function create()

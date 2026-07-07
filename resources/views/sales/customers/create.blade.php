@@ -1,44 +1,13 @@
 @extends('layouts.app')
-@section('title', 'Customer Baru')
+@section('title', 'Tambah Customer')
 @section('content')
-<x-page-header title="Tambah Customer" subtitle="Daftarkan customer baru" />
-<form method="POST" action="{{ route('sales.customers.store') }}">
-    @csrf
-    <div class="row g-3">
-        <div class="col-lg-8">
-            <div class="card-r">
-                <div class="card-head"><h2>Informasi Customer</h2></div>
-                <div class="row g-3">
-                    <div class="col-md-8"><label class="form-label small fw-semibold">Nama Instansi *</label><input name="name" value="{{ old('name') }}" class="form-control" required></div>
-                    <div class="col-md-4"><label class="form-label small fw-semibold">Kategori</label>
-                        <select name="category" class="form-select"><option value="">—</option>@foreach(['Universitas','Sekolah','Rumah Sakit','Industri','Pemerintah','Laboratorium Swasta'] as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach</select>
-                    </div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Email</label><input name="email" type="email" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Telepon</label><input name="phone" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Website</label><input name="website" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Kota</label><input name="city" class="form-control"></div>
-                    <div class="col-12"><label class="form-label small fw-semibold">Alamat</label><textarea name="address" rows="2" class="form-control"></textarea></div>
-                </div>
-            </div>
-            <div class="card-r">
-                <div class="card-head"><h2>PIC Utama</h2></div>
-                <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Nama PIC</label><input name="pic_name" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Jabatan</label><input name="pic_position" class="form-control"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card-r">
-                <div class="card-head"><h2>Pipeline</h2></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Stage *</label>
-                    <select name="pipeline_stage" class="form-select">@foreach(\App\Models\Customer::stages() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Probability (%)</label><input name="probability" type="number" min="0" max="100" value="0" class="form-control"></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Catatan</label><textarea name="notes" rows="3" class="form-control"></textarea></div>
-            </div>
-            <div class="card-r"><button class="btn btn-primary w-100">Simpan Customer</button><a href="{{ route('sales.customers.index') }}" class="btn btn-soft w-100 mt-2">Batal</a></div>
-        </div>
-    </div>
-</form>
+<div class="sales-ui">
+    <form method="POST" action="{{ route('sales.customers.store') }}">
+        @csrf
+        <div class="sales-page-head"><div class="sales-title-wrap"><a href="{{ route('sales.customers.index') }}" class="btn btn-soft"><i class="bi bi-arrow-left"></i></a><div><div class="small fw-bold text-primary mb-1">Customers &gt; Daftar Customer &gt; Tambah Customer</div><h1 class="page-title mb-1">Tambah Customer (Existing)</h1><div class="page-subtitle">Form ini digunakan untuk menambahkan customer yang sudah pernah bekerja sama.</div></div></div><div class="page-actions"><a href="{{ route('sales.customers.index') }}" class="btn btn-soft">Batal</a><button class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan</button></div></div>
+        <div class="row g-3"><div class="col-xl-6"><div class="sales-form-card"><h2 class="sales-form-title">1. Informasi Customer</h2><div class="row g-3"><div class="col-md-6"><label class="form-label small fw-bold">Nama Customer *</label><input name="name" value="{{ old('name') }}" class="form-control" required placeholder="Contoh: Universitas Airlangga"></div><div class="col-md-6"><label class="form-label small fw-bold">Kategori *</label><select name="category" class="form-select" required><option value="">Pilih kategori</option>@foreach(['Pendidikan','Industri','Farmasi','Kesehatan','Pemerintah','Distributor','Kontraktor'] as $c)<option value="{{ $c }}" @selected(old('category')===$c)>{{ $c }}</option>@endforeach</select></div><div class="col-md-6"><label class="form-label small fw-bold">PIC Utama *</label><input name="pic_name" value="{{ old('pic_name') }}" class="form-control" required placeholder="Contoh: Dr. Ahmad Fadli"></div><div class="col-md-6"><label class="form-label small fw-bold">Jabatan PIC</label><input name="pic_position" value="{{ old('pic_position') }}" class="form-control" placeholder="Contoh: Kepala Laboratorium"></div><div class="col-md-6"><label class="form-label small fw-bold">Email *</label><input name="email" type="email" value="{{ old('email') }}" class="form-control" required placeholder="contoh@email.com"></div><div class="col-md-6"><label class="form-label small fw-bold">No. Telepon *</label><input name="phone" value="{{ old('phone') }}" class="form-control" required placeholder="812 3456 7890"></div><div class="col-12"><label class="form-label small fw-bold">Alamat *</label><textarea name="address" rows="4" class="form-control" required placeholder="Contoh: Kampus C Mulyorejo, Surabaya, Jawa Timur 60115">{{ old('address') }}</textarea></div><div class="col-md-3"><label class="form-label small fw-bold">Kota *</label><input name="city" value="{{ old('city') }}" class="form-control" required placeholder="Surabaya"></div><div class="col-md-3"><label class="form-label small fw-bold">Provinsi</label><input class="form-control" placeholder="Pilih provinsi"></div><div class="col-md-3"><label class="form-label small fw-bold">Kode Pos</label><input class="form-control" placeholder="60115"></div><div class="col-md-3"><label class="form-label small fw-bold">Negara</label><input class="form-control" value="Indonesia"></div></div></div><div class="sales-form-card"><h2 class="sales-form-title">3. Informasi Kerja Sama Sebelumnya</h2><div class="row g-3"><div class="col-md-4"><label class="form-label small fw-bold">Tanggal Kerja Sama Terakhir</label><input type="date" name="partner_since" class="form-control"></div><div class="col-md-4"><label class="form-label small fw-bold">Nilai Transaksi Terakhir</label><input class="form-control" placeholder="0"></div><div class="col-md-4"><label class="form-label small fw-bold">Proyek Terakhir</label><input class="form-control" placeholder="Pilih project (opsional)"></div><div class="col-12"><label class="form-label small fw-bold">Catatan Kerja Sama Sebelumnya</label><textarea name="previous_notes" rows="4" class="form-control" placeholder="Contoh: Pernah melakukan pengadaan meja laboratorium dan fume hood.">{{ old('notes') }}</textarea></div></div></div></div>
+        <div class="col-xl-6"><div class="sales-form-card"><h2 class="sales-form-title">2. Status & Klasifikasi</h2><label class="form-label small fw-bold">Status Customer *</label><div class="row g-2 mb-3">@foreach(\App\Models\Customer::stages() as $k=>$v)<div class="col-md-4"><label class="info-card d-block text-center h-100"><input type="radio" name="pipeline_stage" value="{{ $k }}" @checked(old('pipeline_stage','identify')===$k)> <div class="fw-bold mt-1">{{ $v }}</div></label></div>@endforeach</div><label class="form-label small fw-bold">Kategori Industri *</label><input name="type" value="{{ old('type') }}" class="form-control mb-3" required placeholder="Pilih kategori industri"><label class="form-label small fw-bold">Sumber Customer</label><input class="form-control mb-3" placeholder="Pilih sumber"><label class="form-label small fw-bold">Sales Owner *</label><input class="form-control" value="{{ auth()->user()->name }}" readonly><input type="hidden" name="probability" value="{{ old('probability',0) }}"><div class="alert alert-info mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Status ini akan terhubung ke Activities. Setiap perubahan status akan mempengaruhi aktivitas harian sales.</div></div><div class="sales-form-card"><h2 class="sales-form-title">4. Catatan Tambahan</h2><textarea name="notes" rows="7" class="form-control" placeholder="Tuliskan catatan tambahan tentang customer ini...">{{ old('notes') }}</textarea></div></div></div>
+        <div class="sales-form-card"><h2 class="sales-form-title">5. Lampiran <span class="text-muted-2 fw-normal">(Opsional)</span></h2><div class="upload-box"><div><i class="bi bi-cloud-arrow-up fs-1 text-primary"></i><div>Klik untuk upload atau drag & drop</div><small>PDF, DOC, JPG, PNG (Max. 10MB)</small></div></div></div>
+    </form>
+</div>
 @endsection

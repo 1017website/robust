@@ -42,7 +42,10 @@ class ActivityController extends Controller
             return [$stage => ['label' => $label, 'customers' => $q->get()]];
         });
 
-        return view('shared.activities.index', compact('activities', 'stats', 'pipeline'));
+        $selectedCustomer = $pipeline->first()['customers']->first() ?? Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->first();
+        $salesUsers = User::assignableSales();
+
+        return view('shared.activities.index', compact('activities', 'stats', 'pipeline', 'selectedCustomer', 'salesUsers'));
     }
 
     public function create()

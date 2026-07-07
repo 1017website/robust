@@ -29,6 +29,9 @@ class CalendarController extends Controller
             'upcoming' => $activities->filter(fn ($a) => $a->activity_date->isFuture())->count(),
         ];
 
-        return view('shared.calendar.index', compact('activities', 'byDate', 'month', 'year', 'stats'));
+        $todayActivities = (clone $activities)->filter(fn ($a) => $a->activity_date->isToday())->values();
+        $typeSummary = $activities->groupBy('type')->map->count();
+
+        return view('shared.calendar.index', compact('activities', 'byDate', 'month', 'year', 'stats', 'todayActivities', 'typeSummary'));
     }
 }

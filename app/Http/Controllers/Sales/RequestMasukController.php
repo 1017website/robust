@@ -29,6 +29,12 @@ class RequestMasukController extends Controller
         if ($p = $request->get('priority')) {
             $query->where('priority', $p);
         }
+        if ($request->boolean('today')) {
+            $query->whereDate('sent_at', today());
+        }
+        if ($request->boolean('week')) {
+            $query->whereBetween('sent_at', [now()->startOfWeek(), now()->endOfWeek()]);
+        }
 
         $requests = $query->paginate(8)->withQueryString();
 
@@ -39,7 +45,9 @@ class RequestMasukController extends Controller
             'ditolak' => PraLead::where('assigned_sales_id', $uid)->where('status', 'rejected')->whereDate('responded_at', '>=', today()->subDays(7))->count(),
         ];
 
-        return view('sales.request_masuk.index', compact('requests', 'stats'));
+        $selectedRequest = $requests->first();
+
+        return view('sales.request_masuk.index', compact('requests', 'stats', 'selectedRequest'));
     }
 
     public function accept(PraLead $praLead)

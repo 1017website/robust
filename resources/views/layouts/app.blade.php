@@ -24,7 +24,7 @@
     @include('layouts.sidebar')
     <div class="main">
         <header class="topbar">
-            <button class="btn btn-sm btn-light d-lg-none" id="sidebarToggle"><i class="bi bi-list"></i></button>
+            <button class="btn btn-sm btn-light d-xl-none" id="sidebarToggle"><i class="bi bi-list"></i></button>
             <div class="search-box">
                 <i class="bi bi-search"></i>
                 <input type="text" placeholder="Cari customer, PIC, proyek, atau aktivitas...">

@@ -34,7 +34,9 @@ class DesignRequestController extends Controller
             'completed' => DesignRequest::where('sales_id', Auth::id())->where('status', 'completed')->count(),
         ];
 
-        return view('sales.design_requests.index', compact('designRequests', 'stats'));
+        $selectedRequest = $designRequests->first();
+
+        return view('sales.design_requests.index', compact('designRequests', 'stats', 'selectedRequest'));
     }
 
     public function create(Request $request)

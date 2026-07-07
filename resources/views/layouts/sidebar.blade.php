@@ -15,7 +15,7 @@
     <div class="side-label">{{ strtoupper($u->roleLabel()) }}</div>
     <nav class="side-nav">
         <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="bi bi-house-door"></i> Dashboard</a>
-        @if(in_array($role, ['administrator','sales_admin','sales_spv','sales']))
+        @if(in_array($role, ['administrator','sales_admin','sales_spv']))
             <a href="{{ route('pipeline.index') }}" class="{{ request()->routeIs('pipeline.*') ? 'active' : '' }}"><i class="bi bi-kanban"></i> Monitoring Pipeline</a>
         @endif
 
@@ -66,6 +66,8 @@
             <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
             <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
+            <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'active' : '' }}"><i class="bi bi-gear"></i> Settings</a>
+            <form method="POST" action="{{ route('logout') }}" class="m-0">@csrf<button type="submit" class="side-logout"><i class="bi bi-box-arrow-right"></i> Logout</button></form>
         @endif
     </nav>
     <div class="side-foot">

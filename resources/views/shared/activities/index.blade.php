@@ -1,62 +1,34 @@
 @extends('layouts.app')
 @section('title', 'Activities')
 @section('content')
-<x-page-header title="Activities" subtitle="Aktivitas sales dan pipeline customer">
-    <a href="{{ route('activities.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Aktivitas Baru</a>
-</x-page-header>
-
-<div class="stat-grid">
-    <x-stat-card icon="bi-calendar-day" color="primary" label="Hari Ini" :value="$stats['today']" />
-    <x-stat-card icon="bi-hourglass" color="warning" label="Pending" :value="$stats['pending']" />
-    <x-stat-card icon="bi-check2-circle" color="success" label="Selesai Hari Ini" :value="$stats['completed_today']" />
-    <x-stat-card icon="bi-exclamation-triangle" color="danger" label="Terlambat" :value="$stats['overdue']" />
-</div>
-
-<div class="card-r">
-    <div class="card-head"><h2>Pipeline Customer</h2></div>
-    <div class="pipeline">
-        @foreach($pipeline as $stage => $data)
-            <div class="pipe-col">
-                <h4>{{ $data['label'] }} <span>{{ $data['customers']->count() }}</span></h4>
-                @forelse($data['customers']->take(5) as $cust)
-                    <div class="pipe-card"><div class="t">{{ $cust->name }}</div><div class="small text-muted-2">{{ $cust->probability }}% · {{ $cust->category }}</div></div>
-                @empty
-                    <div class="small text-muted-2">—</div>
-                @endforelse
+@php
+    use App\Support\Format;
+    $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
+    $typeClass = fn($t) => match($t) {'meeting'=>'sorange','call'=>'sblue','survey_lokasi'=>'sgreen','presentasi'=>'spurple','follow_up'=>'sorange','whatsapp'=>'sgreen','email'=>'sred','penawaran'=>'steal', default=>'sblue'};
+@endphp
+<div class="sales-ui">
+    <div class="sales-main-grid">
+        <div>
+            <div class="sales-page-head"><div><div class="small fw-bold text-primary mb-1">Activities</div><h1 class="page-title mb-1">Activities</h1><div class="page-subtitle">Kelola pipeline dan aktivitas harian untuk mendorong penjualan dan menjaga hubungan dengan customer.</div></div><div class="page-actions"><select class="form-select" style="width:180px"><option>Semua Sales</option>@foreach($salesUsers ?? [] as $s)<option>{{ $s->name }}</option>@endforeach</select><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div></div>
+            <div class="sales-chip-row mb-3"><span class="sales-chip active">Pipeline</span><span class="sales-chip">Activity List</span><a class="sales-chip" href="{{ route('calendar.index') }}">Calendar</a><span class="sales-chip">Tracking Harian</span></div>
+            <div class="sales-kanban mb-3">
+                @foreach($pipeline as $stage => $data)
+                    <div class="kanban-col"><div class="kh {{ $stageClass($stage) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer</span></div>@forelse($data['customers']->take(4) as $cust)<div class="kanban-card"><div class="fw-bold">{{ $cust->name }}</div><div class="small text-muted-2">{{ $cust->primaryPic?->name ?? '-' }}</div><div class="kanban-meta mt-2"><span>{{ Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span><span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span></div></div>@empty<div class="small text-muted-2">Belum ada customer</div>@endforelse<a href="{{ route('sales.customers.index',['status'=>$stage]) }}" class="btn btn-link w-100 fw-bold small">Lihat Semua</a></div>
+                @endforeach
             </div>
-        @endforeach
+            <div class="card-r p-0 overflow-hidden">
+                <div class="sales-chip-row p-3 pb-0"><span class="sales-chip active">Activity List</span><a href="{{ route('calendar.index') }}" class="sales-chip">Calendar</a><span class="sales-chip">Tracking Harian</span></div>
+                <form class="sales-filter-row p-3 pb-0" method="GET"><input type="date" class="form-control" value="{{ date('Y-m-d') }}"><select name="type" class="form-select"><option value="">Semua Tipe Aktivitas</option>@foreach(\App\Models\Activity::types() as $k=>$v)<option value="{{ $k }}" @selected(request('type')==$k)>{{ $v }}</option>@endforeach</select><select class="form-select"><option>Semua Pipeline Stage</option></select><select class="form-select"><option>Semua Customer</option></select><select name="status" class="form-select"><option value="">Semua Status</option>@foreach(['scheduled','in_progress','completed','pending','cancelled'] as $s)<option value="{{ $s }}" @selected(request('status')==$s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>@endforeach</select><button class="btn btn-soft"><i class="bi bi-download me-1"></i>Export</button></form>
+                <div class="table-wrap"><table class="sales-table"><thead><tr><th>Waktu</th><th>Aktivitas</th><th>Customer</th><th>Pipeline Stage</th><th>Tipe</th><th>Sales</th><th>Status</th><th>Next Follow Up</th><th>Aksi</th></tr></thead><tbody>@forelse($activities as $act)<tr><td>{{ $act->activity_time ? \Illuminate\Support\Carbon::parse($act->activity_time)->format('H:i') : '-' }}</td><td><div class="d-flex gap-2 align-items-center"><div class="ico {{ $typeClass($act->type) }}" style="width:32px;height:32px;border-radius:8px;display:grid;place-items:center"><i class="bi bi-{{ $act->type==='call'?'telephone':($act->type==='email'?'envelope':($act->type==='meeting'?'people':'chat-dots')) }}"></i></div><div><div class="fw-bold">{{ $act->title }}</div><div class="small text-muted-2">{{ $act->description }}</div></div></div></td><td><strong>{{ $act->customer?->name ?? $act->lead?->instansi ?? '-' }}</strong><div class="small text-muted-2">{{ $act->customer?->primaryPic?->name ?? '' }}</div></td><td><span class="status-soft {{ $stageClass($act->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$act->pipeline_stage] ?? ($act->pipeline_stage ?: '-') }}</span></td><td><span class="status-soft st-blue">{{ \App\Models\Activity::types()[$act->type] ?? $act->type }}</span></td><td>{{ $act->sales?->name ?? '-' }}</td><td><x-status-badge :status="$act->status" /></td><td>{{ $act->next_followup_date?->translatedFormat('d M H:i') ?: '-' }}</td><td>@if($act->status !== 'completed')<form method="POST" action="{{ route('activities.status',$act) }}">@csrf @method('PUT')<input type="hidden" name="status" value="completed"><button class="btn btn-sm btn-soft text-success"><i class="bi bi-check-lg"></i></button></form>@else<span class="text-muted-2">—</span>@endif</td></tr>@empty<tr><td colspan="9"><x-empty text="Belum ada aktivitas." /></td></tr>@endforelse</tbody></table></div><div class="p-3 d-flex justify-content-between"><span class="small text-muted-2">Menampilkan {{ $activities->firstItem() ?? 0 }} - {{ $activities->lastItem() ?? 0 }} dari {{ $activities->total() }} data</span>{{ $activities->links() }}</div>
+            </div>
+        </div>
+        <aside class="sales-detail">
+            @if($selectedCustomer)
+                <div class="sales-detail-head"><a href="#" class="btn btn-sm btn-link text-dark ms-auto"><i class="bi bi-x-lg"></i></a></div><div class="sales-detail-body"><div class="text-center mb-3"><div class="logo-avatar mx-auto mb-2" style="width:64px;height:64px"><i class="bi bi-building fs-3"></i></div><h4 class="fw-black">{{ $selectedCustomer->name }}</h4><span class="status-soft {{ $stageClass($selectedCustomer->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$selectedCustomer->pipeline_stage] ?? $selectedCustomer->pipeline_stage }}</span></div><div class="info-card mb-3"><h6>Pipeline Progress</h6>@foreach(\App\Models\Customer::stages() as $k=>$v)<div class="d-flex align-items-center gap-2 mb-2"><i class="bi bi-{{ $selectedCustomer->pipeline_stage===$k?'check-circle-fill text-success':'circle text-muted' }}"></i><span>{{ $v }}</span><span class="ms-auto small text-muted-2">{{ $selectedCustomer->pipeline_stage===$k ? $selectedCustomer->updated_at->translatedFormat('d M Y') : '-' }}</span></div>@endforeach</div><div class="info-card mb-3"><h6>Timeline Aktivitas</h6>@forelse($selectedCustomer->activities()->latest('activity_date')->take(4)->get() as $a)<div class="timeline-item" style="grid-template-columns:70px 1fr"><span class="small text-muted-2">{{ $a->activity_date->translatedFormat('d M Y') }}</span><div><strong>{{ $a->title }}</strong><div class="small text-muted-2">{{ $a->description }}</div></div></div>@empty<div class="small text-muted-2">Belum ada aktivitas.</div>@endforelse</div><div class="info-card"><h6>Informasi Lainnya</h6><div class="kv"><div class="k">PIC Customer</div><div class="v">{{ $selectedCustomer->primaryPic?->name ?? '-' }}</div></div><div class="kv"><div class="k">Email</div><div class="v">{{ $selectedCustomer->email ?: '-' }}</div></div><div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $selectedCustomer->phone ?: '-' }}</div></div><a href="{{ route('sales.customers.show',$selectedCustomer) }}" class="btn btn-soft w-100 mt-3">Lihat Detail Customer <i class="bi bi-arrow-right"></i></a></div></div>
+            @else
+                <div class="sales-detail-body"><x-empty text="Belum ada customer untuk ditampilkan." /></div>
+            @endif
+        </aside>
     </div>
-</div>
-
-<div class="card-r">
-    <form class="filter-bar" method="GET">
-        <select name="type" class="form-select"><option value="">Semua Tipe</option>@foreach(\App\Models\Activity::types() as $k=>$v)<option value="{{ $k }}" @selected(request('type')==$k)>{{ $v }}</option>@endforeach</select>
-        <select name="status" class="form-select"><option value="">Semua Status</option>@foreach(['scheduled','in_progress','completed','pending','cancelled'] as $s)<option value="{{ $s }}" @selected(request('status')==$s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>@endforeach</select>
-        <button class="btn btn-soft btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
-    </form>
-    <div class="table-wrap">
-        <table class="table-r">
-            <thead><tr><th>Tanggal</th><th>Aktivitas</th><th>Tipe</th><th>Customer</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-            @forelse($activities as $act)
-                <tr>
-                    <td>{{ $act->activity_date->format('d M Y') }}<div class="small text-muted-2">{{ $act->activity_time ? \Illuminate\Support\Carbon::parse($act->activity_time)->format('H:i') : '' }}</div></td>
-                    <td class="fw-semibold">{{ $act->title }}</td>
-                    <td><span class="pill">{{ \App\Models\Activity::types()[$act->type] ?? $act->type }}</span></td>
-                    <td>{{ $act->customer?->name ?? '—' }}</td>
-                    <td><x-status-badge :status="$act->status" /></td>
-                    <td>
-                        @if($act->status !== 'completed')
-                        <form method="POST" action="{{ route('activities.status',$act) }}">@csrf @method('PUT')<input type="hidden" name="status" value="completed"><button class="btn btn-sm btn-soft text-success"><i class="bi bi-check-lg"></i></button></form>
-                        @endif
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="6"><x-empty text="Belum ada aktivitas." /></td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-    <div class="mt-3">{{ $activities->links() }}</div>
 </div>
 @endsection

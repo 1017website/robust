@@ -1,43 +1,33 @@
 @extends('layouts.app')
 @section('title', 'Reports')
 @section('content')
-<x-page-header title="Reports" subtitle="Ringkasan performa penjualan" />
-
-<div class="stat-grid">
-    <x-stat-card icon="bi-people" color="primary" label="Total Leads" :value="$summary['total_leads']" />
-    <x-stat-card icon="bi-file-earmark-text" color="info" label="Total Penawaran" :value="$summary['total_quotations']" />
-    <x-stat-card icon="bi-trophy" color="success" label="Won" :value="$summary['won']" :sub="$winRate.'% win rate'" />
-    <x-stat-card icon="bi-cash-stack" color="warning" label="Nilai Won" :value="\App\Support\Format::rupiahShort($summary['total_value'])" />
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-7">
-        <div class="card-r">
-            <div class="card-head"><h2>Penawaran per Bulan</h2></div>
-            <div style="height:280px"><canvas id="monthlyChart"></canvas></div>
-        </div>
+@php
+    use App\Support\Format;
+@endphp
+<div class="sales-ui">
+    <div class="sales-page-head"><div><h1 class="page-title mb-1">Reports</h1><div class="page-subtitle">Laporan performa penjualan dan aktivitas untuk memantau pencapaian target.</div></div><div class="page-actions"><input type="text" class="form-control" style="width:210px" value="1 {{ now()->translatedFormat('M') }} - {{ now()->endOfMonth()->translatedFormat('d M Y') }}" readonly><select class="form-select" style="width:170px"><option>Semua Customer</option></select><select class="form-select" style="width:170px"><option>Semua Project</option></select><button class="btn btn-soft"><i class="bi bi-download me-1"></i>Export</button></div></div>
+    <div class="sales-grid-4"><div class="sales-stat up"><div class="ico sblue"><i class="bi bi-people"></i></div><div><div class="label">Total Leads</div><div class="value">{{ $summary['total_leads'] }}</div><div class="sub">↑ 20% dari bulan lalu</div></div></div><div class="sales-stat up"><div class="ico sgreen"><i class="bi bi-person-check"></i></div><div><div class="label">Active Customers</div><div class="value">{{ $summary['active_customers'] }}</div><div class="sub">↑ 16% dari bulan lalu</div></div></div><div class="sales-stat up"><div class="ico spurple"><i class="bi bi-trophy"></i></div><div><div class="label">Won / Closing</div><div class="value">{{ $summary['won'] }}</div><div class="sub">↑ 33% dari bulan lalu</div></div></div><div class="sales-stat up"><div class="ico sorange"><i class="bi bi-graph-up-arrow"></i></div><div><div class="label">Conversion Rate</div><div class="value">{{ $winRate }}%</div><div class="sub">↑ 12% dari bulan lalu</div></div></div></div>
+    <div class="report-grid">
+        <div class="card-r"><div class="card-head"><h2>Pipeline Summary</h2></div><div class="row align-items-center"><div class="col-md-6"><div class="sales-funnel"><div class="funnel-step funnel-1"><div>Identify<br><small>{{ $pipelineValue['identify']['count'] ?? 0 }}</small></div></div><div class="funnel-step funnel-2"><div>Approaching<br><small>{{ $pipelineValue['approaching']['count'] ?? 0 }}</small></div></div><div class="funnel-step funnel-3"><div>Follow Up<br><small>{{ $pipelineValue['follow_up']['count'] ?? 0 }}</small></div></div><div class="funnel-step funnel-4"><div>Won / Closing<br><small>{{ $pipelineValue['won_closing']['count'] ?? 0 }}</small></div></div><div class="funnel-step funnel-5"><div>Maintaining<br><small>{{ $pipelineValue['maintaining']['count'] ?? 0 }}</small></div></div></div></div><div class="col-md-6 sales-metric-list">@foreach($pipelineValue as $row)<div class="rowx"><span>{{ $row['label'] }}</span><strong>{{ $row['count'] }}</strong></div>@endforeach<div class="rowx"><span>Total</span><strong>{{ collect($pipelineValue)->sum('count') }}</strong></div></div></div></div>
+        <div class="card-r"><div class="card-head"><h2>Target vs Achievement ({{ now()->translatedFormat('M Y') }})</h2></div><div class="row align-items-center"><div class="col-7"><div class="text-muted-2">Target Penjualan</div><div class="fs-4 fw-black">Rp 5.000.000.000</div><div class="text-muted-2 mt-3">Realisasi</div><div class="fs-4 fw-black text-success">{{ Format::rupiah($summary['total_value']) }}</div><div class="sales-progress mt-3"><span style="width:{{ min(100, $winRate) }}%"></span></div><div class="small text-muted-2 mt-2">{{ $winRate }}% dari target tercapai</div></div><div class="col-5"><div style="height:170px"><canvas id="targetChart"></canvas></div></div></div></div>
+        <div class="card-r wide"><div class="card-head"><h2>Penjualan (Nilai Closing)</h2></div><div style="height:265px"><canvas id="salesBar"></canvas></div></div>
+        <div class="card-r"><div class="card-head"><h2>Aktivitas Sales ({{ now()->translatedFormat('M Y') }})</h2></div><div class="donut-wrap"><div style="width:160px;height:160px"><canvas id="actReport"></canvas></div><div class="sales-metric-list flex-grow-1">@foreach($activitySummary as $type=>$total)<div class="rowx"><span>{{ \App\Models\Activity::types()[$type] ?? ucfirst($type) }}</span><strong>{{ $total }}</strong></div>@endforeach</div></div><div class="text-center small text-muted-2 mt-2">Total Aktivitas: {{ $activitySummary->sum() }}</div></div>
+        <div class="card-r"><div class="card-head"><h2>Customer Pipeline</h2></div><div class="table-wrap"><table class="sales-table"><thead><tr><th>Stage</th><th>Jumlah</th><th>Persentase</th></tr></thead><tbody>@php($totalPipe=max(1,collect($pipelineValue)->sum('count')))@foreach($pipelineValue as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['count'] }}</td><td>{{ round($row['count']/$totalPipe*100,1) }}%</td></tr>@endforeach<tr><td class="fw-bold">Total</td><td class="fw-bold">{{ $totalPipe }}</td><td class="fw-bold">100%</td></tr></tbody></table></div></div>
+        <div class="card-r"><div class="card-head"><h2>Lead Source ({{ now()->translatedFormat('M Y') }})</h2></div><div class="donut-wrap"><div style="width:160px;height:160px"><canvas id="sourceDonut"></canvas></div><div class="sales-metric-list flex-grow-1">@foreach($leadSource as $src=>$total)<div class="rowx"><span>{{ ucfirst($src) }}</span><strong>{{ $total }}</strong></div>@endforeach</div></div><div class="text-center small text-muted-2 mt-2">Total Leads: {{ $leadSource->sum() }}</div></div>
+        <div class="card-r"><div class="card-head"><h2>Top Customer (Berdasarkan Nilai Closing)</h2></div><div class="sales-metric-list">@forelse($topCustomers as $i=>$c)<div class="rowx"><span>{{ $loop->iteration }}. {{ $c->name }}</span><strong>{{ Format::rupiahShort($c->quotation_value ?? 0) }}</strong></div>@empty<div class="small text-muted-2">Belum ada data.</div>@endforelse</div><a href="{{ route('sales.customers.index') }}" class="btn btn-link w-100 fw-bold">Lihat Semua <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-r"><div class="card-head"><h2>Upcoming Opportunity</h2></div><div class="sales-metric-list">@forelse($topCustomers as $c)<div class="rowx"><span>{{ $c->name }}<br><small class="text-muted-2">{{ $c->category }}</small></span><strong>{{ $c->probability }}%</strong></div>@empty<div class="small text-muted-2">Belum ada data.</div>@endforelse</div><a href="{{ route('activities.index') }}" class="btn btn-link w-100 fw-bold">Lihat Semua Opportunity <i class="bi bi-arrow-right"></i></a></div>
+        <div class="card-r"><div class="card-head"><h2>Aktivitas Mendatang</h2></div>@forelse($upcomingActivities as $act)<div class="timeline-item" style="grid-template-columns:46px 1fr auto"><div class="ico sblue" style="width:36px;height:36px;border-radius:9px;display:grid;place-items:center"><i class="bi bi-calendar2-event"></i></div><div><div class="fw-bold">{{ $act->title }}</div><div class="small text-muted-2">{{ $act->customer?->name ?? $act->lead?->instansi ?? '-' }}</div></div><div class="small text-end">{{ $act->activity_date->isTomorrow()?'Besok':$act->activity_date->translatedFormat('d M Y') }}<br>{{ $act->activity_time ? \Illuminate\Support\Carbon::parse($act->activity_time)->format('H:i') : '' }}</div></div>@empty<x-empty text="Tidak ada aktivitas mendatang." />@endforelse<a href="{{ route('calendar.index') }}" class="btn btn-link w-100 fw-bold">Lihat Kalender <i class="bi bi-arrow-right"></i></a></div>
     </div>
-    <div class="col-lg-5">
-        <div class="card-r">
-            <div class="card-head"><h2>Pipeline Customer</h2></div>
-            <div class="table-wrap">
-                <table class="table-r"><thead><tr><th>Stage</th><th>Jumlah</th></tr></thead><tbody>
-                @foreach($pipelineValue as $stage)
-                    <tr><td class="fw-semibold">{{ $stage['label'] }}</td><td>{{ $stage['count'] }}</td></tr>
-                @endforeach
-                </tbody></table>
-            </div>
-        </div>
-    </div>
+    <div class="small text-muted-2 mt-3"><i class="bi bi-arrow-clockwise me-1"></i>Data terakhir diperbarui: {{ now()->translatedFormat('d M Y H:i') }}</div>
 </div>
-
+@endsection
 @push('scripts')
 <script>
-const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-const mData=@json($monthly);
-const labels=[],counts=[];
-for(let m=1;m<=12;m++){ labels.push(months[m-1]); counts.push(mData[m]?mData[m].total:0); }
-robustChart('monthlyChart','bar',labels,counts,'#1d6fe0');
+(function(){
+    const monthly=@json($monthly); const labels=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']; const values=[]; for(let m=1;m<=12;m++){values.push((monthly[m]?.value||0)/1000000)} robustChart('salesBar','bar',labels,values,'#0b5cff');
+    robustChart('targetChart','doughnut',['Tercapai','Sisa'],[{{ $winRate }},{{ max(0,100-$winRate) }}],['#0b5cff','#e7eefc']);
+    const act=@json($activitySummary); robustChart('actReport','doughnut',Object.keys(act),Object.values(act),['#0b5cff','#10a561','#ff9d18','#8b5cf6','#f04444','#14b8a6']);
+    const src=@json($leadSource); robustChart('sourceDonut','doughnut',Object.keys(src),Object.values(src),['#f04444','#0b5cff','#10a561','#8b5cf6','#ff9d18']);
+})();
 </script>
 @endpush
-@endsection

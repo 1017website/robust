@@ -1,53 +1,29 @@
 @extends('layouts.app')
 @section('title', 'Detail Lead')
 @section('content')
-<x-page-header :title="$lead->instansi" :subtitle="$lead->code.' · '.$lead->lab_name">
-    <a href="{{ route('sales.leads.edit',$lead) }}" class="btn btn-soft btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
-    <a href="{{ route('sales.design-requests.create',['lead'=>$lead->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Buat Design Request</a>
-</x-page-header>
-
-<div class="row g-3">
-    <div class="col-lg-8">
-        <div class="card-r">
-            <div class="card-head"><h2>Informasi Lead</h2><x-status-badge :status="$lead->stage" /></div>
-            <div class="row g-3">
-                <div class="col-md-6"><div class="small text-muted-2">PIC</div><div class="fw-semibold">{{ $lead->pic_name }} @if($lead->pic_position)<span class="text-muted-2">({{ $lead->pic_position }})</span>@endif</div></div>
-                <div class="col-md-6"><div class="small text-muted-2">Kontak</div><div class="fw-semibold">{{ $lead->phone }} · {{ $lead->email ?? '—' }}</div></div>
-                <div class="col-md-6"><div class="small text-muted-2">Lokasi</div><div class="fw-semibold">{{ $lead->location }}, {{ $lead->city }}</div></div>
-                <div class="col-md-6"><div class="small text-muted-2">Sumber</div><div class="fw-semibold">{{ ucfirst($lead->source) }}</div></div>
-                <div class="col-12"><div class="small text-muted-2">Deskripsi Kebutuhan</div><div>{{ $lead->need_description ?? '—' }}</div></div>
-                @if($lead->scope_items)
-                <div class="col-12"><div class="small text-muted-2 mb-1">Scope Item</div>
-                    @foreach($lead->scope_items as $item)<span class="pill me-1 mb-1">{{ $item }}</span>@endforeach
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <div class="card-r">
-            <div class="card-head"><h2>Design Request Terkait</h2></div>
-            @forelse($lead->designRequests as $dr)
-                <div class="pipe-card d-flex justify-content-between align-items-center">
-                    <div><div class="t">{{ $dr->code }} · {{ $dr->project_name }}</div><div class="small text-muted-2">{{ $dr->created_at->format('d M Y') }}</div></div>
-                    <x-status-badge :status="$dr->status" />
-                </div>
-            @empty
-                <x-empty text="Belum ada design request." />
-            @endforelse
-        </div>
+@php
+    use App\Support\Format;
+@endphp
+<div class="sales-ui">
+    <div class="sales-page-head">
+        <div class="sales-title-wrap"><a href="{{ route('sales.leads.index') }}" class="btn btn-soft"><i class="bi bi-arrow-left"></i></a><div><div class="d-flex gap-2 align-items-center"><h1 class="page-title mb-0">Detail Lead</h1><span class="status-soft st-green">{{ ucfirst($lead->status) }}</span></div><div class="page-subtitle">ID Lead: {{ $lead->code }} · Dibuat: {{ $lead->created_at->translatedFormat('d M Y, H:i') }} oleh {{ $lead->creator?->name ?? '-' }}</div></div></div>
+        <div class="page-actions"><a href="{{ route('sales.leads.edit',$lead) }}" class="btn btn-soft"><i class="bi bi-pencil me-1"></i>Edit</a><a href="{{ route('sales.design-requests.create',['lead'=>$lead->id]) }}" class="btn btn-primary"><i class="bi bi-file-plus me-1"></i>Buat Design Request</a></div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card-r">
-            <div class="card-head"><h2>Ringkasan</h2></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Prioritas</span><x-status-badge :status="$lead->priority" /></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Estimasi Min</span><span class="fw-semibold">{{ $lead->est_value_min ? \App\Support\Format::rupiah($lead->est_value_min) : '—' }}</span></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Estimasi Max</span><span class="fw-semibold">{{ $lead->est_value_max ? \App\Support\Format::rupiah($lead->est_value_max) : '—' }}</span></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Dibuat</span><span class="fw-semibold">{{ $lead->created_at->format('d M Y') }}</span></div>
+    <div class="sales-chip-row mb-3"><span class="sales-chip active">Ringkasan</span><span class="sales-chip">Aktivitas</span><span class="sales-chip">Catatan</span><span class="sales-chip">Dokumen</span><span class="sales-chip">Riwayat</span><span class="sales-chip">Tindak Lanjut</span></div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="info-card mb-3"><h6><i class="bi bi-person sblue rounded p-2 me-2"></i>Informasi Customer</h6><div class="row"><div class="col-md-6"><div class="kv"><div class="k">Nama Instansi</div><div class="v">{{ $lead->instansi }}</div></div><div class="kv"><div class="k">PIC</div><div class="v">{{ $lead->pic_name }}</div></div><div class="kv"><div class="k">No. WhatsApp</div><div class="v">{{ $lead->phone ?: '-' }}</div></div><div class="kv"><div class="k">Email</div><div class="v">{{ $lead->email ?: '-' }}</div></div></div><div class="col-md-6"><div class="kv"><div class="k">Jabatan PIC</div><div class="v">{{ $lead->pic_position ?: '-' }}</div></div><div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $lead->phone ?: '-' }}</div></div><div class="kv"><div class="k">Lokasi</div><div class="v">{{ $lead->location ?: '-' }}</div></div><div class="kv"><div class="k">Tipe Instansi</div><div class="v">{{ $lead->instansi_type ?: '-' }}</div></div></div></div></div>
+            <div class="info-card mb-3"><h6><i class="bi bi-clipboard-check sgreen rounded p-2 me-2"></i>Kebutuhan Awal</h6><div class="row"><div class="col-md-6"><div class="kv"><div class="k">Nama Laboratorium / Proyek</div><div class="v">{{ $lead->lab_name ?: '-' }}</div></div><div class="kv"><div class="k">Deskripsi Kebutuhan</div><div class="v">{{ $lead->need_description ?: '-' }}</div></div></div><div class="col-md-6"><div class="k small text-muted-2 mb-2">Ruang Lingkup</div>@foreach(($lead->scope_items ?? []) as $item)<span class="tag-pill">{{ $item }}</span>@endforeach @if(empty($lead->scope_items))<span class="text-muted-2">-</span>@endif<div class="kv mt-2"><div class="k">Estimasi Budget</div><div class="v">{{ Format::rupiah($lead->est_value_min) }} - {{ Format::rupiah($lead->est_value_max) }}</div></div></div></div></div>
+            <div class="info-card"><h6><i class="bi bi-info-circle sorange rounded p-2 me-2"></i>Informasi Tambahan</h6><div class="row"><div class="col-md-6"><div class="kv"><div class="k">Catatan Awal</div><div class="v">{{ $lead->initial_note ?: '-' }}</div></div></div><div class="col-md-6"><div class="kv"><div class="k">Rencana Tindak Lanjut Awal</div><div class="v">{{ $lead->initial_followup_date?->translatedFormat('d M Y') ?: '-' }}</div></div><div class="kv"><div class="k">Preferensi Kontak</div><div class="v">{{ $lead->contact_preference ?: '-' }}</div></div><div class="kv"><div class="k">Waktu Kontak Terbaik</div><div class="v">{{ $lead->best_contact_time ?: '-' }}</div></div></div></div></div>
         </div>
-        @if($lead->initial_note)
-        <div class="card-r"><div class="card-head"><h2>Catatan</h2></div><p class="mb-0">{{ $lead->initial_note }}</p></div>
-        @endif
+        <div class="col-xl-4">
+            <div class="info-card mb-3"><h6>Ringkasan Lead</h6><div class="kv"><div class="k">Sumber Lead</div><div class="v">{{ ucfirst($lead->source) }}</div></div><div class="kv"><div class="k">Prioritas</div><div class="v">{{ ucfirst($lead->priority) }}</div></div><div class="kv"><div class="k">Tahap Saat Ini</div><div class="v"><span class="status-soft st-green">{{ ucfirst(str_replace('_',' ',$lead->stage)) }}</span></div></div><div class="kv"><div class="k">Sales</div><div class="v">{{ $lead->sales?->name ?? '-' }}</div></div><div class="kv"><div class="k">Dibuat Oleh</div><div class="v">{{ $lead->creator?->name ?? '-' }}</div></div><div class="kv"><div class="k">Terakhir Diperbarui</div><div class="v">{{ $lead->updated_at->translatedFormat('d M Y, H:i') }}</div></div></div>
+            <div class="info-card mb-3"><h6>Dokumen Pendukung</h6>@forelse($lead->documents as $doc)<div class="sales-row-card d-flex justify-content-between align-items-center"><span><i class="bi bi-file-earmark me-2"></i>{{ $doc->title ?? $doc->file_name }}</span><a href="#"><i class="bi bi-download"></i></a></div>@empty<div class="small text-muted-2">Belum ada dokumen.</div>@endforelse</div>
+            <div class="info-card mb-3"><h6>Aktivitas Terakhir</h6><div class="timeline-list"><div class="timeline-item" style="grid-template-columns:26px 1fr"><span class="time-dot bg-primary"></span><div><div class="fw-bold">Lead dibuat</div><div class="small text-muted-2">{{ $lead->created_at->translatedFormat('d M Y, H:i') }}</div></div></div>@if($lead->praLead)<div class="timeline-item" style="grid-template-columns:26px 1fr"><span class="time-dot bg-success"></span><div><div class="fw-bold">Lead diterima dari Request Masuk</div><div class="small text-muted-2">{{ $lead->praLead->responded_at?->translatedFormat('d M Y, H:i') }}</div></div></div>@endif</div></div>
+            <div class="info-card"><h6>Tindak Lanjut Terjadwal</h6><a href="{{ route('activities.create') }}" class="btn btn-soft w-100">Buat Jadwal / Aktivitas</a></div>
+        </div>
     </div>
 </div>
 @endsection

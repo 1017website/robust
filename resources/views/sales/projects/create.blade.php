@@ -1,53 +1,18 @@
 @extends('layouts.app')
-@section('title', 'Project Baru')
+@section('title', 'Tambah Project')
 @section('content')
-<x-page-header title="Buat Project" subtitle="Konversi penawaran menang menjadi project" />
-<form method="POST" action="{{ route('sales.projects.store') }}">
-    @csrf
-    <div class="row g-3">
-        <div class="col-lg-8">
-            <div class="card-r">
-                <div class="card-head"><h2>Informasi Project</h2></div>
-                <div class="row g-3">
-                    <div class="col-12"><label class="form-label small fw-semibold">Sumber Penawaran *</label>
-                        <select name="quotation_id" class="form-select select2" required>
-                            <option value="">— Pilih penawaran Won —</option>
-                            @foreach($wonQuotations as $q)<option value="{{ $q->id }}" @selected($quotation?->id==$q->id)>{{ $q->code }} · {{ $q->customer_name }} ({{ \App\Support\Format::rupiahShort($q->grand_total) }})</option>@endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-8"><label class="form-label small fw-semibold">Nama Project *</label><input name="name" value="{{ $quotation?->project_name }}" class="form-control" required></div>
-                    <div class="col-md-4"><label class="form-label small fw-semibold">Prioritas</label><select name="priority" class="form-select"><option value="medium">Medium</option><option value="high">High</option><option value="low">Low</option></select></div>
-                    <div class="col-12"><label class="form-label small fw-semibold">Deskripsi</label><textarea name="description" rows="2" class="form-control"></textarea></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Tanggal Mulai *</label><input name="start_date" type="date" value="{{ date('Y-m-d') }}" class="form-control" required></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Target Selesai *</label><input name="target_date" type="date" class="form-control" required></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Metode Kerja</label><input name="work_method" class="form-control" placeholder="mis. Turnkey"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">Skema Pembayaran</label><input name="payment_scheme" class="form-control" placeholder="mis. DP 30% - 40% - 30%"></div>
-                    <div class="col-12"><label class="form-label small fw-semibold">Lokasi</label><input name="location" class="form-control"></div>
-                    <div class="col-12"><label class="form-label small fw-semibold">Scope of Work</label><textarea name="scope_of_work" rows="2" class="form-control"></textarea></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card-r">
-                <div class="card-head"><h2>Tim</h2></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Project Manager *</label>
-                    <select name="project_manager_id" class="form-select select2" required>
-                        <option value="">— Pilih —</option>
-                        @foreach($managers as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach
-                    </select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Status Awal</label>
-                    <select name="status" class="form-select">@foreach(\App\Models\Project::statuses() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Tim Internal</label>
-                    <select name="internal_team[]" class="form-select select2" multiple>
-                        @foreach($team as $t)<option value="{{ $t->id }}">{{ $t->name }} ({{ $t->roleLabel() }})</option>@endforeach
-                    </select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Catatan</label><textarea name="note" rows="2" class="form-control"></textarea></div>
-            </div>
-            <div class="card-r"><button class="btn btn-primary w-100">Buat Project</button></div>
-        </div>
-    </div>
-</form>
+@php
+    use App\Support\Format;
+@endphp
+<div class="sales-ui">
+    <form method="POST" action="{{ route('sales.projects.store') }}">
+        @csrf
+        <div class="sales-page-head"><div class="sales-title-wrap"><a href="{{ route('sales.projects.index') }}" class="btn btn-soft"><i class="bi bi-arrow-left"></i></a><div><div class="small fw-bold text-primary mb-1">Projects &gt; Daftar Project &gt; Tambah Project</div><h1 class="page-title mb-1">Tambah Project</h1><div class="page-subtitle">Buat project baru dari penawaran yang telah Won / Closing.</div></div></div><div class="page-actions"><a href="{{ route('sales.projects.index') }}" class="btn btn-soft">Batal</a><button class="btn btn-primary"><i class="bi bi-check-square me-1"></i>Simpan Project</button></div></div>
+        <div class="alert alert-primary rounded-4 border-0"><i class="bi bi-info-circle-fill me-2"></i>Project ini akan dibuat dari penawaran berstatus Won / Closing. Data customer, PIC, dan beberapa informasi penawaran akan otomatis terisi.</div>
+        <div class="row g-3"><div class="col-xl-4"><div class="sales-form-card"><h2 class="sales-form-title">1. Sumber Penawaran (Won / Closing)</h2><label class="form-label small fw-bold">Penawaran *</label><select name="quotation_id" class="form-select select2" required><option value="">Pilih penawaran</option>@foreach($wonQuotations as $q)<option value="{{ $q->id }}" @selected($quotation?->id==$q->id)>{{ $q->code }} - {{ $q->project_name }}</option>@endforeach</select>@if($quotation)<div class="info-card mt-3"><span class="status-soft st-green">Won / Closing</span><div class="kv"><div class="k">Customer</div><div class="v">{{ $quotation->customer_name }}</div></div><div class="kv"><div class="k">PIC Customer</div><div class="v">{{ $quotation->pic_name }}</div></div><div class="kv"><div class="k">Sales</div><div class="v">{{ $quotation->sales?->name }}</div></div><div class="kv"><div class="k">Total Penawaran</div><div class="v">{{ Format::rupiah($quotation->grand_total) }}</div></div><div class="kv"><div class="k">Tanggal Penawaran</div><div class="v">{{ $quotation->quote_date?->translatedFormat('d M Y') }}</div></div></div>@endif</div><div class="sales-form-card"><h2 class="sales-form-title">2. Informasi Project</h2><label class="form-label small fw-bold">Nama Project *</label><input name="name" value="{{ old('name',$quotation?->project_name) }}" class="form-control" required><label class="form-label small fw-bold mt-3">Kode Project</label><input name="code" value="{{ old('code') }}" class="form-control" placeholder="Auto jika dikosongkan"><label class="form-label small fw-bold mt-3">Deskripsi Project</label><textarea name="description" rows="4" class="form-control">{{ old('description') }}</textarea><div class="row g-3 mt-0"><div class="col-md-6"><label class="form-label small fw-bold">Kategori Project *</label><input name="category" class="form-control" value="{{ old('category') }}" placeholder="Pendidikan"></div><div class="col-md-6"><label class="form-label small fw-bold">Jenis Project</label><input name="type" class="form-control" value="{{ old('type',$quotation?->project_name) }}" placeholder="Laboratorium Kimia"></div><div class="col-md-6"><label class="form-label small fw-bold">Prioritas</label><select name="priority" class="form-select"><option value="high">Tinggi</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div><div class="col-md-6"><label class="form-label small fw-bold">Status Awal *</label><select name="status" class="form-select">@foreach(\App\Models\Project::statuses() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div></div></div></div>
+        <div class="col-xl-4"><div class="sales-form-card"><h2 class="sales-form-title">3. Informasi Pelaksanaan</h2><div class="row g-3"><div class="col-md-6"><label class="form-label small fw-bold">Tanggal Mulai (Planned) *</label><input name="start_date" type="date" value="{{ old('start_date',date('Y-m-d')) }}" class="form-control" required></div><div class="col-md-6"><label class="form-label small fw-bold">Tanggal Selesai (Target) *</label><input name="target_date" type="date" value="{{ old('target_date') }}" class="form-control" required></div><div class="col-12"><label class="form-label small fw-bold">Metode Pengerjaan *</label><select name="work_method" class="form-select"><option value="Turnkey">Turnkey</option><option value="Supply Only">Supply Only</option><option value="Instalasi">Instalasi</option></select></div><div class="col-12"><label class="form-label small fw-bold">Lokasi Project *</label><textarea name="location" rows="3" class="form-control">{{ old('location',$quotation?->customer?->address) }}</textarea></div><div class="col-12"><label class="form-label small fw-bold">Ruang Lingkup Pekerjaan</label><textarea name="scope_of_work" rows="5" class="form-control" placeholder="• Furniture Laboratorium&#10;• Instalasi Meja & Kabinet&#10;• Instalasi Utilitas">{{ old('scope_of_work') }}</textarea></div></div></div><div class="sales-form-card"><h2 class="sales-form-title">4. Informasi Nilai & Pembayaran</h2><label class="form-label small fw-bold">Nilai Project (Sesuai Penawaran)</label><input class="form-control" value="{{ $quotation ? Format::rupiah($quotation->subtotal - $quotation->discount_amount) : '' }}" readonly><div class="row g-3 mt-0"><div class="col-md-6"><label class="form-label small fw-bold">PPN (11%)</label><input class="form-control" value="{{ $quotation ? Format::rupiah($quotation->tax_amount) : '' }}" readonly></div><div class="col-md-6"><label class="form-label small fw-bold">Total Nilai Project</label><input class="form-control fw-bold text-primary" value="{{ $quotation ? Format::rupiah($quotation->grand_total) : '' }}" readonly></div><div class="col-md-6"><label class="form-label small fw-bold">Mata Uang</label><input class="form-control" value="IDR - Rupiah" readonly></div><div class="col-md-6"><label class="form-label small fw-bold">Skema Pembayaran *</label><input name="payment_scheme" class="form-control" value="{{ old('payment_scheme','Tahap / Bertahap') }}"></div></div><button type="button" class="btn btn-soft mt-3"><i class="bi bi-plus-lg me-1"></i>Atur Termin Pembayaran</button></div></div>
+        <div class="col-xl-4"><div class="sales-form-card"><h2 class="sales-form-title">5. Tim Project</h2><label class="form-label small fw-bold">Project Manager *</label><select name="project_manager_id" class="form-select select2" required><option value="">Pilih PM</option>@foreach($managers as $m)<option value="{{ $m->id }}" @selected(auth()->id()===$m->id)>{{ $m->name }}</option>@endforeach</select><label class="form-label small fw-bold mt-3">Tim Internal</label><select name="internal_team[]" class="form-select select2" multiple>@foreach($team as $t)<option value="{{ $t->id }}">{{ $t->name }}</option>@endforeach</select><label class="form-label small fw-bold mt-3">Tim Eksternal / Vendor</label><input name="external_vendor" class="form-control" placeholder="Pilih vendor (jika ada)"></div><div class="sales-form-card"><h2 class="sales-form-title">6. Dokumen & Lampiran</h2><div class="sales-row-card"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Penawaran {{ $quotation?->code ?? '-' }}.pdf <span class="float-end small text-muted-2">1.2 MB</span></div><div class="sales-row-card"><i class="bi bi-file-earmark-excel text-success me-2"></i>BOQ {{ $quotation?->code ?? '-' }}.xlsx <span class="float-end small text-muted-2">2.4 MB</span></div><div class="upload-box mt-3"><div><i class="bi bi-cloud-arrow-up fs-2 text-primary"></i><div>Klik untuk upload atau drag & drop</div><small>PDF, DOC, DOCX, XLSX, JPG, PNG</small></div></div></div><div class="sales-form-card"><h2 class="sales-form-title">7. Catatan Tambahan</h2><textarea name="note" rows="5" class="form-control" placeholder="Tulis catatan tambahan terkait project ini..."></textarea></div></div></div>
+        <div class="alert alert-primary rounded-4 border-0 mt-3"><i class="bi bi-info-circle-fill me-2"></i>Setelah project dibuat, Anda dapat langsung membuat aktivitas, menugaskan task, dan memantau progres project.</div>
+    </form>
+</div>
 @endsection

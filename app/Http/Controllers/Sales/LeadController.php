@@ -23,7 +23,18 @@ class LeadController extends Controller
         }
 
         $leads = $query->paginate(10)->withQueryString();
-        return view('sales.leads.index', compact('leads'));
+
+        $base = Lead::where('sales_id', Auth::id());
+        $stats = [
+            'total' => (clone $base)->count(),
+            'lead' => (clone $base)->whereIn('stage', ['lead', 'identify'])->count(),
+            'design_request' => (clone $base)->where('stage', 'design_request')->count(),
+            'penawaran' => (clone $base)->where('stage', 'penawaran')->count(),
+            'won' => Lead::where('sales_id', Auth::id())->where(function ($q) { $q->whereIn('stage', ['won', 'closing'])->orWhere('status', 'won'); })->count(),
+        ];
+        $selectedLead = $leads->first();
+
+        return view('sales.leads.index', compact('leads', 'stats', 'selectedLead'));
     }
 
     public function create()
