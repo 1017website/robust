@@ -1,90 +1,144 @@
-@php($u = auth()->user())
-@php($role = $u->role)
-@php($companyName = \App\Models\SystemSetting::value('company_name', 'ROBUST'))
-@php($companyTagline = \App\Models\SystemSetting::value('company_tagline', 'Laboratory Furniture & Equipment'))
-@php($companyLogo = \App\Models\SystemSetting::assetUrl('company_logo'))
+@php
+    $u = auth()->user();
+    $role = $u->role;
+    $companyName = \App\Models\SystemSetting::value('company_name', 'ROBUST');
+    $companyTagline = \App\Models\SystemSetting::value('company_tagline', 'Laboratory Furniture & Equipment');
+    $companyLogo = \App\Models\SystemSetting::assetUrl('company_logo');
+
+    $drafterNewDesignRequestCount = 0;
+    if ($role === 'drafter' && class_exists(\App\Models\DesignRequest::class)) {
+        try {
+            $drafterNewDesignRequestCount = \App\Models\DesignRequest::query()
+                ->where('status', 'assigned')
+                ->where('production_pic_id', $u->id)
+                ->count()
+                + \App\Models\DesignRequest::query()
+                    ->where('status', 'assigned')
+                    ->whereNull('production_pic_id')
+                    ->count();
+        } catch (\Throwable $e) {
+            $drafterNewDesignRequestCount = 0;
+        }
+    }
+
+    $menuGroups = [];
+    $pushItem = function (array &$groups, string $label, string $route, string $active, string $icon, $badge = null) {
+        $groups[] = [
+            'type' => 'item',
+            'label' => $label,
+            'route' => $route,
+            'active' => $active,
+            'icon' => $icon,
+            'badge' => $badge,
+        ];
+    };
+    $pushLabel = function (array &$groups, string $label) {
+        $groups[] = ['type' => 'label', 'label' => $label];
+    };
+
+    $pushItem($menuGroups, 'Dashboard', 'dashboard', 'dashboard', 'bi-house-door');
+
+    if (in_array($role, ['administrator', 'sales_admin', 'sales_spv'], true)) {
+        $pushItem($menuGroups, 'Monitoring Pipeline', 'pipeline.index', 'pipeline.*', 'bi-kanban');
+    }
+
+    if ($role === 'administrator') {
+        $pushLabel($menuGroups, 'MAIN');
+        $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
+        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
+        $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
+        $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
+        $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
+        $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
+        $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
+        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
+        $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
+        $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
+        $pushItem($menuGroups, 'System Settings', 'admin.system-settings.index', 'admin.system-settings.*', 'bi-gear-wide-connected');
+    } elseif ($role === 'sales_admin') {
+        $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
+        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
+        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
+        $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
+    } elseif ($role === 'sales_spv') {
+        $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+    } elseif ($role === 'drafter') {
+        $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $drafterNewDesignRequestCount);
+        $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
+        $pushItem($menuGroups, 'Tasks', 'drafter.tasks.index', 'drafter.tasks.*', 'bi-ui-checks');
+        $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');
+        $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
+        $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
+    } else {
+        $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
+        $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
+        $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
+        $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
+        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
+    }
+
+    $showLogoutButton = in_array($role, ['drafter', 'sales'], true);
+@endphp
+
 <aside class="sidebar" id="sidebar">
     <div class="brand">
-        @if($companyLogo)
+        <?php if ($companyLogo): ?>
             <img src="{{ $companyLogo }}" alt="{{ $companyName }}" class="brand-logo-img">
-        @else
+        <?php else: ?>
             <div class="brand-logo">{{ $companyName }}<span>®</span></div>
-        @endif
+        <?php endif; ?>
         <div class="brand-sub">{{ $companyTagline }}</div>
     </div>
-    <div class="side-label">{{ strtoupper($u->roleLabel()) }}</div>
-    <nav class="side-nav">
-        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="bi bi-house-door"></i> Dashboard</a>
-        @if(in_array($role, ['administrator','sales_admin','sales_spv']))
-            <a href="{{ route('pipeline.index') }}" class="{{ request()->routeIs('pipeline.*') ? 'active' : '' }}"><i class="bi bi-kanban"></i> Monitoring Pipeline</a>
-        @endif
 
-        @if($role === 'administrator')
-            <div class="side-label">MAIN</div>
-            <a href="{{ route('admin.pra-leads.index') }}" class="{{ request()->routeIs('admin.pra-leads.*') ? 'active' : '' }}"><i class="bi bi-percent"></i> Pra Leads</a>
-            <a href="{{ route('admin.assignment.index') }}" class="{{ request()->routeIs('admin.assignment.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Assignment</a>
-            <a href="{{ route('sales.request-masuk.index') }}" class="{{ request()->routeIs('sales.request-masuk.*') ? 'active' : '' }}"><i class="bi bi-inbox"></i> Request Masuk</a>
-            <a href="{{ route('sales.leads.index') }}" class="{{ request()->routeIs('sales.leads.*') ? 'active' : '' }}"><i class="bi bi-person-lines-fill"></i> Leads</a>
-            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
-            <a href="{{ route('sales.design-requests.index') }}" class="{{ request()->routeIs('sales.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
-            <a href="{{ route('sales.quotations.index') }}" class="{{ request()->routeIs('sales.quotations.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Penawaran</a>
-            <a href="{{ route('spv.quotation-approvals.index') }}" class="{{ request()->routeIs('spv.quotation-approvals.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Approval Penawaran</a>
-            <a href="{{ route('admin.purchase-order-requests.index') }}" class="{{ request()->routeIs('admin.purchase-order-requests.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Request PO</a>
-            <a href="{{ route('sales.customers.index') }}" class="{{ request()->routeIs('sales.customers.*') ? 'active' : '' }}"><i class="bi bi-person-vcard"></i> Customers</a>
-            <a href="{{ route('sales.projects.index') }}" class="{{ request()->routeIs('sales.projects.*') ? 'active' : '' }}"><i class="bi bi-folder"></i> Projects</a>
-            <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
-            <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-folder2-open"></i> Documents</a>
-            <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
-            <div class="side-label">SISTEM</div>
-            <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-person-gear"></i> Manage User</a>
-            <a href="{{ route('admin.system-settings.index') }}" class="{{ request()->routeIs('admin.system-settings.*') ? 'active' : '' }}"><i class="bi bi-gear-wide-connected"></i> System Settings</a>
-        @elseif($role === 'sales_admin')
-            <a href="{{ route('admin.pra-leads.index') }}" class="{{ request()->routeIs('admin.pra-leads.*') ? 'active' : '' }}"><i class="bi bi-percent"></i> Pra Leads</a>
-            <a href="{{ route('admin.assignment.index') }}" class="{{ request()->routeIs('admin.assignment.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Assignment</a>
-            <a href="{{ route('admin.purchase-order-requests.index') }}" class="{{ request()->routeIs('admin.purchase-order-requests.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Request PO</a>
-            <a href="{{ route('sales.customers.index') }}" class="{{ request()->routeIs('sales.customers.*') ? 'active' : '' }}"><i class="bi bi-person-vcard"></i> Customers</a>
-            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
-            <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
-            <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
-            <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-person-gear"></i> Manage User</a>
-        @elseif($role === 'sales_spv')
-            <a href="{{ route('spv.quotation-approvals.index') }}" class="{{ request()->routeIs('spv.quotation-approvals.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Approval Penawaran</a>
-            <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
-            <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
-        @elseif($role === 'drafter')
-            @php
-                $drafterNewDesignRequestCount = \App\Models\DesignRequest::query()
-                    ->where('status', 'assigned')
-                    ->where(function ($query) use ($u) {
-                        $query->where('production_pic_id', $u->id)
-                            ->orWhereNull('production_pic_id');
-                    })
-                    ->count();
-            @endphp
-            <a href="{{ route('drafter.design-requests.index') }}" class="{{ request()->routeIs('drafter.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> <span>Design Request</span>@if($drafterNewDesignRequestCount > 0)<span class="side-badge">{{ $drafterNewDesignRequestCount > 99 ? '99+' : $drafterNewDesignRequestCount }}</span>@endif</a>
-            <a href="{{ route('drafter.projects.index') }}" class="{{ request()->routeIs('drafter.projects.*') ? 'active' : '' }}"><i class="bi bi-box-seam"></i> Projects</a>
-            <a href="{{ route('drafter.tasks.index') }}" class="{{ request()->routeIs('drafter.tasks.*') ? 'active' : '' }}"><i class="bi bi-ui-checks"></i> Tasks</a>
-            <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Documents</a>
-            <a href="{{ route('drafter.calendar.index') }}" class="{{ request()->routeIs('drafter.calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
-            <a href="{{ route('drafter.reports.index') }}" class="{{ request()->routeIs('drafter.reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
-            <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'active' : '' }}"><i class="bi bi-gear"></i> Settings</a>
-            <form method="POST" action="{{ route('logout') }}" class="m-0">@csrf<button type="submit" class="side-logout"><i class="bi bi-box-arrow-right"></i> Logout</button></form>
-        @else
-            <a href="{{ route('sales.request-masuk.index') }}" class="{{ request()->routeIs('sales.request-masuk.*') ? 'active' : '' }}"><i class="bi bi-inbox"></i> Request Masuk</a>
-            <a href="{{ route('sales.leads.index') }}" class="{{ request()->routeIs('sales.leads.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Leads</a>
-            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
-            <a href="{{ route('sales.design-requests.index') }}" class="{{ request()->routeIs('sales.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
-            <a href="{{ route('sales.quotations.index') }}" class="{{ request()->routeIs('sales.quotations.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Penawaran</a>
-            <a href="{{ route('sales.customers.index') }}" class="{{ request()->routeIs('sales.customers.*') ? 'active' : '' }}"><i class="bi bi-person-vcard"></i> Customers</a>
-            <a href="{{ route('sales.projects.index') }}" class="{{ request()->routeIs('sales.projects.*') ? 'active' : '' }}"><i class="bi bi-folder"></i> Projects</a>
-            <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
-            <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
-            <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'active' : '' }}"><i class="bi bi-gear"></i> Settings</a>
-            <form method="POST" action="{{ route('logout') }}" class="m-0">@csrf<button type="submit" class="side-logout"><i class="bi bi-box-arrow-right"></i> Logout</button></form>
-        @endif
+    <div class="side-label">{{ strtoupper($u->roleLabel()) }}</div>
+
+    <nav class="side-nav">
+        <?php foreach ($menuGroups as $menu): ?>
+            <?php if (($menu['type'] ?? 'item') === 'label'): ?>
+                <div class="side-label">{{ $menu['label'] }}</div>
+            <?php else: ?>
+                <?php
+                    $isActive = request()->routeIs($menu['active']);
+                    $badge = (int) ($menu['badge'] ?? 0);
+                ?>
+                <a href="{{ route($menu['route']) }}" class="{{ $isActive ? 'active' : '' }}">
+                    <i class="bi {{ $menu['icon'] }}"></i>
+                    <span class="side-menu-text">{{ $menu['label'] }}</span>
+                    <?php if ($badge > 0): ?>
+                        <span class="side-badge">{{ $badge > 99 ? '99+' : $badge }}</span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+        <?php endforeach; ?>
+
+        <?php if ($showLogoutButton): ?>
+            <form method="POST" action="{{ route('logout') }}" class="m-0">
+                {{ csrf_field() }}
+                <button type="submit" class="side-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+            </form>
+        <?php endif; ?>
     </nav>
+
     <div class="side-foot">
-        <div class="avatar">{{ strtoupper(substr($u->name,0,1)) }}</div>
+        <div class="avatar">{{ strtoupper(substr($u->name, 0, 1)) }}</div>
         <div>
             <div class="name">{{ $u->name }}</div>
             <div class="role">{{ $u->roleLabel() }}</div>
