@@ -187,7 +187,7 @@
                 <div class="info-row"><span>No. WhatsApp</span><strong id="previewPhone">—</strong></div>
                 <div class="info-row"><span>Email</span><strong id="previewEmail">—</strong></div>
                 <div class="info-row"><span>Sumber</span><strong id="previewSource">—</strong></div>
-                <div class="info-row"><span>Jenis Laboratorium</span><strong id="previewLab">—</strong></div>
+                <div class="info-row"><span>Jenis Kebutuhan</span><strong id="previewLab">—</strong></div>
                 <div class="info-row"><span>Lokasi Project</span><strong id="previewLocation">—</strong></div>
                 <div class="info-row"><span>Sales Ditugaskan</span><strong id="previewSales">—</strong></div>
             </div>
@@ -223,7 +223,7 @@
 
             <div class="section-title mt-4">Informasi Kebutuhan</div>
             <div class="row g-3">
-                <div class="col-md-6"><label class="form-label small fw-semibold">Jenis Laboratorium</label><input name="lab_type" value="{{ old('lab_type') }}" class="form-control" placeholder="Laboratorium Kimia"></div>
+                <div class="col-md-6"><label class="form-label small fw-semibold">Jenis Kebutuhan</label><input name="lab_type" value="{{ old('lab_type') }}" class="form-control" placeholder="Contoh: Renovasi lab, furniture, fume hood, storage cabinet"></div>
                 <div class="col-md-6"><label class="form-label small fw-semibold">Lokasi Project</label><input name="location" value="{{ old('location') }}" class="form-control" placeholder="Surabaya"></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Kebutuhan Awal</label><textarea name="initial_need" rows="3" class="form-control" placeholder="Contoh: wall bench, fume hood, storage cabinet...">{{ old('initial_need') }}</textarea></div>
                 <div class="col-md-4"><label class="form-label small fw-semibold">Estimasi Min</label><input data-rupiah name="est_value_min" type="text" inputmode="numeric" value="{{ old('est_value_min') }}" class="form-control"></div>

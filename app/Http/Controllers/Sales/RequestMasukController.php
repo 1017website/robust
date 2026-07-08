@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\PraLead;
 use App\Services\CodeGenerator;
@@ -23,7 +22,8 @@ class RequestMasukController extends Controller
 
         if ($s = $request->get('q')) {
             $query->where(function ($w) use ($s) {
-                $w->where('instansi', 'like', "%$s%")->orWhere('initial_need', 'like', "%$s%");
+                $w->where('instansi', 'like', "%$s%")
+                    ->orWhere('initial_need', 'like', "%$s%");
             });
         }
         if ($p = $request->get('priority')) {
@@ -52,9 +52,20 @@ class RequestMasukController extends Controller
 
     public function accept(PraLead $praLead)
     {
-        abort_if($praLead->assigned_sales_id !== Auth::id(), 403);
+        abort_unless($this->canProcess($praLead), 403);
 
-        DB::transaction(function () use ($praLead) {
+        if (! $praLead->assigned_sales_id) {
+            return back()->with('error', 'Pra Lead belum memiliki sales yang ditugaskan. Assign sales terlebih dahulu.');
+        }
+
+        $lead = DB::transaction(function () use ($praLead) {
+            $existingLead = Lead::where('pra_lead_id', $praLead->id)->first();
+
+            if ($existingLead) {
+                $praLead->update(['status' => 'accepted', 'responded_at' => $praLead->responded_at ?: now()]);
+                return $existingLead;
+            }
+
             $praLead->update(['status' => 'accepted', 'responded_at' => now()]);
 
             $lead = Lead::create([
@@ -80,14 +91,16 @@ class RequestMasukController extends Controller
             ]);
 
             Logger::record('accepted', "Request {$praLead->instansi} diterima dan menjadi Lead", $lead);
+
+            return $lead;
         });
 
-        return redirect()->route('sales.leads.index')->with('success', 'Request diterima dan menjadi Lead.');
+        return redirect()->route('sales.leads.show', $lead)->with('success', 'Request diterima dan menjadi Lead.');
     }
 
     public function reject(Request $request, PraLead $praLead)
     {
-        abort_if($praLead->assigned_sales_id !== Auth::id(), 403);
+        abort_unless($this->canProcess($praLead), 403);
         $request->validate(['reject_reason' => ['required', 'string', 'max:500']]);
 
         $praLead->update([
@@ -98,5 +111,20 @@ class RequestMasukController extends Controller
         Logger::record('rejected', "Request {$praLead->instansi} ditolak", $praLead);
 
         return back()->with('success', 'Request ditolak.');
+    }
+
+    protected function canProcess(PraLead $praLead): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isAdminLevel()) {
+            return true;
+        }
+
+        return (int) $praLead->assigned_sales_id === (int) $user->id;
     }
 }

@@ -59,7 +59,7 @@ class LeadController extends Controller
 
     public function show(Lead $lead)
     {
-        abort_if($lead->sales_id !== Auth::id() && ! Auth::user()->isSalesAdmin(), 403);
+        abort_if((int) $lead->sales_id !== (int) Auth::id() && ! Auth::user()->isAdminLevel(), 403);
         $lead->load('praLead', 'customer', 'designRequests', 'documents', 'quotations');
         return view('sales.leads.show', compact('lead'));
     }

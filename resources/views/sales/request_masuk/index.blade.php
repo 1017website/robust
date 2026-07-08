@@ -45,7 +45,7 @@
                         @forelse($requests as $req)
                             <tr class="{{ $selected && $selected->id === $req->id ? 'selected' : '' }}">
                                 <td>
-                                    <div class="d-flex gap-3 align-items-center"><div class="logo-avatar"><i class="bi bi-building"></i></div><div><div class="fw-bold">{{ $req->instansi }}</div><div class="small text-muted-2">{{ $req->pic_name }}</div></div></div>
+                                    <div class="d-flex gap-3 align-items-center"><div class="logo-avatar"><i class="bi bi-building"></i></div><div><div class="fw-bold">{{ $req->instansi }}</div><div class="small text-muted-2">{{ $req->pic_name }}</div>@if($req->assigned_sales_id)<span class="badge rounded-pill text-bg-success mt-1"><i class="bi bi-person-check-fill me-1"></i>Assigned dari Pra Leads</span>@endif</div></div>
                                 </td>
                                 <td><div class="fw-bold text-truncate-cell">{{ $req->lab_type ?: 'Kebutuhan proyek' }}</div><div class="small text-muted-2 text-truncate-cell">{{ $req->initial_need ?: '—' }}</div></td>
                                 <td class="fw-semibold">{{ $req->location ?: '—' }}</td>
@@ -69,7 +69,7 @@
             @if($selected)
                 <div class="sales-detail-head"><div><h5 class="mb-0 fw-black">Detail Request</h5></div><a class="btn btn-sm btn-soft" href="{{ route('sales.request-masuk.index') }}"><i class="bi bi-x-lg"></i></a></div>
                 <div class="sales-detail-body">
-                    <span class="status-soft st-blue">NEW REQUEST</span>
+                    <div class="d-flex flex-wrap gap-2 mb-2"><span class="status-soft st-blue">NEW REQUEST</span>@if($selected->assigned_sales_id)<span class="badge rounded-pill text-bg-success"><i class="bi bi-person-check-fill me-1"></i>Assigned dari Pra Leads</span>@endif</div>
                     <div class="sales-detail-title">{{ $selected->instansi }}</div>
                     <div class="small text-muted-2 mb-3">Request dikirim oleh Admin pada {{ optional($selected->sent_at ?? $selected->created_at)->translatedFormat('d M Y, H:i') }}</div>
 
@@ -82,7 +82,7 @@
                             <div class="kv"><div class="k">Lokasi</div><div class="v">{{ $selected->location ?: '—' }}</div></div>
                         </div></div>
                         <div class="col-12"><div class="info-card"><h6><i class="bi bi-clipboard-check sgreen rounded p-2 me-2"></i>Kebutuhan Awal</h6>
-                            <div class="fw-bold mb-2">{{ $selected->lab_type ?: 'Kebutuhan Laboratorium' }}</div>
+                            <div class="fw-bold mb-2">{{ $selected->lab_type ?: 'Jenis kebutuhan belum diisi' }}</div>
                             <div class="small text-muted-2">{{ $selected->initial_need ?: 'Belum ada deskripsi kebutuhan.' }}</div>
                         </div></div>
                         <div class="col-md-6"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
