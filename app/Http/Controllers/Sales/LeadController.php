@@ -5,18 +5,21 @@ namespace App\Http\Controllers\Sales;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Services\CodeGenerator;
+use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class LeadController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lead::where('sales_id', Auth::id())->latest();
+        $query = $this->leadQueryForCurrentUser()->with('customer')->latest();
 
         if ($s = $request->get('q')) {
-            $query->where(fn ($w) => $w->where('instansi', 'like', "%$s%")->orWhere('pic_name', 'like', "%$s%"));
+            $query->where(fn ($w) => $w->where('instansi', 'like', "%$s%")
+                ->orWhere('pic_name', 'like', "%$s%"));
         }
         if ($stage = $request->get('stage')) {
             $query->where('stage', $stage);
@@ -24,13 +27,13 @@ class LeadController extends Controller
 
         $leads = $query->paginate(10)->withQueryString();
 
-        $base = Lead::where('sales_id', Auth::id());
+        $base = $this->leadQueryForCurrentUser();
         $stats = [
             'total' => (clone $base)->count(),
             'lead' => (clone $base)->whereIn('stage', ['lead', 'identify'])->count(),
             'design_request' => (clone $base)->where('stage', 'design_request')->count(),
             'penawaran' => (clone $base)->where('stage', 'penawaran')->count(),
-            'won' => Lead::where('sales_id', Auth::id())->where(function ($q) { $q->whereIn('stage', ['won', 'closing'])->orWhere('status', 'won'); })->count(),
+            'won' => (clone $base)->where(function ($q) { $q->whereIn('stage', ['won', 'closing'])->orWhere('status', 'won'); })->count(),
         ];
         $selectedLead = $leads->first();
 
@@ -51,38 +54,75 @@ class LeadController extends Controller
         $data['stage'] = 'lead';
         $data['status'] = 'aktif';
 
-        $lead = Lead::create($data);
-        Logger::record('created', "Lead {$lead->instansi} dibuat manual", $lead);
+        $lead = DB::transaction(function () use ($data) {
+            $lead = Lead::create($data);
+            app(LeadCustomerConnector::class)->ensureForLead($lead);
 
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead berhasil disimpan.');
+            return $lead->fresh('customer');
+        });
+
+        Logger::record('created', "Lead {$lead->instansi} dibuat manual dan terhubung ke Customer", $lead);
+
+        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead berhasil disimpan dan terhubung ke Customer.');
     }
 
     public function show(Lead $lead)
     {
-        abort_if((int) $lead->sales_id !== (int) Auth::id() && ! Auth::user()->isAdminLevel(), 403);
-        $lead->load('praLead', 'customer', 'designRequests', 'documents', 'quotations');
+        abort_unless($this->canManageLead($lead), 403);
+        $lead->load('praLead', 'customer.primaryPic', 'designRequests', 'documents', 'quotations');
         return view('sales.leads.show', compact('lead'));
     }
 
     public function edit(Lead $lead)
     {
-        abort_if($lead->sales_id !== Auth::id(), 403);
+        abort_unless($this->canManageLead($lead), 403);
         return view('sales.leads.edit', compact('lead'));
     }
 
     public function update(Request $request, Lead $lead)
     {
-        abort_if($lead->sales_id !== Auth::id(), 403);
-        $lead->update($this->validateData($request));
-        Logger::record('updated', "Lead {$lead->instansi} diperbarui", $lead);
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead diperbarui.');
+        abort_unless($this->canManageLead($lead), 403);
+        DB::transaction(function () use ($request, $lead) {
+            $lead->update($this->validateData($request));
+            app(LeadCustomerConnector::class)->ensureForLead($lead->fresh('customer'));
+        });
+
+        Logger::record('updated', "Lead {$lead->instansi} diperbarui dan data Customer disinkronkan", $lead);
+        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead diperbarui dan data Customer ikut disinkronkan.');
     }
 
     public function destroy(Lead $lead)
     {
-        abort_if($lead->sales_id !== Auth::id(), 403);
+        abort_unless($this->canManageLead($lead), 403);
         $lead->delete();
         return redirect()->route('sales.leads.index')->with('success', 'Lead dihapus.');
+    }
+
+    protected function leadQueryForCurrentUser()
+    {
+        $user = Auth::user();
+        $query = Lead::query();
+
+        if ($user && $user->isAdminLevel()) {
+            return $query;
+        }
+
+        return $query->where('sales_id', Auth::id());
+    }
+
+    protected function canManageLead(Lead $lead): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isAdminLevel()) {
+            return true;
+        }
+
+        return (int) $lead->sales_id === (int) $user->id;
     }
 
     protected function validateData(Request $request): array

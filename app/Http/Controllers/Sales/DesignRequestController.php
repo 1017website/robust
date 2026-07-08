@@ -7,6 +7,7 @@ use App\Models\DesignRequest;
 use App\Models\Lead;
 use App\Models\User;
 use App\Services\CodeGenerator;
+use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,7 +74,8 @@ class DesignRequestController extends Controller
         $data['created_by'] = Auth::id();
         $data['status'] = $request->input('action') === 'send' ? 'assigned' : 'draft';
         if ($lead = $this->leadQuery()->find($data['lead_id'] ?? null)) {
-            $data['customer_id'] = $lead->customer_id;
+            $customer = app(LeadCustomerConnector::class)->ensureForLead($lead);
+            $data['customer_id'] = $customer->id;
             $lead->update(['stage' => 'design_request']);
         }
 

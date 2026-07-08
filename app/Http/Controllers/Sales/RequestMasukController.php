@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\PraLead;
 use App\Services\CodeGenerator;
+use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,7 +64,9 @@ class RequestMasukController extends Controller
 
             if ($existingLead) {
                 $praLead->update(['status' => 'accepted', 'responded_at' => $praLead->responded_at ?: now()]);
-                return $existingLead;
+                app(LeadCustomerConnector::class)->ensureForLead($existingLead);
+
+                return $existingLead->fresh('customer');
             }
 
             $praLead->update(['status' => 'accepted', 'responded_at' => now()]);
@@ -90,12 +93,14 @@ class RequestMasukController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            Logger::record('accepted', "Request {$praLead->instansi} diterima dan menjadi Lead", $lead);
+            app(LeadCustomerConnector::class)->ensureForLead($lead);
 
-            return $lead;
+            Logger::record('accepted', "Request {$praLead->instansi} diterima, menjadi Lead, dan terhubung ke Customer", $lead);
+
+            return $lead->fresh('customer');
         });
 
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Request diterima dan menjadi Lead.');
+        return redirect()->route('sales.leads.show', $lead)->with('success', 'Request diterima, menjadi Lead, dan otomatis terhubung ke Customer.');
     }
 
     public function reject(Request $request, PraLead $praLead)
