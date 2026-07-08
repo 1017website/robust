@@ -25,13 +25,13 @@
             <a href="{{ route('admin.assignment.index') }}" class="{{ request()->routeIs('admin.assignment.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Assignment</a>
             <a href="{{ route('sales.request-masuk.index') }}" class="{{ request()->routeIs('sales.request-masuk.*') ? 'active' : '' }}"><i class="bi bi-inbox"></i> Request Masuk</a>
             <a href="{{ route('sales.leads.index') }}" class="{{ request()->routeIs('sales.leads.*') ? 'active' : '' }}"><i class="bi bi-person-lines-fill"></i> Leads</a>
+            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
             <a href="{{ route('sales.design-requests.index') }}" class="{{ request()->routeIs('sales.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
             <a href="{{ route('sales.quotations.index') }}" class="{{ request()->routeIs('sales.quotations.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Penawaran</a>
             <a href="{{ route('spv.quotation-approvals.index') }}" class="{{ request()->routeIs('spv.quotation-approvals.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Approval Penawaran</a>
             <a href="{{ route('admin.purchase-order-requests.index') }}" class="{{ request()->routeIs('admin.purchase-order-requests.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Request PO</a>
             <a href="{{ route('sales.customers.index') }}" class="{{ request()->routeIs('sales.customers.*') ? 'active' : '' }}"><i class="bi bi-person-vcard"></i> Customers</a>
             <a href="{{ route('sales.projects.index') }}" class="{{ request()->routeIs('sales.projects.*') ? 'active' : '' }}"><i class="bi bi-folder"></i> Projects</a>
-            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
             <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
             <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-folder2-open"></i> Documents</a>
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
@@ -63,11 +63,11 @@
         @else
             <a href="{{ route('sales.request-masuk.index') }}" class="{{ request()->routeIs('sales.request-masuk.*') ? 'active' : '' }}"><i class="bi bi-inbox"></i> Request Masuk</a>
             <a href="{{ route('sales.leads.index') }}" class="{{ request()->routeIs('sales.leads.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Leads</a>
+            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
             <a href="{{ route('sales.design-requests.index') }}" class="{{ request()->routeIs('sales.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
             <a href="{{ route('sales.quotations.index') }}" class="{{ request()->routeIs('sales.quotations.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Penawaran</a>
             <a href="{{ route('sales.customers.index') }}" class="{{ request()->routeIs('sales.customers.*') ? 'active' : '' }}"><i class="bi bi-person-vcard"></i> Customers</a>
             <a href="{{ route('sales.projects.index') }}" class="{{ request()->routeIs('sales.projects.*') ? 'active' : '' }}"><i class="bi bi-folder"></i> Projects</a>
-            <a href="{{ route('activities.index') }}" class="{{ request()->routeIs('activities.*') ? 'active' : '' }}"><i class="bi bi-check2-square"></i> Activities</a>
             <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
             <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'active' : '' }}"><i class="bi bi-gear"></i> Settings</a>

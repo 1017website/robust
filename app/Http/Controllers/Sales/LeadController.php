@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Models\Document;
 use App\Models\Lead;
 use App\Services\CodeGenerator;
 use App\Services\LeadCustomerConnector;
@@ -57,28 +58,38 @@ class LeadController extends Controller
         $data['stage'] = 'lead';
         $data['status'] = 'aktif';
 
-        $lead = DB::transaction(function () use ($data) {
+        $lead = DB::transaction(function () use ($request, $data) {
             $lead = Lead::create($data);
             app(LeadCustomerConnector::class)->ensureForLead($lead);
+            $this->storeLeadDocuments($request, $lead);
 
-            return $lead->fresh('customer');
+            return $lead->fresh(['customer', 'documents']);
         });
 
         Logger::record('created', "Lead {$lead->instansi} dibuat manual dan terhubung ke Customer", $lead);
 
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead berhasil disimpan dan terhubung ke Customer.');
+        return redirect()
+            ->route('sales.leads.create')
+            ->withInput($request->except('documents'))
+            ->with([
+                'success' => 'Lead berhasil disimpan dan terhubung ke Customer.',
+                'created_lead_id' => $lead->id,
+                'created_lead_code' => $lead->code,
+                'created_lead_name' => $lead->instansi,
+            ]);
     }
 
     public function show(Lead $lead)
     {
         abort_unless($this->canManageLead($lead), 403);
-        $lead->load('praLead', 'customer.primaryPic', 'designRequests', 'documents', 'quotations');
+        $lead->load('praLead', 'customer.primaryPic', 'designRequests', 'documents', 'quotations', 'activities');
         return view('sales.leads.show', compact('lead'));
     }
 
     public function edit(Lead $lead)
     {
         abort_unless($this->canManageLead($lead), 403);
+        $lead->load('documents');
         return view('sales.leads.edit', compact('lead'));
     }
 
@@ -88,6 +99,7 @@ class LeadController extends Controller
         DB::transaction(function () use ($request, $lead) {
             $lead->update($this->validateData($request));
             app(LeadCustomerConnector::class)->ensureForLead($lead->fresh('customer'));
+            $this->storeLeadDocuments($request, $lead->fresh());
         });
 
         Logger::record('updated', "Lead {$lead->instansi} diperbarui dan data Customer disinkronkan", $lead);
@@ -144,12 +156,48 @@ class LeadController extends Controller
             'lab_name' => ['required', 'string', 'max:255'],
             'need_description' => ['nullable', 'string', 'max:500'],
             'scope_items' => ['nullable', 'array'],
+            'capacity' => ['nullable', 'string', 'max:255'],
             'est_value_min' => ['nullable', 'numeric'],
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
             'initial_note' => ['nullable', 'string'],
+            'initial_followup_date' => ['nullable', 'date'],
+            'contact_preference' => ['nullable', 'string', 'max:100'],
+            'best_contact_time' => ['nullable', 'string', 'max:100'],
+            'documents' => ['nullable', 'array', 'max:5'],
+            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
         $data['scope_items'] = array_values(array_filter($request->input('scope_items', [])));
+        unset($data['documents']);
+
         return $data;
     }
+
+    protected function storeLeadDocuments(Request $request, Lead $lead): void
+    {
+        if (! $request->hasFile('documents')) {
+            return;
+        }
+
+        foreach (array_slice($request->file('documents', []), 0, 5) as $file) {
+            if (! $file || ! $file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('documents', 'public');
+
+            Document::create([
+                'documentable_type' => Lead::class,
+                'documentable_id' => $lead->id,
+                'name' => $file->getClientOriginalName(),
+                'category' => 'lead',
+                'description' => 'Dokumen pendukung lead',
+                'file_path' => $path,
+                'file_type' => $file->getClientOriginalExtension(),
+                'file_size' => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
+    }
+
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\DesignRequest;
 use App\Models\Lead;
 use App\Models\User;
@@ -17,85 +18,184 @@ class DesignRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DesignRequest::with('productionPic', 'sales')
-            ->where('sales_id', Auth::id())->latest();
+        $query = $this->designRequestQuery()->latest();
 
         if ($s = $request->get('q')) {
-            $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")->orWhere('project_name', 'like', "%$s%"));
+            $query->where(function ($w) use ($s) {
+                $w->where('code', 'like', "%{$s}%")
+                    ->orWhere('customer_name', 'like', "%{$s}%")
+                    ->orWhere('pic_name', 'like', "%{$s}%")
+                    ->orWhere('project_name', 'like', "%{$s}%")
+                    ->orWhere('detail_need', 'like', "%{$s}%");
+            });
         }
+
         if ($status = $request->get('status')) {
             $query->where('status', $status);
         }
 
-        $designRequests = $query->paginate(8)->withQueryString();
+        if ($priority = $request->get('priority')) {
+            $query->where('priority', $priority);
+        }
 
+        if ($productionPicId = $request->get('production_pic_id')) {
+            $query->where('production_pic_id', $productionPicId);
+        }
+
+        if (! Auth::user()->isSales() && ($salesId = $request->get('sales_id'))) {
+            $query->where('sales_id', $salesId);
+        }
+
+        $designRequests = $query->paginate(10)->withQueryString();
+
+        $scope = fn () => $this->designRequestQuery();
         $stats = [
-            'total' => DesignRequest::where('sales_id', Auth::id())->count(),
-            'waiting' => DesignRequest::where('sales_id', Auth::id())->where('status', 'assigned')->count(),
-            'progress' => DesignRequest::where('sales_id', Auth::id())->whereIn('status', ['drafting', 'costing', 'review'])->count(),
-            'completed' => DesignRequest::where('sales_id', Auth::id())->where('status', 'completed')->count(),
+            'total' => $scope()->count(),
+            'waiting' => $scope()->where('status', 'assigned')->count(),
+            'progress' => $scope()->whereIn('status', ['drafting', 'costing', 'review'])->count(),
+            'completed' => $scope()->where('status', 'completed')->count(),
         ];
 
-        $selectedRequest = $designRequests->first();
+        $drafters = $this->assignableDraftersQuery()->get();
+        $salesUsers = User::assignableSales();
 
-        return view('sales.design_requests.index', compact('designRequests', 'stats', 'selectedRequest'));
+        return view('sales.design_requests.index', compact('designRequests', 'stats', 'drafters', 'salesUsers'));
     }
 
     public function create(Request $request)
     {
-        $lead = $request->get('lead') ? $this->leadQuery()->findOrFail($request->get('lead')) : null;
-        $drafters = User::where('role', 'drafter')->where('is_active', true)->get();
-        return view('sales.design_requests.create', compact('lead', 'drafters'));
+        $lead = $request->get('lead')
+            ? $this->leadQuery()->with('customer.primaryPic')->findOrFail($request->get('lead'))
+            : null;
+
+        $customers = $this->customerQuery()->with('primaryPic')->orderBy('name')->get();
+        $drafters = $this->assignableDraftersQuery()->get();
+        $drafterWorkloads = $this->drafterWorkloads($drafters);
+
+        return view('sales.design_requests.create', compact('lead', 'customers', 'drafters', 'drafterWorkloads'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'lead_id' => ['nullable', Rule::exists('leads', 'id')->where(fn ($query) => $this->scopeLeadExistsRule($query))],
-            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_id' => ['nullable', Rule::exists('customers', 'id')->where(fn ($query) => $this->scopeCustomerExistsRule($query))],
+            'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
             'pic_name' => ['nullable', 'string', 'max:255'],
             'project_name' => ['required', 'string', 'max:255'],
             'request_date' => ['required', 'date'],
-            'deadline' => ['required', 'date'],
+            'deadline' => ['required', 'date', 'after_or_equal:request_date'],
             'priority' => ['required', 'in:low,medium,high'],
             'short_description' => ['required', 'string', 'max:500'],
             'lab_type' => ['nullable', 'string', 'max:255'],
             'capacity' => ['nullable', 'string', 'max:255'],
             'detail_need' => ['required', 'string', 'max:1000'],
             'scope_checklist' => ['nullable', 'array'],
+            'scope_checklist.*' => ['nullable', 'string', 'max:120'],
             'outputs' => ['nullable', 'array'],
+            'outputs.*' => ['nullable', 'string', 'max:80'],
             'extra_note' => ['nullable', 'string', 'max:500'],
-            'production_pic_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'drafter')->where('is_active', true))],
+            'production_pic_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->whereRaw('LOWER(role) = ?', ['drafter'])->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            }))],
             'production_note' => ['nullable', 'string', 'max:300'],
         ]);
 
-        $data['code'] = CodeGenerator::next(DesignRequest::class, 'DR', 3);
-        $data['sales_id'] = Auth::id();
-        $data['created_by'] = Auth::id();
-        $data['status'] = $request->input('action') === 'send' ? 'assigned' : 'draft';
-        if ($lead = $this->leadQuery()->find($data['lead_id'] ?? null)) {
-            $customer = app(LeadCustomerConnector::class)->ensureForLead($lead);
+        $lead = null;
+        $customer = null;
+
+        if (! empty($data['lead_id'])) {
+            $lead = $this->leadQuery()->with('customer.primaryPic')->findOrFail($data['lead_id']);
+            $customer = app(LeadCustomerConnector::class)->ensureForLead($lead)->load('primaryPic');
+        } elseif (! empty($data['customer_id'])) {
+            $customer = $this->customerQuery()->with('primaryPic')->findOrFail($data['customer_id']);
+        } elseif (! empty($data['customer_name'])) {
+            $customer = $this->findOrCreateCustomerFromRequest($data);
+        }
+
+        if ($customer) {
             $data['customer_id'] = $customer->id;
+            $data['customer_name'] = $customer->name;
+            $data['pic_name'] = $data['pic_name'] ?: $customer->primaryPic?->name;
+        }
+
+        $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
+        $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
+        $data['code'] = CodeGenerator::next(DesignRequest::class, 'DR', 3);
+        $data['sales_id'] = $lead?->sales_id ?: ($customer?->sales_id ?: Auth::id());
+        $data['created_by'] = Auth::id();
+        $data['status'] = $request->input('action') === 'draft' ? 'draft' : 'assigned';
+        $data['submitted_at'] = $data['status'] === 'assigned' ? now() : null;
+
+        $designRequest = DesignRequest::create($data);
+
+        if ($lead) {
             $lead->update(['stage' => 'design_request']);
         }
 
-        $dr = DesignRequest::create($data);
-        Logger::record('created', "Design Request {$dr->code} dibuat", $dr);
+        Logger::record('created', "Design Request {$designRequest->code} dibuat", $designRequest);
 
-        return redirect()->route('sales.design-requests.index')->with('success', 'Design Request berhasil dikirim ke produksi.');
+        return redirect()
+            ->route('sales.design-requests.show', $designRequest)
+            ->with('success', 'Design Request berhasil disimpan dan drafter sudah ditugaskan.');
     }
 
     public function show(DesignRequest $designRequest)
     {
         abort_unless($this->canViewDesignRequest($designRequest), 403);
-        $designRequest->load('items', 'productionPic', 'documents', 'sales');
+        $designRequest->load('items', 'productionPic', 'documents', 'sales', 'customer.primaryPic', 'lead');
+
         return view('sales.design_requests.show', compact('designRequest'));
+    }
+
+    protected function designRequestQuery()
+    {
+        return DesignRequest::with('productionPic', 'sales', 'customer', 'lead')
+            ->when(Auth::user()->isSales(), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('sales_id', Auth::id())
+                        ->orWhereHas('lead', fn ($lead) => $lead->where('sales_id', Auth::id()))
+                        ->orWhereHas('customer', fn ($customer) => $customer->where('sales_id', Auth::id()));
+                });
+            });
     }
 
     protected function leadQuery()
     {
         return Lead::query()
             ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+    }
+
+    protected function customerQuery()
+    {
+        return Customer::query()
+            ->when(Auth::user()->isSales(), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
+                });
+            });
+    }
+
+    protected function assignableDraftersQuery()
+    {
+        return User::query()
+            ->whereRaw('LOWER(role) = ?', ['drafter'])
+            ->where(function ($query) {
+                $query->where('is_active', true)->orWhereNull('is_active');
+            })
+            ->orderBy('name');
+    }
+
+    protected function drafterWorkloads($drafters)
+    {
+        return $drafters->map(function (User $drafter) {
+            return [
+                'drafter' => $drafter,
+                'active_requests' => DesignRequest::where('production_pic_id', $drafter->id)
+                    ->whereNotIn('status', ['completed', 'rejected'])
+                    ->count(),
+            ];
+        })->sortBy('active_requests')->values();
     }
 
     protected function scopeLeadExistsRule($query)
@@ -107,9 +207,61 @@ class DesignRequestController extends Controller
         return $query;
     }
 
+    protected function scopeCustomerExistsRule($query)
+    {
+        if (Auth::user()->isSales()) {
+            $query->where(function ($scope) {
+                $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
+            });
+        }
+
+        return $query;
+    }
+
+    protected function findOrCreateCustomerFromRequest(array $data): Customer
+    {
+        $customer = Customer::query()
+            ->when(Auth::user()->isSales(), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
+                });
+            })
+            ->where('name', $data['customer_name'])
+            ->first();
+
+        if (! $customer) {
+            $customer = Customer::create([
+                'code' => CodeGenerator::next(Customer::class, 'CUST', 4),
+                'name' => $data['customer_name'],
+                'type' => $data['lab_type'] ?? null,
+                'pipeline_stage' => 'identify',
+                'probability' => 0,
+                'status' => 'aktif',
+                'sales_id' => Auth::user()->isSales() ? Auth::id() : null,
+            ]);
+        }
+
+        if (! empty($data['pic_name']) && ! $customer->primaryPic) {
+            $customer->pics()->create([
+                'name' => $data['pic_name'],
+                'is_primary' => true,
+            ]);
+            $customer->load('primaryPic');
+        }
+
+        return $customer;
+    }
+
     protected function canViewDesignRequest(DesignRequest $designRequest): bool
     {
-        return ! Auth::user()->isSales()
-            || (int) $designRequest->sales_id === (int) Auth::id();
+        if (! Auth::user()->isSales()) {
+            return true;
+        }
+
+        $userId = (int) Auth::id();
+
+        return (int) $designRequest->sales_id === $userId
+            || (int) optional($designRequest->lead)->sales_id === $userId
+            || (int) optional($designRequest->customer)->sales_id === $userId;
     }
 }

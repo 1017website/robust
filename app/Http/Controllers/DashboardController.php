@@ -160,6 +160,8 @@ class DashboardController extends Controller
         $stats = [
             'request_baru' => DesignRequest::where('status', 'assigned')->count(),
             'drawing_progress' => DesignRequest::whereIn('status', ['drafting', 'costing'])->count(),
+            // Backward compatible key for the drafter dashboard view.
+            'drafting' => DesignRequest::whereIn('status', ['drafting', 'costing'])->count(),
             'waiting_approval' => DesignRequest::where('status', 'review')->count(),
             'project_aktif' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
             'qc_pending' => DesignRequest::whereIn('status', ['review', 'costing'])->count(),
@@ -215,8 +217,26 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Keep legacy variable aliases because the existing Blade dashboard
+        // still references these names in several sections.
+        $progress = $progressStages;
+        $revisions = $revisionRequests;
+        $approvalQueue = $waitingSalesApproval;
+        $timeline = $activityTimeline;
+
         return view('drafter.dashboard', compact(
-            'stats', 'myTasks', 'queue', 'progressStages', 'deadlineAlerts', 'revisionRequests', 'waitingSalesApproval', 'activityTimeline'
+            'stats',
+            'myTasks',
+            'queue',
+            'progressStages',
+            'deadlineAlerts',
+            'revisionRequests',
+            'waitingSalesApproval',
+            'activityTimeline',
+            'progress',
+            'revisions',
+            'approvalQueue',
+            'timeline'
         ));
     }
 }

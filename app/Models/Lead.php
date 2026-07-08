@@ -27,6 +27,7 @@ class Lead extends Model
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     public function designRequests(): HasMany { return $this->hasMany(DesignRequest::class); }
     public function quotations(): HasMany { return $this->hasMany(Quotation::class); }
+    public function activities(): HasMany { return $this->hasMany(Activity::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
 
     public static function activeStatuses(): array

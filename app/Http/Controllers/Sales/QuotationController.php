@@ -19,7 +19,9 @@ class QuotationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Quotation::with('customer', 'sales')->where('sales_id', Auth::id())->latest();
+        $query = Quotation::with('customer', 'sales')
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+            ->latest();
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")
@@ -36,14 +38,17 @@ class QuotationController extends Controller
 
     public function create(Request $request)
     {
-        $designRequest = $request->get('dr') ? DesignRequest::with('items', 'lead', 'customer')->find($request->get('dr')) : null;
+        $designRequest = $request->get('dr')
+            ? DesignRequest::with('items', 'lead', 'customer', 'sales')->find($request->get('dr'))
+            : null;
 
-        if ($designRequest && $designRequest->sales_id !== Auth::id()) {
+        if ($designRequest && ! $this->canAccessDesignRequestForQuotation($designRequest)) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
-        $customers = Customer::orderBy('name')->get();
-        $completedDR = DesignRequest::where('status', 'completed')->where('sales_id', Auth::id())->get();
+        $customers = $this->customerQuery()->orderBy('name')->get();
+        $completedDR = $this->accessibleCompletedDesignRequests()->get();
+
         return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR'));
     }
 
@@ -65,7 +70,7 @@ class QuotationController extends Controller
                 'customer_name' => $data['customer_name'],
                 'pic_name' => $data['pic_name'] ?? null,
                 'project_name' => $data['project_name'],
-                'sales_id' => Auth::id(),
+                'sales_id' => $this->quotationSalesId($designRequest),
                 'delivery_method' => $data['delivery_method'],
                 'quote_date' => $data['quote_date'],
                 'valid_until' => $data['valid_until'],
@@ -129,8 +134,8 @@ class QuotationController extends Controller
 
         $quotation->load('items', 'designRequest');
         $designRequest = $quotation->designRequest;
-        $customers = Customer::orderBy('name')->get();
-        $completedDR = DesignRequest::where('status', 'completed')->where('sales_id', Auth::id())->get();
+        $customers = $this->customerQuery()->orderBy('name')->get();
+        $completedDR = $this->accessibleCompletedDesignRequests()->get();
 
         return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR'));
     }
@@ -347,8 +352,9 @@ class QuotationController extends Controller
             return null;
         }
 
-        $designRequest = DesignRequest::with('lead', 'customer')->findOrFail($designRequestId);
-        if ($designRequest->sales_id !== Auth::id()) {
+        $designRequest = DesignRequest::with('lead', 'customer', 'sales')->findOrFail($designRequestId);
+
+        if (! $this->canAccessDesignRequestForQuotation($designRequest)) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
@@ -407,9 +413,55 @@ class QuotationController extends Controller
         ]);
     }
 
+    protected function customerQuery()
+    {
+        return Customer::query()
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+    }
+
+    protected function accessibleCompletedDesignRequests()
+    {
+        return DesignRequest::with('customer', 'lead', 'sales')
+            ->where('status', 'completed')
+            ->when(Auth::user()->isSales(), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('sales_id', Auth::id())
+                        ->orWhereHas('lead', fn ($lead) => $lead->where('sales_id', Auth::id()))
+                        ->orWhereHas('customer', fn ($customer) => $customer->where('sales_id', Auth::id()));
+                });
+            })
+            ->latest();
+    }
+
+    protected function canAccessDesignRequestForQuotation(DesignRequest $designRequest): bool
+    {
+        if (! Auth::user()->isSales()) {
+            return true;
+        }
+
+        $userId = (int) Auth::id();
+
+        return (int) $designRequest->sales_id === $userId
+            || (int) optional($designRequest->lead)->sales_id === $userId
+            || (int) optional($designRequest->customer)->sales_id === $userId;
+    }
+
+    protected function quotationSalesId(?DesignRequest $designRequest): int
+    {
+        if (Auth::user()->isSales()) {
+            return (int) Auth::id();
+        }
+
+        return (int) ($designRequest?->sales_id ?: Auth::id());
+    }
+
     protected function ensureOwner(Quotation $quotation): void
     {
-        if ($quotation->sales_id !== Auth::id()) {
+        if (! Auth::user()->isSales()) {
+            return;
+        }
+
+        if ((int) $quotation->sales_id !== (int) Auth::id()) {
             abort(403, 'Penawaran ini bukan milik Anda.');
         }
     }
