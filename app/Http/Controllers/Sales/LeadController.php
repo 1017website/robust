@@ -24,6 +24,9 @@ class LeadController extends Controller
         if ($stage = $request->get('stage')) {
             $query->where('stage', $stage);
         }
+        if ($priority = $request->get('priority')) {
+            $query->where('priority', $priority);
+        }
 
         $leads = $query->paginate(10)->withQueryString();
 
