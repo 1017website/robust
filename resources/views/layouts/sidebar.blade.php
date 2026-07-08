@@ -52,7 +52,16 @@
             <a href="{{ route('calendar.index') }}" class="{{ request()->routeIs('calendar.*') ? 'active' : '' }}"><i class="bi bi-calendar3"></i> Calendar</a>
             <a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="bi bi-bar-chart"></i> Reports</a>
         @elseif($role === 'drafter')
-            <a href="{{ route('drafter.design-requests.index') }}" class="{{ request()->routeIs('drafter.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> Design Request</a>
+            @php
+                $drafterNewDesignRequestCount = \App\Models\DesignRequest::query()
+                    ->where('status', 'assigned')
+                    ->where(function ($query) use ($u) {
+                        $query->where('production_pic_id', $u->id)
+                            ->orWhereNull('production_pic_id');
+                    })
+                    ->count();
+            @endphp
+            <a href="{{ route('drafter.design-requests.index') }}" class="{{ request()->routeIs('drafter.design-requests.*') ? 'active' : '' }}"><i class="bi bi-pencil-square"></i> <span>Design Request</span>@if($drafterNewDesignRequestCount > 0)<span class="side-badge">{{ $drafterNewDesignRequestCount > 99 ? '99+' : $drafterNewDesignRequestCount }}</span>@endif</a>
             <a href="{{ route('drafter.projects.index') }}" class="{{ request()->routeIs('drafter.projects.*') ? 'active' : '' }}"><i class="bi bi-box-seam"></i> Projects</a>
             <a href="{{ route('drafter.tasks.index') }}" class="{{ request()->routeIs('drafter.tasks.*') ? 'active' : '' }}"><i class="bi bi-ui-checks"></i> Tasks</a>
             <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-text"></i> Documents</a>
