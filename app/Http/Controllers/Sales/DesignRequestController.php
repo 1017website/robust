@@ -46,6 +46,7 @@ class DesignRequestController extends Controller
             $query->where('priority', $priority);
         }
 
+        $designRequests = $query->paginate(10)->withQueryString();
         $base = DesignRequest::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
             'total' => (clone $base)->count(),
@@ -133,10 +134,11 @@ class DesignRequestController extends Controller
             $lead->update(['stage' => 'design_request']);
         }
 
+        $designRequest = DesignRequest::create($data);
         Logger::record('created', "Design Request {$designRequest->code} dibuat", $designRequest);
 
         return redirect()
-            ->route('sales.design-requests.show', $designRequest)
+            ->route('sales.design-requests.index')
             ->with('success', 'Design Request berhasil disimpan dan drafter sudah ditugaskan.');
     }
 

@@ -60,6 +60,7 @@ class RequestMasukController extends Controller
         }
 
         $lead = DB::transaction(function () use ($praLead) {
+            $praLead = PraLead::query()->lockForUpdate()->findOrFail($praLead->id);
             $existingLead = Lead::where('pra_lead_id', $praLead->id)->first();
 
             if ($existingLead) {
@@ -69,11 +70,10 @@ class RequestMasukController extends Controller
                 return $existingLead->fresh('customer');
             }
 
-        if ($praLead->status !== 'waiting_acceptance') {
-            return back()->with('error', 'Request ini sudah diproses sebelumnya.');
-        }
+            if ($praLead->status !== 'waiting_acceptance') {
+                return null;
+            }
 
-        DB::transaction(function () use ($praLead) {
             $praLead->update(['status' => 'accepted', 'responded_at' => now()]);
 
             $lead = Lead::create([
@@ -105,7 +105,11 @@ class RequestMasukController extends Controller
             return $lead->fresh('customer');
         });
 
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Request diterima, menjadi Lead, dan otomatis terhubung ke Customer.');
+        if (! $lead) {
+            return back()->with('error', 'Request ini sudah diproses sebelumnya.');
+        }
+
+        return redirect()->route('sales.leads.index')->with('success', 'Request diterima, menjadi Lead, dan otomatis terhubung ke Customer.');
     }
 
     public function reject(Request $request, PraLead $praLead)

@@ -11,6 +11,7 @@ use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
@@ -104,7 +105,12 @@ class LeadController extends Controller
         if (Auth::user()->isSales()) {
             unset($data['sales_id']);
         }
-        $lead->update($data);
+
+        DB::transaction(function () use ($request, $lead, $data) {
+            $lead->update($data);
+            $this->storeLeadDocuments($request, $lead);
+        });
+
         Logger::record('updated', "Lead {$lead->instansi} diperbarui", $lead);
         return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead diperbarui.');
     }
@@ -164,6 +170,8 @@ class LeadController extends Controller
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
             'initial_note' => ['nullable', 'string'],
+            'documents' => ['nullable', 'array', 'max:5'],
+            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'sales_id' => [
                 Rule::requiredIf(fn () => ! Auth::user()->isSales()),
                 'nullable',
@@ -177,6 +185,24 @@ class LeadController extends Controller
         unset($data['documents']);
 
         return $data;
+    }
+
+    protected function storeLeadDocuments(Request $request, Lead $lead): void
+    {
+        foreach ($request->file('documents', []) as $file) {
+            $path = $file->store('documents', 'public');
+
+            Document::create([
+                'documentable_type' => Lead::class,
+                'documentable_id' => $lead->id,
+                'name' => $file->getClientOriginalName(),
+                'category' => 'lainnya',
+                'file_path' => $path,
+                'file_type' => $file->getClientOriginalExtension(),
+                'file_size' => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
     }
 
     protected function ensureAccess(Lead $lead): void

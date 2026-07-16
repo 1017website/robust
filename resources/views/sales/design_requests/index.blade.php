@@ -2,6 +2,7 @@
 @section('title', 'Design Request')
 @section('content')
 @php
+    $selected = $selectedRequest;
     $statusClass = fn($s) => match($s) {
         'completed' => 'st-green',
         'drafting' => 'st-blue',
