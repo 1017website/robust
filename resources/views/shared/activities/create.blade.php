@@ -9,6 +9,7 @@
             <div class="card-r">
                 <div class="card-head"><h2>Detail Aktivitas</h2></div>
                 <div class="row g-3">
+                    @if(!auth()->user()->isSales())<div class="col-md-6"><label class="form-label small fw-semibold">Sales PIC *</label><select name="sales_id" class="form-select" required><option value="">Pilih sales</option>@foreach($salesUsers as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id')===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
                     <div class="col-md-6"><label class="form-label small fw-semibold">Tipe *</label><select name="type" class="form-select" required>@foreach(\App\Models\Activity::types() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Customer</label><select name="customer_id" class="form-select select2"><option value="">—</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Pipeline Stage</label><select name="pipeline_stage" class="form-select"><option value="">Ikuti stage customer</option>@foreach(\App\Models\Customer::stages() as $k=>$v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></div>
@@ -23,11 +24,11 @@
         <div class="col-lg-4">
             <div class="card-r">
                 <div class="card-head"><h2>Status & Tindak Lanjut</h2></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Status *</label><select name="status" class="form-select"><option value="scheduled">Terjadwal</option><option value="in_progress">Berlangsung</option><option value="completed">Selesai</option><option value="pending">Pending</option></select></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Status *</label><select name="status" class="form-select">@foreach(\App\Models\Activity::statuses() as $key=>$label)<option value="{{ $key }}" @selected(old('status','scheduled')===$key)>{{ $label }}</option>@endforeach</select></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Tindak Lanjut</label><textarea name="next_action" rows="2" class="form-control"></textarea></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Tgl Follow Up</label><input name="next_followup_date" type="date" class="form-control"></div>
             </div>
-            <div class="card-r"><button class="btn btn-primary w-100">Simpan Aktivitas</button><a href="{{ route('activities.index') }}" class="btn btn-soft w-100 mt-2">Batal</a></div>
+            <div class="card-r"><button type="submit" class="btn btn-primary w-100">Simpan Aktivitas</button><a href="{{ route('activities.index') }}" class="btn btn-soft w-100 mt-2">Batal</a></div>
         </div>
     </div>
 </form>

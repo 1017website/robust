@@ -125,7 +125,7 @@
                     <div class="card-head"><h2>Diskon & Pajak</h2></div>
                     <div class="row g-3">
                         <div class="col-md-4"><label class="form-label small fw-semibold">Tipe Diskon</label><select name="discount_type" id="discType" class="form-select"><option value="percent" @selected(old('discount_type', $quotation?->discount_type ?? 'percent') === 'percent')>Persen (%)</option><option value="nominal" @selected(old('discount_type', $quotation?->discount_type) === 'nominal')>Nominal (Rp)</option></select></div>
-                        <div class="col-md-4"><label class="form-label small fw-semibold">Nilai Diskon</label><input name="discount_value" id="discValue" type="text" inputmode="decimal" value="{{ old('discount_value', $quotation?->discount_value ?? 0) }}" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label small fw-semibold">Nilai Diskon</label><input name="discount_value" id="discValue" type="text" inputmode="decimal" data-qty value="{{ old('discount_value', $quotation?->discount_value ?? 0) }}" class="form-control"></div>
                         <div class="col-md-4"><label class="form-label small fw-semibold">PPN (%)</label><input name="tax_percent" id="taxPercent" type="text" inputmode="decimal" data-qty value="{{ old('tax_percent', $quotation?->tax_percent ?? 11) }}" class="form-control"></div>
                         <div class="col-12"><label class="form-label small fw-semibold">Alasan Diskon</label><input name="discount_reason" value="{{ old('discount_reason', $quotation?->discount_reason) }}" class="form-control"></div>
                     </div>
@@ -243,7 +243,18 @@ function addCost(data={}){
 document.getElementById('addCost').onclick=()=>{ addCost(); };
 if(costsData.length){ costsData.forEach(addCost); }
 
-['discType','discValue','taxPercent'].forEach(id=>document.getElementById(id).addEventListener('input',recalc));
+function syncDiscountInputKind(){
+    const input=document.getElementById('discValue');
+    const nominal=document.getElementById('discType').value==='nominal';
+    input.toggleAttribute('data-rupiah',nominal);
+    input.toggleAttribute('data-qty',!nominal);
+    input.dataset.numberKind=nominal?'currency':'decimal';
+    input.setAttribute('inputmode',nominal?'numeric':'decimal');
+    formatNumberEl(input,input.dataset.numberKind);
+}
+document.getElementById('discType').addEventListener('change',()=>{ syncDiscountInputKind(); recalc(); });
+['discValue','taxPercent'].forEach(id=>document.getElementById(id).addEventListener('input',recalc));
+syncDiscountInputKind();
 const customerSelect = document.getElementById('customerSelect');
 customerSelect?.addEventListener('change', function(){
     const opt = this.options[this.selectedIndex];

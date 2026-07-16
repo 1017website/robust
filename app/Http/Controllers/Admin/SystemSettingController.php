@@ -21,6 +21,7 @@ class SystemSettingController extends Controller
             'company_tagline' => SystemSetting::value('company_tagline', 'Laboratory Furniture & Equipment'),
             'company_logo' => SystemSetting::assetUrl('company_logo'),
             'company_favicon' => SystemSetting::assetUrl('company_favicon'),
+            'sales_monthly_target' => (float) SystemSetting::value('sales_monthly_target', 0),
         ];
 
         $commands = $this->allowedCommands();
@@ -37,10 +38,12 @@ class SystemSettingController extends Controller
             'company_favicon' => ['nullable', 'file', 'max:1024', 'mimes:ico,png,jpg,jpeg,webp,svg'],
             'remove_logo' => ['nullable', 'boolean'],
             'remove_favicon' => ['nullable', 'boolean'],
+            'sales_monthly_target' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         SystemSetting::putValue('company_name', $data['company_name']);
         SystemSetting::putValue('company_tagline', $data['company_tagline'] ?? '');
+        SystemSetting::putValue('sales_monthly_target', $data['sales_monthly_target'] ?? 0, 'number');
 
         if ($request->boolean('remove_logo')) {
             $this->deleteStoredFile('company_logo');

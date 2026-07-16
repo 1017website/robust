@@ -19,17 +19,17 @@
             <div class="page-subtitle">Berikut ringkasan aktivitas dan pipeline prospek hari ini.</div>
         </div>
         <div class="page-actions">
-            <button class="btn btn-soft"><i class="bi bi-calendar3 me-1"></i>Periode: {{ now()->startOfWeek()->translatedFormat('d') }} - {{ now()->endOfWeek()->translatedFormat('d M Y') }}</button>
+            <span class="btn btn-soft"><i class="bi bi-calendar3 me-1"></i>Periode: {{ now()->startOfWeek()->translatedFormat('d') }} - {{ now()->endOfWeek()->translatedFormat('d M Y') }}</span>
         </div>
     </div>
 
     <div class="sa-stats six">
-        <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-people"></i></div><div><small>Pra Leads</small><strong>{{ $stats['pra_leads'] }}</strong><span class="up">▲ 12% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico orange"><i class="bi bi-send"></i></div><div><small>Assigned</small><strong>{{ $stats['assigned'] ?? 0 }}</strong><span class="up">▲ 8% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico purple"><i class="bi bi-hourglass-split"></i></div><div><small>Waiting Acceptance</small><strong>{{ $stats['waiting'] }}</strong><span class="up">▲ 17% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico red"><i class="bi bi-x-circle"></i></div><div><small>Rejected</small><strong>{{ $stats['rejected'] ?? 0 }}</strong><span class="down">▼ 25% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico green"><i class="bi bi-person-check"></i></div><div><small>Leads Aktif</small><strong>{{ $stats['leads_aktif'] }}</strong><span class="up">▲ 8% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-briefcase"></i></div><div><small>Project Aktif</small><strong>{{ $stats['project_aktif'] }}</strong><span class="up">▲ 3% dari minggu lalu</span></div></div>
+        <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-people"></i></div><div><small>Pra Leads</small><strong>{{ $stats['pra_leads'] }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico orange"><i class="bi bi-send"></i></div><div><small>Assigned</small><strong>{{ $stats['assigned'] ?? 0 }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico purple"><i class="bi bi-hourglass-split"></i></div><div><small>Waiting Acceptance</small><strong>{{ $stats['waiting'] }}</strong><span>Perlu ditindaklanjuti</span></div></div>
+        <div class="sa-stat"><div class="sa-ico red"><i class="bi bi-x-circle"></i></div><div><small>Rejected</small><strong>{{ $stats['rejected'] ?? 0 }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico green"><i class="bi bi-person-check"></i></div><div><small>Leads Aktif</small><strong>{{ $stats['leads_aktif'] }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-briefcase"></i></div><div><small>Project Aktif</small><strong>{{ $stats['project_aktif'] }}</strong><span>Data saat ini</span></div></div>
     </div>
 
     <div class="sa-dashboard-grid">
@@ -112,7 +112,7 @@
                             <td>{{ $loop->iteration }}</td>
                             <td><strong>{{ $lead->instansi }}</strong></td>
                             <td>{{ $lead->pic_name }}</td>
-                            <td>{{ $lead->lab_type ?: IlluminateSupportStr::limit($lead->initial_need, 30) }}</td>
+                            <td>{{ $lead->lab_type ?: \Illuminate\Support\Str::limit($lead->initial_need, 30) }}</td>
                             <td>{{ $lead->assignedSales?->name ?? '-' }}</td>
                             <td><x-status-badge :status="$lead->status" /></td>
                             <td>{{ $lead->created_at?->translatedFormat('d M Y') }}<br><small>{{ $lead->created_at?->format('H:i') }}</small></td>

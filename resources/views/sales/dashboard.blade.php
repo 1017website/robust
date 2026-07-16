@@ -26,10 +26,10 @@
     @endif
 
     <div class="sales-grid-5">
-        <div class="sales-stat up"><div class="ico sblue"><i class="bi bi-people"></i></div><div><div class="label">Leads Aktif</div><div class="value">{{ $stats['leads_aktif'] }}</div><div class="sub">↑ 18% dari bulan lalu</div></div></div>
-        <div class="sales-stat up"><div class="ico sgreen"><i class="bi bi-file-earmark-check"></i></div><div><div class="label">Penawaran Aktif</div><div class="value">{{ $stats['penawaran_aktif'] }}</div><div class="sub">↑ 20% dari bulan lalu</div></div></div>
-        <div class="sales-stat up"><div class="ico sorange"><i class="bi bi-briefcase"></i></div><div><div class="label">Project Berjalan</div><div class="value">{{ $stats['project_berjalan'] }}</div><div class="sub">↑ 12% dari bulan lalu</div></div></div>
-        <div class="sales-stat up"><div class="ico spurple"><i class="bi bi-trophy"></i></div><div><div class="label">Deal Won (Bulan Ini)</div><div class="value">{{ $stats['deal_won'] }}</div><div class="sub">↑ 33% dari bulan lalu</div></div></div>
+        <div class="sales-stat"><div class="ico sblue"><i class="bi bi-people"></i></div><div><div class="label">Leads Aktif</div><div class="value">{{ $stats['leads_aktif'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="sales-stat"><div class="ico sgreen"><i class="bi bi-file-earmark-check"></i></div><div><div class="label">Penawaran Aktif</div><div class="value">{{ $stats['penawaran_aktif'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="sales-stat"><div class="ico sorange"><i class="bi bi-briefcase"></i></div><div><div class="label">Project Berjalan</div><div class="value">{{ $stats['project_berjalan'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="sales-stat"><div class="ico spurple"><i class="bi bi-trophy"></i></div><div><div class="label">Deal Won (Bulan Ini)</div><div class="value">{{ $stats['deal_won'] }}</div><div class="sub">Bulan berjalan</div></div></div>
         <div class="sales-stat"><div class="ico steal"><i class="bi bi-bullseye"></i></div><div class="w-100"><div class="label">Target (Bulan Ini)</div><div class="value fs-4">{{ $fmtShort($stats['won_value']) }}</div><div class="sales-progress mt-2"><span style="width:{{ $targetPercent }}%"></span></div><div class="sub">Progress {{ $targetPercent }}%</div></div></div>
     </div>
 

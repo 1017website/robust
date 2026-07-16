@@ -13,16 +13,16 @@
             <div class="page-subtitle">Monitoring distribusi workload, ownership, dan performa sales.</div>
         </div>
         <div class="page-actions">
-            <button class="btn btn-soft"><i class="bi bi-calendar3 me-1"></i>Periode: {{ now()->startOfWeek()->translatedFormat('d') }} - {{ now()->endOfWeek()->translatedFormat('d M Y') }}</button>
-            <button class="btn btn-soft"><i class="bi bi-download me-1"></i>Export</button>
+            <span class="btn btn-soft"><i class="bi bi-calendar3 me-1"></i>Periode: {{ now()->startOfWeek()->translatedFormat('d') }} - {{ now()->endOfWeek()->translatedFormat('d M Y') }}</span>
+            <a class="btn btn-soft" href="{{ route('admin.assignment.index', ['export' => 'csv']) }}"><i class="bi bi-download me-1"></i>Export CSV</a>
         </div>
     </div>
 
     <div class="sa-stats four">
         <div class="sa-stat"><div class="sa-ico blue"><i class="bi bi-people"></i></div><div><small>Total Sales</small><strong>{{ $stats['total_sales'] }}</strong><span>Aktif</span></div></div>
-        <div class="sa-stat"><div class="sa-ico green"><i class="bi bi-person-plus"></i></div><div><small>Total Leads</small><strong>{{ $stats['total_leads'] }}</strong><span class="up">▲ 12% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico orange"><i class="bi bi-briefcase"></i></div><div><small>Active Projects</small><strong>{{ $stats['active_projects'] }}</strong><span class="up">▲ 5% dari minggu lalu</span></div></div>
-        <div class="sa-stat"><div class="sa-ico purple"><i class="bi bi-check2-circle"></i></div><div><small>Acceptance Rate</small><strong>{{ $stats['acceptance_rate'] }}%</strong><span class="up">▲ 7% dari minggu lalu</span></div></div>
+        <div class="sa-stat"><div class="sa-ico green"><i class="bi bi-person-plus"></i></div><div><small>Total Leads</small><strong>{{ $stats['total_leads'] }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico orange"><i class="bi bi-briefcase"></i></div><div><small>Active Projects</small><strong>{{ $stats['active_projects'] }}</strong><span>Data saat ini</span></div></div>
+        <div class="sa-stat"><div class="sa-ico purple"><i class="bi bi-check2-circle"></i></div><div><small>Acceptance Rate</small><strong>{{ $stats['acceptance_rate'] }}%</strong><span>Berdasarkan assignment</span></div></div>
     </div>
 
     <div class="sa-assignment-grid">
@@ -52,7 +52,7 @@
             </section>
 
             <div class="sa-two-col mt-3">
-                <section class="sa-card">
+                <section class="sa-card" id="acceptance">
                     <div class="sa-card-head"><h2>Lead Acceptance Monitoring <i class="bi bi-info-circle text-muted-2"></i></h2></div>
                     <div class="table-wrap">
                         <table class="sa-table">
@@ -64,12 +64,12 @@
                             </tbody>
                         </table>
                     </div>
-                    <a class="sa-link" href="#">Lihat Detail Acceptance <i class="bi bi-arrow-right"></i></a>
+                    <a class="sa-link" href="{{ route('admin.assignment.index') }}#acceptance">Lihat Detail Acceptance <i class="bi bi-arrow-right"></i></a>
                 </section>
 
                 <section class="sa-card">
                     <div class="sa-card-head"><h2>Top Sales Performance (Win Rate)</h2></div>
-                    <select class="form-select form-select-sm mb-3" style="width:190px"><option>Berdasarkan Nilai Project</option></select>
+                    <div class="small fw-semibold text-muted-2 mb-3">Berdasarkan acceptance rate</div>
                     <div class="sa-progress-list compact">
                         @foreach($acceptance->sortByDesc('rate')->take(5) as $idx => $row)
                             <div class="sa-progress-row"><span>{{ $loop->iteration <= 3 ? ['🥇','🥈','🥉'][$loop->iteration-1] : $loop->iteration }} &nbsp;{{ $row['sales']->name }}</span><div class="sa-mini-bar"><b style="width:{{ $row['rate'] }}%"></b></div><strong>{{ $row['rate'] }}%</strong></div>
@@ -101,12 +101,11 @@
                         </tbody>
                     </table>
                 </div>
-                <a class="sa-link" href="#">Lihat Semua Project <i class="bi bi-arrow-right"></i></a>
+                    <a class="sa-link" href="{{ route('sales.projects.index') }}">Lihat Semua Project <i class="bi bi-arrow-right"></i></a>
             </section>
         </div>
 
         <aside class="sa-card sa-assignment-side">
-            <div class="d-flex justify-content-end"><button class="btn btn-sm btn-link text-dark"><i class="bi bi-x-lg"></i></button></div>
             @if($selectedSales)
                 @php($selectedAccept = $acceptMap[$selectedSales->id] ?? ['rate'=>0])
                 <div class="text-center">
@@ -125,7 +124,7 @@
                     <div><strong>{{ $selectedAccept['rate'] ?? 0 }}%</strong><span>Win Rate</span></div>
                 </div>
                 <hr>
-                <div class="sa-card-head"><h2>Lead Terbaru</h2><a href="#">Lihat Semua</a></div>
+            <div class="sa-card-head"><h2>Lead Terbaru</h2><a href="{{ route('sales.leads.index') }}">Lihat Semua</a></div>
                 <div class="sa-mini-list">
                     @foreach($leads->where('sales_id', $selectedSales->id)->take(3) as $lead)
                         <div><span>{{ $loop->iteration }}</span><strong>{{ $lead->instansi }}</strong><small><x-status-badge :status="$lead->status" /></small></div>
@@ -142,7 +141,7 @@
                         @endforeach
                     </select>
                     <div class="row g-2 align-items-end">
-                        <div class="col"><label class="form-label small">Dari</label><select class="form-select"><option>{{ $selectedSales->name }}</option></select></div>
+                        <div class="col"><label class="form-label small">Dari</label><input class="form-control" value="{{ $selectedSales->name }}" readonly></div>
                         <div class="col-auto pb-2"><i class="bi bi-arrow-right"></i></div>
                         <div class="col"><label class="form-label small">Ke</label><select name="to_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach</select></div>
                     </div>

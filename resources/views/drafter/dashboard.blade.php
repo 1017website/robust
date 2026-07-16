@@ -21,12 +21,12 @@
     </div>
 
     <div class="drafter-stat-grid six">
-        <div class="drafter-stat"><div class="ico purple"><i class="bi bi-file-earmark-plus"></i></div><div><div class="label">Design Request Baru</div><div class="value">{{ $stats['request_baru'] ?? 0 }}</div><div class="sub up">↗ 2 dari kemarin</div></div></div>
-        <div class="drafter-stat"><div class="ico blue"><i class="bi bi-pencil-square"></i></div><div><div class="label">Drawing Dalam Progress</div><div class="value">{{ $stats['drawing_progress'] ?? $stats['drafting'] ?? 0 }}</div><div class="sub up">↗ 1 dari kemarin</div></div></div>
-        <div class="drafter-stat"><div class="ico orange"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Menunggu Approval</div><div class="value">{{ $stats['waiting_approval'] ?? 0 }}</div><div class="sub up">↗ 1 dari kemarin</div></div></div>
-        <div class="drafter-stat"><div class="ico green"><i class="bi bi-buildings"></i></div><div><div class="label">Project Produksi Aktif</div><div class="value">{{ $stats['project_aktif'] ?? 0 }}</div><div class="sub up">↗ 3 dari kemarin</div></div></div>
-        <div class="drafter-stat"><div class="ico red"><i class="bi bi-shield-exclamation"></i></div><div><div class="label">QC Pending</div><div class="value">{{ $stats['qc_pending'] ?? 0 }}</div><div class="sub up">↗ 2 dari kemarin</div></div></div>
-        <div class="drafter-stat"><div class="ico amber"><i class="bi bi-calendar2-check"></i></div><div><div class="label">Deadline Hari Ini</div><div class="value">{{ $stats['deadline_today'] ?? 0 }}</div><a href="{{ route('drafter.design-requests.index') }}" class="small fw-bold">Lihat detail</a></div></div>
+        <div class="drafter-stat"><div class="ico purple"><i class="bi bi-file-earmark-plus"></i></div><div><div class="label">Design Request Baru</div><div class="value">{{ $stats['request_baru'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="drafter-stat"><div class="ico blue"><i class="bi bi-pencil-square"></i></div><div><div class="label">Drawing Dalam Progress</div><div class="value">{{ $stats['drafting'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="drafter-stat"><div class="ico orange"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Menunggu Approval</div><div class="value">{{ $stats['waiting_approval'] }}</div><div class="sub">Perlu ditindaklanjuti</div></div></div>
+        <div class="drafter-stat"><div class="ico green"><i class="bi bi-buildings"></i></div><div><div class="label">Project Produksi Aktif</div><div class="value">{{ $stats['project_aktif'] }}</div><div class="sub">Data saat ini</div></div></div>
+        <div class="drafter-stat"><div class="ico red"><i class="bi bi-shield-exclamation"></i></div><div><div class="label">QC Pending</div><div class="value">{{ $stats['qc_pending'] }}</div><div class="sub">Perlu ditindaklanjuti</div></div></div>
+        <div class="drafter-stat"><div class="ico amber"><i class="bi bi-calendar2-check"></i></div><div><div class="label">Deadline Hari Ini</div><div class="value">{{ $stats['deadline_today'] }}</div><a href="{{ route('drafter.design-requests.index') }}" class="small fw-bold">Lihat detail</a></div></div>
     </div>
 
     <div class="drafter-dashboard-grid">

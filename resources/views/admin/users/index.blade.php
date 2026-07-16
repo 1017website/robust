@@ -17,7 +17,7 @@
         <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari nama / email / jabatan...">
         <select name="role" class="form-select">
             <option value="">Semua Role</option>
-            @foreach(\App\Models\User::roles() as $k=>$v)<option value="{{ $k }}" @selected(request('role')==$k)>{{ $v }}</option>@endforeach
+            @foreach($allowedRoles as $k=>$v)<option value="{{ $k }}" @selected(request('role')==$k)>{{ $v }}</option>@endforeach
         </select>
         <select name="status" class="form-select">
             <option value="">Semua Status</option>
@@ -82,7 +82,7 @@
                                         <div class="col-md-6"><label class="form-label small fw-semibold">Telepon</label><input name="phone" value="{{ $user->phone }}" class="form-control"></div>
                                         <div class="col-md-6"><label class="form-label small fw-semibold">Role / Hak Akses *</label>
                                             <select name="role" class="form-select" {{ $user->id === auth()->id() ? 'disabled' : '' }}>
-                                                @foreach(\App\Models\User::roles() as $k=>$v)<option value="{{ $k }}" @selected($user->role==$k)>{{ $v }}</option>@endforeach
+                                                @foreach($allowedRoles as $k=>$v)<option value="{{ $k }}" @selected($user->role==$k)>{{ $v }}</option>@endforeach
                                             </select>
                                             @if($user->id === auth()->id())<input type="hidden" name="role" value="{{ $user->role }}"><div class="form-text">Role akun sendiri tidak dapat diubah.</div>@endif
                                         </div>
@@ -126,7 +126,7 @@
                         <div class="col-md-6"><label class="form-label small fw-semibold">Telepon</label><input name="phone" value="{{ old('phone') }}" class="form-control"></div>
                         <div class="col-md-6"><label class="form-label small fw-semibold">Role / Hak Akses *</label>
                             <select name="role" class="form-select" required>
-                                @foreach(\App\Models\User::roles() as $k=>$v)<option value="{{ $k }}" @selected(old('role')==$k)>{{ $v }}</option>@endforeach
+                                @foreach($allowedRoles as $k=>$v)<option value="{{ $k }}" @selected(old('role')==$k)>{{ $v }}</option>@endforeach
                             </select>
                         </div>
                         <div class="col-md-6"><label class="form-label small fw-semibold">Status</label>

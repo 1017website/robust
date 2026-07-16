@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Sidebar drawer (mobile/tablet)
     var t = document.getElementById('sidebarToggle');
     var sb = document.getElementById('sidebar');
+    var sidebarClose = document.getElementById('sidebarClose');
     var backdrop = document.getElementById('sidebarBackdrop');
     function setSidebar(open) {
         if (!sb) return;
@@ -11,6 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
     if (t && sb) t.addEventListener('click', function () { setSidebar(!sb.classList.contains('show')); });
+    if (sidebarClose) sidebarClose.addEventListener('click', function () {
+        setSidebar(false);
+        if (t) t.focus();
+    });
     if (backdrop) backdrop.addEventListener('click', function () { setSidebar(false); });
     if (sb) sb.querySelectorAll('a').forEach(function (link) {
         link.addEventListener('click', function () { setSidebar(false); });
@@ -20,6 +25,45 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     window.addEventListener('resize', function () {
         if (window.innerWidth >= 1200) setSidebar(false);
+    });
+
+    // Dropdown aksi tabel perlu keluar dari container overflow agar seluruh menu terlihat.
+    document.addEventListener('shown.bs.dropdown', function (e) {
+        var toggle = e.target.closest('[data-bs-toggle="dropdown"]');
+        if (!toggle || !toggle.closest('.table-wrap')) return;
+        var menu = toggle.parentElement && toggle.parentElement.querySelector(':scope > .dropdown-menu');
+        if (!menu) return;
+
+        menu._tableDropdownHost = menu.parentNode;
+        toggle._tableDropdownMenu = menu;
+        document.body.appendChild(menu);
+        menu.classList.add('table-dropdown-floating');
+
+        requestAnimationFrame(function () {
+            var triggerRect = toggle.getBoundingClientRect();
+            var menuRect = menu.getBoundingClientRect();
+            var gutter = 8;
+            var left = Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - gutter);
+            left = Math.max(gutter, left);
+            var top = triggerRect.bottom + 5;
+            if (top + menuRect.height > window.innerHeight - gutter) {
+                top = Math.max(gutter, triggerRect.top - menuRect.height - 5);
+            }
+            menu.style.setProperty('left', left + 'px', 'important');
+            menu.style.setProperty('top', top + 'px', 'important');
+        });
+    });
+
+    document.addEventListener('hidden.bs.dropdown', function (e) {
+        var toggle = e.target.closest('[data-bs-toggle="dropdown"]');
+        var menu = toggle && toggle._tableDropdownMenu;
+        if (!menu || !menu._tableDropdownHost) return;
+        menu._tableDropdownHost.appendChild(menu);
+        menu.classList.remove('table-dropdown-floating');
+        menu.style.removeProperty('left');
+        menu.style.removeProperty('top');
+        delete toggle._tableDropdownMenu;
+        delete menu._tableDropdownHost;
     });
 
     // CSRF for fetch
@@ -47,6 +91,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---------- Auto-format input ----------
     bindNumberInputs(document);
+
+    // Form menambah baris secara dinamis (item, biaya, termin, dan sejenisnya).
+    // Observer menjaga input baru langsung mendapat separator tanpa kode per halaman.
+    var numberObserver = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+            mutation.addedNodes.forEach(function (node) {
+                if (node.nodeType === 1) bindNumberInputs(node);
+            });
+        });
+    });
+    numberObserver.observe(document.body, { childList: true, subtree: true });
 });
 
 // Inisialisasi Select2 dalam scope tertentu.
@@ -73,7 +128,10 @@ function initSelect2(scope, parent) {
 //  - [data-qty] / .input-qty / nama decimal       -> ribuan titik + koma desimal
 function bindNumberInputs(scope) {
     var root = scope || document;
-    root.querySelectorAll('input').forEach(function (el) {
+    var inputs = root.matches && root.matches('input')
+        ? [root].concat(Array.from(root.querySelectorAll('input')))
+        : Array.from(root.querySelectorAll('input'));
+    inputs.forEach(function (el) {
         var kind = numberInputKind(el);
         if (!kind || el.dataset.numberBound === 'true') return;
 
@@ -83,11 +141,14 @@ function bindNumberInputs(scope) {
         if (!el.getAttribute('inputmode')) el.setAttribute('inputmode', kind === 'currency' ? 'numeric' : 'decimal');
 
         formatNumberEl(el, kind);
-        el.addEventListener('input', function () { formatNumberEl(el, kind); });
-        el.addEventListener('blur', function () { formatNumberEl(el, kind); });
+        el.addEventListener('input', function () { formatNumberEl(el, el.dataset.numberKind || kind); });
+        el.addEventListener('blur', function () { formatNumberEl(el, el.dataset.numberKind || kind); });
     });
 
-    root.querySelectorAll('form').forEach(function (form) {
+    var forms = root.matches && root.matches('form')
+        ? [root].concat(Array.from(root.querySelectorAll('form')))
+        : Array.from(root.querySelectorAll('form'));
+    forms.forEach(function (form) {
         if (form.dataset.numberSubmitBound === 'true') return;
         form.dataset.numberSubmitBound = 'true';
         form.addEventListener('submit', function () {
@@ -139,8 +200,16 @@ function normalizeNumberValue(value, kind) {
     v = v.replace(/-/g, '');
 
     if (kind === 'currency') {
-        v = v.replace(',', '.');
-        if (v.indexOf('.') !== -1) v = v.split('.')[0];
+        if (v.indexOf(',') !== -1) {
+            // Format Indonesia: titik ribuan, koma desimal.
+            v = v.split(',')[0].replace(/\./g, '');
+        } else {
+            var currencyParts = v.split('.');
+            var isDatabaseDecimal = currencyParts.length === 2
+                && currencyParts[0].length > 3
+                && currencyParts[1].length <= 2;
+            v = isDatabaseDecimal ? currencyParts[0] : currencyParts.join('');
+        }
         return negative + v.replace(/\D/g, '');
     }
 
@@ -148,7 +217,7 @@ function normalizeNumberValue(value, kind) {
         v = v.replace(/\./g, '').replace(',', '.');
     } else {
         var parts = v.split('.');
-        if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3 && parts[0].length > 1)) {
+        if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
             v = v.replace(/\./g, '');
         }
     }
@@ -183,6 +252,17 @@ function numberValue(el) {
 
 function rupiahValue(el) {
     return parseInt(normalizeNumberValue(el.value, 'currency'), 10) || 0;
+}
+
+// Dipakai form edit yang mengisi value lewat JavaScript, bukan dari render Blade.
+function setNumberInputValue(el, value) {
+    if (!el) return;
+    el.value = value ?? '';
+    var kind = el.dataset.numberKind || numberInputKind(el);
+    if (kind) {
+        el.dataset.numberKind = kind;
+        formatNumberEl(el, kind);
+    }
 }
 
 // Helper: render chart

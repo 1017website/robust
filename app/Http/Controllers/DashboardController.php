@@ -10,6 +10,7 @@ use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\Quotation;
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -79,7 +80,7 @@ class DashboardController extends Controller
             ->whereIn('status', $wonStatuses)
             ->whereMonth('updated_at', now()->month)
             ->sum('grand_total');
-        $target = 12500000000;
+        $target = (float) SystemSetting::value('sales_monthly_target', 0);
 
         $stats = [
             'leads_aktif' => Lead::where('sales_id', $uid)->whereIn('status', Lead::activeStatuses())->count(),
@@ -156,22 +157,19 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $activeStatuses = ['assigned', 'drafting', 'costing', 'review'];
+        $base = fn () => DesignRequest::query()->where('production_pic_id', $user->id);
 
         $stats = [
-            'request_baru' => DesignRequest::where('status', 'assigned')->count(),
-            'drawing_progress' => DesignRequest::whereIn('status', ['drafting', 'costing'])->count(),
-            // Backward compatible key for the drafter dashboard view.
-            'drafting' => DesignRequest::whereIn('status', ['drafting', 'costing'])->count(),
-            'waiting_approval' => DesignRequest::where('status', 'review')->count(),
+            'request_baru' => $base()->where('status', 'assigned')->count(),
+            'drafting' => $base()->whereIn('status', ['drafting', 'costing'])->count(),
+            'waiting_approval' => $base()->where('status', 'review')->count(),
             'project_aktif' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
-            'qc_pending' => DesignRequest::whereIn('status', ['review', 'costing'])->count(),
-            'deadline_today' => DesignRequest::whereIn('status', $activeStatuses)->whereDate('deadline', today())->count(),
+            'qc_pending' => $base()->whereIn('status', ['review', 'costing'])->count(),
+            'deadline_today' => $base()->whereIn('status', $activeStatuses)->whereDate('deadline', today())->count(),
         ];
 
         $myTasks = DesignRequest::with('sales')
-            ->where(function ($q) use ($user) {
-                $q->where('production_pic_id', $user->id)->orWhereNull('production_pic_id');
-            })
+            ->where('production_pic_id', $user->id)
             ->whereIn('status', $activeStatuses)
             ->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END')
             ->orderBy('deadline')
@@ -179,20 +177,22 @@ class DashboardController extends Controller
             ->get();
 
         $queue = DesignRequest::with('sales')
+            ->where('production_pic_id', $user->id)
             ->whereIn('status', ['assigned', 'drafting', 'costing', 'review'])
             ->latest()
             ->take(6)
             ->get();
 
         $progressStages = collect([
-            'Material Ready' => DesignRequest::whereIn('status', ['assigned', 'drafting', 'costing', 'review', 'completed'])->count(),
-            'Produksi' => DesignRequest::whereIn('status', ['drafting', 'costing', 'review', 'completed'])->count(),
-            'Finishing' => DesignRequest::whereIn('status', ['costing', 'review', 'completed'])->count(),
-            'QC' => DesignRequest::whereIn('status', ['review', 'completed'])->count(),
-            'Ready Delivery' => DesignRequest::where('status', 'completed')->count(),
+            'Material Ready' => $base()->whereIn('status', ['assigned', 'drafting', 'costing', 'review', 'completed'])->count(),
+            'Produksi' => $base()->whereIn('status', ['drafting', 'costing', 'review', 'completed'])->count(),
+            'Finishing' => $base()->whereIn('status', ['costing', 'review', 'completed'])->count(),
+            'QC' => $base()->whereIn('status', ['review', 'completed'])->count(),
+            'Ready Delivery' => $base()->where('status', 'completed')->count(),
         ]);
 
         $deadlineAlerts = DesignRequest::with('sales')
+            ->where('production_pic_id', $user->id)
             ->whereIn('status', $activeStatuses)
             ->whereNotNull('deadline')
             ->whereDate('deadline', '<=', today()->addDays(2))
@@ -201,42 +201,34 @@ class DashboardController extends Controller
             ->get();
 
         $revisionRequests = DesignRequest::with('sales')
+            ->where('production_pic_id', $user->id)
             ->whereIn('status', ['rejected', 'review'])
             ->latest('updated_at')
             ->take(3)
             ->get();
 
         $waitingSalesApproval = DesignRequest::with('sales')
+            ->where('production_pic_id', $user->id)
             ->where('status', 'completed')
             ->latest('submitted_at')
             ->take(3)
             ->get();
 
         $activityTimeline = DesignRequest::with('sales')
+            ->where('production_pic_id', $user->id)
             ->latest('updated_at')
             ->take(5)
             ->get();
 
-        // Keep legacy variable aliases because the existing Blade dashboard
-        // still references these names in several sections.
-        $progress = $progressStages;
-        $revisions = $revisionRequests;
-        $approvalQueue = $waitingSalesApproval;
-        $timeline = $activityTimeline;
-
-        return view('drafter.dashboard', compact(
-            'stats',
-            'myTasks',
-            'queue',
-            'progressStages',
-            'deadlineAlerts',
-            'revisionRequests',
-            'waitingSalesApproval',
-            'activityTimeline',
-            'progress',
-            'revisions',
-            'approvalQueue',
-            'timeline'
-        ));
+        return view('drafter.dashboard', [
+            'stats' => $stats,
+            'myTasks' => $myTasks,
+            'queue' => $queue,
+            'progress' => $progressStages,
+            'deadlineAlerts' => $deadlineAlerts,
+            'revisions' => $revisionRequests,
+            'approvalQueue' => $waitingSalesApproval,
+            'timeline' => $activityTimeline,
+        ]);
     }
 }

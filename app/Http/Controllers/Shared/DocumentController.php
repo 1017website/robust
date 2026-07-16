@@ -10,21 +10,13 @@ use App\Models\Lead;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Document::with('uploader', 'documentable')->latest();
-        if (Auth::user()->isDrafter()) {
-            $query->where(function ($q) {
-                $q->where('uploaded_by', Auth::id())
-                    ->orWhere('documentable_type', DesignRequest::class)
-                    ->orWhere('documentable_type', 'App\\Models\\DesignRequest');
-            });
-        }
+        $query = Document::with('uploader', 'documentable')->visibleTo(Auth::user())->latest();
         if ($cat = $request->get('category')) {
             $query->where('category', $cat);
         }
@@ -33,14 +25,7 @@ class DocumentController extends Controller
         }
         $documents = $query->paginate(10)->withQueryString();
 
-        $statsQuery = Document::query();
-        if (Auth::user()->isDrafter()) {
-            $statsQuery->where(function ($q) {
-                $q->where('uploaded_by', Auth::id())
-                    ->orWhere('documentable_type', DesignRequest::class)
-                    ->orWhere('documentable_type', 'App\\Models\\DesignRequest');
-            });
-        }
+        $statsQuery = Document::query()->visibleTo(Auth::user());
 
         $stats = [
             'total' => (clone $statsQuery)->count(),
@@ -93,11 +78,8 @@ class DocumentController extends Controller
     public function destroy(Document $document)
     {
         abort_unless($this->canManageDocument($document), 403);
-        if ($document->file_path) {
-            Storage::disk('public')->delete($document->file_path);
-        }
         $document->delete();
-        return back()->with('success', 'Dokumen dihapus.');
+        return back()->with('success', 'Dokumen berhasil diarsipkan.');
     }
 
     protected function documentableTypes(): array
@@ -131,10 +113,7 @@ class DocumentController extends Controller
 
         if ($user->isDrafter()) {
             return $documentable instanceof DesignRequest
-                && (
-                    (int) $documentable->production_pic_id === (int) $user->id
-                    || $documentable->production_pic_id === null
-                );
+                && (int) $documentable->production_pic_id === (int) $user->id;
         }
 
         return false;

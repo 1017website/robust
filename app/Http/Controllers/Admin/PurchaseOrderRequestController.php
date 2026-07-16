@@ -9,6 +9,7 @@ use App\Services\CodeGenerator;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderRequestController extends Controller
 {
@@ -60,27 +61,30 @@ class PurchaseOrderRequestController extends Controller
 
         $checklist = $this->normalizedChecklist($data['checklist'] ?? []);
 
-        $poRequest = PurchaseOrderRequest::create([
-            'code' => CodeGenerator::next(PurchaseOrderRequest::class, 'RPO', 4, true),
-            'quotation_id' => $quotation->id,
-            'requested_by' => Auth::id(),
-            'request_date' => $data['request_date'],
-            'customer_po_number' => $data['customer_po_number'] ?? null,
-            'customer_po_file' => $data['customer_po_file'] ?? null,
-            'delivery_address' => $data['delivery_address'] ?? null,
-            'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
-            'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
-            'npwp_name' => $data['npwp_name'] ?? null,
-            'npwp_number' => $data['npwp_number'] ?? null,
-            'payment_term' => $data['payment_term'] ?? null,
-            'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-            'checklist' => $checklist,
-            'checklist_completed_at' => $this->isChecklistComplete($checklist) ? now() : null,
-            'admin_note' => $data['admin_note'] ?? null,
-            'status' => 'submitted',
-        ]);
+        $poRequest = DB::transaction(function () use ($quotation, $data, $checklist) {
+            $poRequest = PurchaseOrderRequest::create([
+                'code' => CodeGenerator::next(PurchaseOrderRequest::class, 'RPO', 4, true),
+                'quotation_id' => $quotation->id,
+                'requested_by' => Auth::id(),
+                'request_date' => $data['request_date'],
+                'customer_po_number' => $data['customer_po_number'] ?? null,
+                'customer_po_file' => $data['customer_po_file'] ?? null,
+                'delivery_address' => $data['delivery_address'] ?? null,
+                'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
+                'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
+                'npwp_name' => $data['npwp_name'] ?? null,
+                'npwp_number' => $data['npwp_number'] ?? null,
+                'payment_term' => $data['payment_term'] ?? null,
+                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+                'checklist' => $checklist,
+                'checklist_completed_at' => $this->isChecklistComplete($checklist) ? now() : null,
+                'admin_note' => $data['admin_note'] ?? null,
+                'status' => 'submitted',
+            ]);
 
-        $quotation->update(['status' => 'request_po_created']);
+            $quotation->update(['status' => 'request_po_created']);
+            return $poRequest;
+        });
 
         Logger::record('created', "Request PO {$poRequest->code} dibuat dari penawaran {$quotation->code}", $poRequest);
 

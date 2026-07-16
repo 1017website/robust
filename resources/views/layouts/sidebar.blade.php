@@ -99,6 +99,9 @@
 @endphp
 
 <aside class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Tutup menu">
+        <i class="bi bi-x-lg"></i>
+    </button>
     <div class="brand">
         <?php if ($companyLogo): ?>
             <img src="{{ $companyLogo }}" alt="{{ $companyName }}" class="brand-logo-img">

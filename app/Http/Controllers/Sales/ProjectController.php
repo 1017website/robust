@@ -12,6 +12,7 @@ use App\Services\Logger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -34,7 +35,7 @@ class ProjectController extends Controller
             ? $this->eligibleQuotationQuery()->with('customer')->findOrFail($request->get('quotation'))
             : null;
         $wonQuotations = $this->eligibleQuotationQuery()->get();
-        $managers = User::whereIn('role', ['sales', 'sales_admin'])->where('is_active', true)->get();
+        $managers = User::assignableSales();
         $team = User::where('is_active', true)->get();
         return view('sales.projects.create', compact('quotation', 'wonQuotations', 'managers', 'team'));
     }
@@ -51,19 +52,26 @@ class ProjectController extends Controller
             'priority' => ['required', 'in:low,medium,high'],
             'status' => ['required', 'in:'.implode(',', array_keys(Project::statuses()))],
             'start_date' => ['required', 'date'],
-            'target_date' => ['required', 'date'],
+            'target_date' => ['required', 'date', 'after_or_equal:start_date'],
             'work_method' => ['nullable', 'string', 'max:100'],
             'location' => ['nullable', 'string'],
             'scope_of_work' => ['nullable', 'string'],
             'payment_scheme' => ['nullable', 'string', 'max:100'],
-            'project_manager_id' => ['required', 'exists:users,id'],
+            'project_manager_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
             'internal_team' => ['nullable', 'array'],
+            'internal_team.*' => [Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at'))],
             'external_vendor' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
         ]);
 
         $quotation = $this->eligibleQuotationQuery()->findOrFail($data['quotation_id']);
-        $data['code'] = $data['code'] ?: CodeGenerator::next(Project::class, 'PRJ', 4, true);
+        $data['code'] = ($data['code'] ?? null) ?: CodeGenerator::next(Project::class, 'PRJ', 4, true);
         $data['customer_id'] = $quotation->customer_id;
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
         $data['tax_amount'] = $quotation->tax_amount;

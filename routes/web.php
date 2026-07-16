@@ -124,9 +124,20 @@ Route::middleware('auth')->group(function () {
         Route::resource('projects', ProjectController::class)->only(['index', 'create', 'store', 'show']);
     });
 
-    // Customers (sales + admin)
+    // Customer read access untuk sales, admin, dan SPV.
+    Route::middleware('role:sales,sales_admin,sales_spv')->prefix('sales')->name('sales.')->group(function () {
+        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->whereNumber('customer')->name('customers.show');
+    });
+
+    // Perubahan customer hanya untuk sales dan admin.
     Route::middleware('role:sales,sales_admin')->prefix('sales')->name('sales.')->group(function () {
-        Route::resource('customers', CustomerController::class)->except(['destroy']);
+        Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
+        Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
+        Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->whereNumber('customer')->name('customers.edit');
+        Route::match(['put', 'patch'], '/customers/{customer}', [CustomerController::class, 'update'])
+            ->whereNumber('customer')
+            ->name('customers.update');
     });
 
     // ---------- SPV Sales ----------

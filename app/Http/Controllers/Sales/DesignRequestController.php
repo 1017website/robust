@@ -18,7 +18,9 @@ class DesignRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $this->designRequestQuery()->latest();
+        $query = DesignRequest::with('productionPic', 'sales')
+            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->latest();
 
         if ($s = $request->get('q')) {
             $query->where(function ($w) use ($s) {
@@ -33,46 +35,38 @@ class DesignRequestController extends Controller
         if ($status = $request->get('status')) {
             $query->where('status', $status);
         }
+        if (! Auth::user()->isSales() && $salesId = $request->get('sales_id')) {
+            $query->where('sales_id', $salesId);
+        }
+        if ($productionPicId = $request->get('production_pic_id')) {
+            $query->where('production_pic_id', $productionPicId);
+        }
 
         if ($priority = $request->get('priority')) {
             $query->where('priority', $priority);
         }
 
-        if ($productionPicId = $request->get('production_pic_id')) {
-            $query->where('production_pic_id', $productionPicId);
-        }
-
-        if (! Auth::user()->isSales() && ($salesId = $request->get('sales_id'))) {
-            $query->where('sales_id', $salesId);
-        }
-
-        $designRequests = $query->paginate(10)->withQueryString();
-
-        $scope = fn () => $this->designRequestQuery();
+        $base = DesignRequest::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
-            'total' => $scope()->count(),
-            'waiting' => $scope()->where('status', 'assigned')->count(),
-            'progress' => $scope()->whereIn('status', ['drafting', 'costing', 'review'])->count(),
-            'completed' => $scope()->where('status', 'completed')->count(),
+            'total' => (clone $base)->count(),
+            'waiting' => (clone $base)->where('status', 'assigned')->count(),
+            'progress' => (clone $base)->whereIn('status', ['drafting', 'costing', 'review'])->count(),
+            'completed' => (clone $base)->where('status', 'completed')->count(),
         ];
 
-        $drafters = $this->assignableDraftersQuery()->get();
-        $salesUsers = User::assignableSales();
+        $selectedRequest = $designRequests->first();
+        $salesList = User::assignableSales();
+        $drafters = User::where('role', 'drafter')->where('is_active', true)->orderBy('name')->get();
 
-        return view('sales.design_requests.index', compact('designRequests', 'stats', 'drafters', 'salesUsers'));
+        return view('sales.design_requests.index', compact('designRequests', 'stats', 'selectedRequest', 'salesList', 'drafters'));
     }
 
     public function create(Request $request)
     {
-        $lead = $request->get('lead')
-            ? $this->leadQuery()->with('customer.primaryPic')->findOrFail($request->get('lead'))
-            : null;
-
-        $customers = $this->customerQuery()->with('primaryPic')->orderBy('name')->get();
-        $drafters = $this->assignableDraftersQuery()->get();
-        $drafterWorkloads = $this->drafterWorkloads($drafters);
-
-        return view('sales.design_requests.create', compact('lead', 'customers', 'drafters', 'drafterWorkloads'));
+        $lead = $request->get('lead') ? $this->leadQuery()->findOrFail($request->get('lead')) : null;
+        $drafters = User::where('role', 'drafter')->where('is_active', true)->get();
+        $salesList = User::assignableSales();
+        return view('sales.design_requests.create', compact('lead', 'drafters', 'salesList'));
     }
 
     public function store(Request $request)
@@ -99,6 +93,14 @@ class DesignRequestController extends Controller
                 $q->where('is_active', true)->orWhereNull('is_active');
             }))],
             'production_note' => ['nullable', 'string', 'max:300'],
+            'sales_id' => [
+                Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
 
         $lead = null;
@@ -122,14 +124,12 @@ class DesignRequestController extends Controller
         $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
         $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
         $data['code'] = CodeGenerator::next(DesignRequest::class, 'DR', 3);
-        $data['sales_id'] = $lead?->sales_id ?: ($customer?->sales_id ?: Auth::id());
+        $lead = $this->leadQuery()->find($data['lead_id'] ?? null);
+        $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : ($lead?->sales_id ?: $data['sales_id']);
         $data['created_by'] = Auth::id();
-        $data['status'] = $request->input('action') === 'draft' ? 'draft' : 'assigned';
-        $data['submitted_at'] = $data['status'] === 'assigned' ? now() : null;
-
-        $designRequest = DesignRequest::create($data);
-
+        $data['status'] = $request->input('action') === 'send' ? 'assigned' : 'draft';
         if ($lead) {
+            $data['customer_id'] = $lead->customer_id;
             $lead->update(['stage' => 'design_request']);
         }
 

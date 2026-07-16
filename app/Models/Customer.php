@@ -39,4 +39,22 @@ class Customer extends Model
             'maintaining' => 'Maintaining',
         ];
     }
+
+    public static function categories(): array
+    {
+        return [
+            'Pendidikan',
+            'Universitas',
+            'Sekolah',
+            'Rumah Sakit',
+            'Laboratorium Swasta',
+            'Industri',
+            'Farmasi',
+            'Kesehatan',
+            'Pemerintah',
+            'Distributor',
+            'Kontraktor',
+            'Lainnya',
+        ];
+    }
 }

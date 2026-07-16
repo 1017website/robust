@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\DesignRequest;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,11 +14,12 @@ class CalendarController extends Controller
 {
     public function index(Request $request)
     {
-        $month = (int) $request->get('month', now()->month);
-        $year = (int) $request->get('year', now()->year);
+        $month = min(12, max(1, (int) $request->get('month', now()->month)));
+        $year = min(2100, max(2000, (int) $request->get('year', now()->year)));
 
         if (Auth::user()->isDrafter()) {
             $designRequests = DesignRequest::with('sales')
+                ->where('production_pic_id', Auth::id())
                 ->where(function ($query) use ($month, $year) {
                     $query->whereYear('deadline', $year)->whereMonth('deadline', $month)
                         ->orWhere(function ($q) use ($month, $year) {
@@ -28,6 +30,10 @@ class CalendarController extends Controller
                 ->get();
 
             $projects = Project::with('projectManager')
+                ->where(function ($query) {
+                    $query->where('project_manager_id', Auth::id())
+                        ->orWhereJsonContains('internal_team', Auth::id());
+                })
                 ->whereYear('target_date', $year)->whereMonth('target_date', $month)
                 ->orderBy('target_date')
                 ->get();
@@ -76,6 +82,12 @@ class CalendarController extends Controller
         if (Auth::user()->isSales()) {
             $query->where('sales_id', Auth::id());
         }
+        if (! Auth::user()->isSales() && $salesId = $request->get('sales_id')) {
+            $query->where('sales_id', $salesId);
+        }
+        if ($type = $request->get('type')) {
+            $query->where('type', $type);
+        }
         $activities = $query->orderBy('activity_date')->orderBy('activity_time')->get();
 
         $byDate = $activities->groupBy(fn ($a) => $a->activity_date->format('Y-m-d'));
@@ -89,7 +101,8 @@ class CalendarController extends Controller
 
         $todayActivities = (clone $activities)->filter(fn ($a) => $a->activity_date->isToday())->values();
         $typeSummary = $activities->groupBy('type')->map->count();
+        $salesUsers = User::assignableSales();
 
-        return view('shared.calendar.index', compact('activities', 'byDate', 'month', 'year', 'stats', 'todayActivities', 'typeSummary'));
+        return view('shared.calendar.index', compact('activities', 'byDate', 'month', 'year', 'stats', 'todayActivities', 'typeSummary', 'salesUsers'));
     }
 }

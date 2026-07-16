@@ -20,7 +20,7 @@ class QuotationController extends Controller
     public function index(Request $request)
     {
         $query = Quotation::with('customer', 'sales')
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->latest();
 
         if ($s = $request->get('q')) {
@@ -42,13 +42,14 @@ class QuotationController extends Controller
             ? DesignRequest::with('items', 'lead', 'customer', 'sales')->find($request->get('dr'))
             : null;
 
-        if ($designRequest && ! $this->canAccessDesignRequestForQuotation($designRequest)) {
+        if ($designRequest && Auth::user()->isSales() && $designRequest->sales_id !== Auth::id()) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
-        $customers = $this->customerQuery()->orderBy('name')->get();
-        $completedDR = $this->accessibleCompletedDesignRequests()->get();
-
+        $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
+        $completedDR = DesignRequest::where('status', 'completed')
+            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->get();
         return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR'));
     }
 
@@ -70,7 +71,9 @@ class QuotationController extends Controller
                 'customer_name' => $data['customer_name'],
                 'pic_name' => $data['pic_name'] ?? null,
                 'project_name' => $data['project_name'],
-                'sales_id' => $this->quotationSalesId($designRequest),
+                'sales_id' => $designRequest?->sales_id
+                    ?: Customer::find($link['customer_id'])?->sales_id
+                    ?: Auth::id(),
                 'delivery_method' => $data['delivery_method'],
                 'quote_date' => $data['quote_date'],
                 'valid_until' => $data['valid_until'],
@@ -134,8 +137,10 @@ class QuotationController extends Controller
 
         $quotation->load('items', 'designRequest');
         $designRequest = $quotation->designRequest;
-        $customers = $this->customerQuery()->orderBy('name')->get();
-        $completedDR = $this->accessibleCompletedDesignRequests()->get();
+        $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
+        $completedDR = DesignRequest::where('status', 'completed')
+            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->get();
 
         return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR'));
     }
@@ -298,6 +303,10 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
+        if (! in_array($quotation->status, ['approved', 'sent_to_customer', 'negotiation', 'sent'], true)) {
+            return back()->with('error', 'Penawaran belum bisa ditandai customer tidak setuju.');
+        }
+
         $oldStatus = $quotation->status;
         $quotation->update([
             'status' => 'customer_rejected',
@@ -315,8 +324,8 @@ class QuotationController extends Controller
     protected function validatedData(Request $request): array
     {
         return $request->validate([
-            'design_request_id' => ['nullable', 'exists:design_requests,id'],
-            'customer_id' => ['nullable', 'exists:customers,id'],
+            'design_request_id' => ['nullable', 'exists:design_requests,id,deleted_at,NULL'],
+            'customer_id' => ['nullable', 'exists:customers,id,deleted_at,NULL'],
             'customer_name' => ['required', 'string', 'max:255'],
             'pic_name' => ['nullable', 'string', 'max:255'],
             'project_name' => ['required', 'string', 'max:255'],
@@ -352,9 +361,8 @@ class QuotationController extends Controller
             return null;
         }
 
-        $designRequest = DesignRequest::with('lead', 'customer', 'sales')->findOrFail($designRequestId);
-
-        if (! $this->canAccessDesignRequestForQuotation($designRequest)) {
+        $designRequest = DesignRequest::with('lead', 'customer')->findOrFail($designRequestId);
+        if (Auth::user()->isSales() && $designRequest->sales_id !== Auth::id()) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
@@ -457,11 +465,7 @@ class QuotationController extends Controller
 
     protected function ensureOwner(Quotation $quotation): void
     {
-        if (! Auth::user()->isSales()) {
-            return;
-        }
-
-        if ((int) $quotation->sales_id !== (int) Auth::id()) {
+        if (Auth::user()->isSales() && $quotation->sales_id !== Auth::id()) {
             abort(403, 'Penawaran ini bukan milik Anda.');
         }
     }

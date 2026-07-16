@@ -10,10 +10,11 @@ use App\Models\Quotation;
 use App\Models\User;
 use App\Services\Logger;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AssignmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $salesList = User::assignableSales();
 
@@ -51,6 +52,27 @@ class AssignmentController extends Controller
         $leads = Lead::with('sales')->latest()->take(60)->get();
         $projects = Project::with('quotation.sales', 'quotation.customer')->latest()->take(6)->get();
 
+        if ($request->get('export') === 'csv') {
+            return response()->streamDownload(function () use ($workload, $acceptance) {
+                $output = fopen('php://output', 'w');
+                fwrite($output, "\xEF\xBB\xBF");
+                fputcsv($output, ['Sales', 'Request Masuk', 'Leads Aktif', 'Design Request', 'Penawaran Aktif', 'Project Aktif', 'Acceptance Rate'], ';');
+                $acceptanceBySales = $acceptance->keyBy(fn ($row) => $row['sales']->id);
+                foreach ($workload as $row) {
+                    fputcsv($output, [
+                        $row['sales']->name,
+                        $row['request_masuk'],
+                        $row['leads_aktif'],
+                        $row['design_request'],
+                        $row['penawaran_aktif'],
+                        $row['project_aktif'],
+                        ($acceptanceBySales[$row['sales']->id]['rate'] ?? 0).'%',
+                    ], ';');
+                }
+                fclose($output);
+            }, 'assignment-sales-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
+
         return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats', 'leads', 'projects'));
     }
 
@@ -58,7 +80,13 @@ class AssignmentController extends Controller
     {
         $data = $request->validate([
             'lead_id' => ['required', 'exists:leads,id'],
-            'to_sales_id' => ['required', 'exists:users,id'],
+            'to_sales_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
 
         $lead = Lead::findOrFail($data['lead_id']);

@@ -24,7 +24,7 @@ class GlobalSearchController extends Controller
             $user = Auth::user();
             $like = "%{$query}%";
 
-            if ($user->isAdministrator() || $user->isSalesAdmin() || $user->isSales()) {
+            if ($user->isAdministrator() || $user->isSalesAdmin() || $user->isSales() || $user->isSalesSpv()) {
                 $customers = Customer::with('primaryPic', 'sales')
                     ->when($user->isSales(), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->where(function (Builder $q) use ($like) {
@@ -173,6 +173,7 @@ class GlobalSearchController extends Controller
             }
 
             $documents = Document::query()
+                ->visibleTo($user)
                 ->where(function (Builder $q) use ($like) {
                     $q->where('name', 'like', $like)
                         ->orWhere('category', 'like', $like)

@@ -12,6 +12,8 @@ use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ActivityController extends Controller
 {
@@ -19,8 +21,8 @@ class ActivityController extends Controller
     {
         $period = $request->get('period', 'today');
         $selectedDate = $request->get('date');
-        $calendarMonth = (int) $request->get('cal_month', now()->month);
-        $calendarYear = (int) $request->get('cal_year', now()->year);
+        $calendarMonth = min(12, max(1, (int) $request->get('cal_month', now()->month)));
+        $calendarYear = min(2100, max(2000, (int) $request->get('cal_year', now()->year)));
         $calendarFirst = Carbon::create($calendarYear, $calendarMonth, 1);
         $calendarPrev = $calendarFirst->copy()->subMonth();
         $calendarNext = $calendarFirst->copy()->addMonth();
@@ -87,9 +89,11 @@ class ActivityController extends Controller
         });
 
         $stageWithCustomer = $pipeline->first(fn ($data) => $data['customers']->isNotEmpty());
-        $selectedCustomer = $request->get('customer_id')
-            ? $customerScope()->find($request->get('customer_id'))
-            : ($stageWithCustomer ? $stageWithCustomer['customers']->first() : $customerScope()->first());
+        $selectedCustomer = $request->boolean('hide_detail')
+            ? null
+            : ($request->get('customer_id')
+                ? $customerScope()->find($request->get('customer_id'))
+                : ($stageWithCustomer ? $stageWithCustomer['customers']->first() : $customerScope()->first()));
         $salesUsers = User::assignableSales();
         $customers = $customerScope()->orderBy('name')->get();
 
@@ -114,15 +118,16 @@ class ActivityController extends Controller
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->orderBy('name')
             ->get();
-        return view('shared.activities.create', compact('customers'));
+        $salesUsers = User::assignableSales();
+        return view('shared.activities.create', compact('customers', 'salesUsers'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'customer_id' => ['nullable', 'exists:customers,id'],
-            'lead_id' => ['nullable', 'exists:leads,id'],
-            'type' => ['required', 'string'],
+            'customer_id' => ['nullable', Rule::exists('customers', 'id')->whereNull('deleted_at')],
+            'lead_id' => ['nullable', Rule::exists('leads', 'id')->whereNull('deleted_at')],
+            'type' => ['required', Rule::in(array_keys(Activity::types()))],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'activity_date' => ['required', 'date'],
@@ -130,17 +135,35 @@ class ActivityController extends Controller
             'duration_minutes' => ['nullable', 'integer'],
             'location_link' => ['nullable', 'string', 'max:255'],
             'pipeline_stage' => ['nullable', 'in:'.implode(',', array_keys(Customer::stages()))],
-            'status' => ['required', 'string'],
+            'status' => ['required', Rule::in(array_keys(Activity::statuses()))],
             'next_action' => ['nullable', 'string'],
             'next_followup_date' => ['nullable', 'date'],
+            'sales_id' => [
+                Rule::requiredIf(fn () => ! Auth::user()->isSales()),
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
         if (! empty($data['customer_id'])) {
             $customer = Customer::findOrFail($data['customer_id']);
             abort_if(Auth::user()->isSales() && (int) $customer->sales_id !== (int) Auth::id(), 403);
-            $data['pipeline_stage'] = $data['pipeline_stage'] ?: $customer->pipeline_stage;
+            if (! Auth::user()->isSales() && (int) $customer->sales_id !== (int) $data['sales_id']) {
+                throw ValidationException::withMessages(['customer_id' => 'Customer tidak dimiliki oleh sales yang dipilih.']);
+            }
+            $data['pipeline_stage'] = ($data['pipeline_stage'] ?? null) ?: $customer->pipeline_stage;
+        }
+        if (! empty($data['lead_id'])) {
+            $lead = Lead::findOrFail($data['lead_id']);
+            abort_if(Auth::user()->isSales() && (int) $lead->sales_id !== (int) Auth::id(), 403);
+            if (! Auth::user()->isSales() && (int) $lead->sales_id !== (int) $data['sales_id']) {
+                throw ValidationException::withMessages(['lead_id' => 'Lead tidak dimiliki oleh sales yang dipilih.']);
+            }
         }
         $data['code'] = CodeGenerator::next(Activity::class, 'ACT-'.date('ymd'), 4);
-        $data['sales_id'] = Auth::id();
+        $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : $data['sales_id'];
         $data['created_by'] = Auth::id();
 
         $activity = Activity::create($data);
@@ -151,7 +174,11 @@ class ActivityController extends Controller
 
     public function updateStatus(Request $request, Activity $activity)
     {
-        $request->validate(['status' => ['required', 'string'], 'result' => ['nullable', 'string']]);
+        abort_if(Auth::user()->isSales() && (int) $activity->sales_id !== (int) Auth::id(), 403);
+        $request->validate([
+            'status' => ['required', Rule::in(array_keys(Activity::statuses()))],
+            'result' => ['nullable', 'string', 'max:2000'],
+        ]);
         $activity->update($request->only('status', 'result'));
         return back()->with('success', 'Status aktivitas diperbarui.');
     }

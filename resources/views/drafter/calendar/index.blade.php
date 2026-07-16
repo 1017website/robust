@@ -13,14 +13,13 @@
     <div class="drafter-page-head"><div><h1 class="page-title mb-1">Calendar</h1><div class="page-subtitle">Jadwal dan deadline semua project & task.</div></div></div>
     <div class="drafter-calendar-layout">
         <main>
-            <div class="calendar-toolbar"><a class="btn btn-soft" href="{{ route('drafter.calendar.index') }}">Today</a><a class="btn btn-soft" href="{{ route('drafter.calendar.index',['month'=>$prev->month,'year'=>$prev->year]) }}"><i class="bi bi-chevron-left"></i></a><a class="btn btn-soft" href="{{ route('drafter.calendar.index',['month'=>$next->month,'year'=>$next->year]) }}"><i class="bi bi-chevron-right"></i></a><strong>{{ $start->translatedFormat('F Y') }}</strong><span class="ms-auto"></span><button class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Buat Event</button></div>
-            <div class="calendar-toolbar"><select class="form-select"><option>Semua Project</option></select><select class="form-select"><option>Semua Tipe</option></select><select class="form-select"><option>Semua PIC</option></select><button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button></div>
+            <div class="calendar-toolbar"><a class="btn btn-soft" href="{{ route('drafter.calendar.index') }}">Hari Ini</a><a class="btn btn-soft" href="{{ route('drafter.calendar.index',['month'=>$prev->month,'year'=>$prev->year]) }}" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left"></i></a><a class="btn btn-soft" href="{{ route('drafter.calendar.index',['month'=>$next->month,'year'=>$next->year]) }}" aria-label="Bulan berikutnya"><i class="bi bi-chevron-right"></i></a><strong>{{ $start->translatedFormat('F Y') }}</strong></div>
             <div class="drafter-calendar-grid">
                 @foreach(['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'] as $d)<div class="cal-head">{{ $d }}</div>@endforeach
                 @for($i=1;$i<$firstDow;$i++)<div class="cal-cell muted"></div>@endfor
                 @for($day=1;$day<=$daysInMonth;$day++)
                     @php($date = \Illuminate\Support\Carbon::create($year,$month,$day))
-                    <div class="cal-cell {{ $date->isToday() ? 'today' : '' }}"><div class="day-num">{{ $day }}</div>@foreach(($byDate[$date->format('Y-m-d')] ?? collect())->take(3) as $event)<div class="cal-event {{ strtolower($types[$event->type] ?? 'blue') }}"><strong>{{ $event->time ?: '' }} {{ $event->title }}</strong><small>{{ $event->subtitle }}</small></div>@endforeach @if(($byDate[$date->format('Y-m-d')] ?? collect())->count() > 3)<small>+{{ ($byDate[$date->format('Y-m-d')] ?? collect())->count()-3 }} more</small>@endif</div>
+                    <div class="cal-cell {{ $date->isToday() ? 'today' : '' }}"><div class="day-num calendar-day-dot {{ $date->isToday() ? 'active' : '' }}">{{ $day }}</div>@foreach(($byDate[$date->format('Y-m-d')] ?? collect())->take(3) as $event)<div class="cal-event {{ strtolower($types[$event->type] ?? 'blue') }}"><strong>{{ $event->time ?: '' }} {{ $event->title }}</strong><small>{{ $event->subtitle }}</small></div>@endforeach @if(($byDate[$date->format('Y-m-d')] ?? collect())->count() > 3)<small>+{{ ($byDate[$date->format('Y-m-d')] ?? collect())->count()-3 }} more</small>@endif</div>
                 @endfor
             </div>
         </main>

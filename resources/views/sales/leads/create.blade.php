@@ -127,85 +127,22 @@
                     </div>
                 </section>
             </div>
-
-            <div class="lead-form-col">
-                <section class="lead-card">
-                    <h2 class="lead-card-title"><span class="lead-icon sgreen"><i class="bi bi-clipboard-check"></i></span>Kebutuhan Awal</h2>
-
-                    <div class="mb-3">
-                        <label class="form-label lead-label">Nama Laboratorium / Proyek <span>*</span></label>
-                        <input name="lab_name" value="{{ old('lab_name') }}" class="form-control lead-control" required placeholder="Contoh: Laboratorium Kimia">
-                    </div>
-
-                    <label class="form-label lead-label">Deskripsi Kebutuhan</label>
-                    <div class="lead-textarea-wrap">
-                        <textarea name="need_description" rows="5" maxlength="500" class="form-control lead-control lead-counter-field" data-counter-target="needCounter" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description') }}</textarea>
-                        <span id="needCounter" class="lead-counter">{{ strlen(old('need_description', '')) }}/500</span>
-                    </div>
-
-                    <div class="mt-3">
-                        <label class="form-label lead-label">Daftar Kebutuhan <span class="fw-normal">(contoh: Wall Bench, Fume Hood, Sink, dll)</span></label>
-                        <div class="lead-chip-input">
-                            <input type="text" id="scopeInput" class="form-control lead-control" placeholder="Ketik kebutuhan lalu tekan Enter">
-                            <button type="button" class="btn btn-soft" id="scopeAddBtn"><i class="bi bi-plus-lg me-1"></i>Tambah</button>
-                        </div>
-                        <div class="lead-chip-list" id="scopeChipList">
-                            @foreach($scopeItems as $scope)
-                                @if(trim($scope) !== '')
-                                    <span class="lead-scope-chip" data-value="{{ $scope }}">{{ $scope }} <button type="button" aria-label="Hapus kebutuhan">×</button><input type="hidden" name="scope_items[]" value="{{ $scope }}"></span>
-                                @endif
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <label class="form-label lead-label">Kapasitas / Pengguna</label>
-                        <input name="capacity" value="{{ old('capacity') }}" class="form-control lead-control" placeholder="Contoh: 40 Mahasiswa / 10 Peneliti">
-                    </div>
-                </section>
-
-                <section class="lead-card">
-                    <h2 class="lead-card-title"><span class="lead-icon sorange"><i class="bi bi-flag"></i></span>Estimasi & Prioritas</h2>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label lead-label">Estimasi Potensi <span class="fw-normal">(Opsional)</span></label>
-                            <input data-rupiah name="est_value_min" value="{{ old('est_value_min') }}" class="form-control lead-control" placeholder="Contoh: 500.000.000">
-                            <small class="text-muted-2">Dari (Rp)</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label lead-label d-none d-md-block">&nbsp;</label>
-                            <input data-rupiah name="est_value_max" value="{{ old('est_value_max') }}" class="form-control lead-control" placeholder="Contoh: 1.000.000.000">
-                            <small class="text-muted-2">Sampai (Rp)</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label lead-label">Prioritas Lead <span>*</span></label>
-                            <select name="priority" class="form-select lead-control" required>
-                                <option value="">Pilih prioritas</option>
-                                <option value="high" @selected(old('priority')=='high')>High (Tinggi)</option>
-                                <option value="medium" @selected(old('priority','medium')=='medium')>Medium</option>
-                                <option value="low" @selected(old('priority')=='low')>Low</option>
-                            </select>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="lead-card">
-                    <h2 class="lead-card-title"><span class="lead-icon sblue"><i class="bi bi-file-earmark-arrow-up"></i></span>Dokumen Pendukung <span class="text-muted-2 fw-normal">(Opsional)</span></h2>
-                    <div class="lead-upload-grid">
-                        <label class="lead-upload-box">
-                            <input type="file" name="documents[]" id="leadDocuments" multiple accept=".pdf,.jpg,.jpeg,.png" class="d-none" data-max-files="5">
-                            <i class="bi bi-cloud-arrow-up"></i>
-                            <strong>Klik atau drag & drop file di sini</strong>
-                            <span>PDF, JPG, PNG (Max 10MB)</span>
-                        </label>
-                        <div class="lead-file-panel">
-                            <div class="lead-file-head"><span>File yang diunggah</span><b id="leadFileCount">0/5</b></div>
-                            <div class="lead-file-list" id="leadFileList">
-                                <div class="lead-empty-file">Belum ada file yang diunggah</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+            <div class="col-xl-6">
+                <div class="sales-form-card">
+                    <h2 class="sales-form-title"><i class="bi bi-clipboard-check sgreen rounded p-2 me-2"></i>Kebutuhan Awal</h2>
+                    <div class="mb-3"><label class="form-label small fw-bold">Nama Laboratorium / Proyek *</label><input name="lab_name" value="{{ old('lab_name') }}" class="form-control" required placeholder="Contoh: Laboratorium Kimia"></div>
+                    <label class="form-label small fw-bold">Deskripsi Kebutuhan</label><textarea name="need_description" rows="5" maxlength="500" class="form-control" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description') }}</textarea>
+                    <div class="mt-3"><label class="form-label small fw-bold">Daftar Kebutuhan</label><div class="d-flex flex-wrap gap-2">
+                        @foreach(['Wall Bench','Fume Hood','Storage Cabinet','Sink Area','Meja Praktikum','Meja Instrumen','Safety Equipment','Lainnya'] as $item)
+                            <label class="tag-pill"><input type="checkbox" name="scope_items[]" value="{{ $item }}" @checked(in_array($item, old('scope_items', [])))> {{ $item }}</label>
+                        @endforeach
+                    </div></div>
+                </div>
+                <div class="sales-form-card">
+                    <h2 class="sales-form-title"><i class="bi bi-flag sorange rounded p-2 me-2"></i>Estimasi & Prioritas</h2>
+                    <div class="row g-3"><div class="col-md-4"><label class="form-label small fw-bold">Estimasi Dari (Rp)</label><input name="est_value_min" value="{{ old('est_value_min') }}" class="form-control" placeholder="500.000.000"></div><div class="col-md-4"><label class="form-label small fw-bold">Sampai (Rp)</label><input name="est_value_max" value="{{ old('est_value_max') }}" class="form-control" placeholder="1.000.000.000"></div><div class="col-md-4"><label class="form-label small fw-bold">Prioritas Lead *</label><select name="priority" class="form-select" required><option value="">Pilih prioritas</option><option value="high" @selected(old('priority')=='high')>High (Tinggi)</option><option value="medium" @selected(old('priority','medium')=='medium')>Medium</option><option value="low" @selected(old('priority')=='low')>Low</option></select></div></div>
+                </div>
+                @if(! auth()->user()->isSales())<div class="sales-form-card"><h2 class="sales-form-title">Sales Owner</h2><select name="sales_id" class="form-select" required><option value="">Pilih sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id')===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
             </div>
         </div>
 

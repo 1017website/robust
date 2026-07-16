@@ -224,10 +224,28 @@
                 </section>
             </div>
         </div>
-
-        <div class="lead-sticky-actions">
-            <a href="{{ route('sales.leads.show', $lead) }}" class="btn btn-soft">Batal</a>
-            <button class="btn btn-primary">Simpan Perubahan</button>
+        <div class="col-lg-4">
+            <div class="card-r">
+                <div class="card-head"><h2>Klasifikasi</h2></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Sumber *</label>
+                    <select name="source" class="form-select" required>
+                        @foreach(['whatsapp','website','referensi','telepon','email','lainnya'] as $src)<option value="{{ $src }}" @selected($lead->source==$src)>{{ ucfirst($src) }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Prioritas *</label>
+                    <select name="priority" class="form-select">
+                        @foreach(['low'=>'Low','medium'=>'Medium','high'=>'High'] as $k=>$v)<option value="{{ $k }}" @selected($lead->priority==$k)>{{ $v }}</option>@endforeach
+                    </select>
+                </div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Estimasi Min</label><input data-rupiah name="est_value_min" type="text" inputmode="numeric" value="{{ $lead->est_value_min }}" class="form-control"></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Estimasi Max</label><input data-rupiah name="est_value_max" type="text" inputmode="numeric" value="{{ $lead->est_value_max }}" class="form-control"></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Catatan</label><textarea name="initial_note" rows="3" class="form-control">{{ $lead->initial_note }}</textarea></div>
+                @if(! auth()->user()->isSales())<div class="mb-3"><label class="form-label small fw-semibold">Sales Owner</label><select name="sales_id" class="form-select" required>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id',$lead->sales_id)===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
+            </div>
+            <div class="card-r">
+                <button class="btn btn-primary w-100">Simpan Perubahan</button>
+                <a href="{{ route('sales.leads.show',$lead) }}" class="btn btn-soft w-100 mt-2">Batal</a>
+            </div>
         </div>
     </form>
 </div>

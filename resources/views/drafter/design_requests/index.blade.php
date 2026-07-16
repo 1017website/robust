@@ -16,11 +16,11 @@
     <div class="drafter-shell">
         <main class="drafter-main">
             <div class="drafter-stat-grid five">
-                <div class="drafter-stat"><div class="ico blue"><i class="bi bi-pencil-square"></i></div><div><div class="label">Request Baru</div><div class="value">{{ $stats['baru'] }}</div><div class="sub up">↗ 2 dari kemarin</div></div></div>
-                <div class="drafter-stat"><div class="ico orange"><i class="bi bi-shield-check"></i></div><div><div class="label">Drafting</div><div class="value">{{ $stats['drafting'] }}</div><div class="sub up">↗ 1 dari kemarin</div></div></div>
-                <div class="drafter-stat"><div class="ico purple"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Review</div><div class="value">{{ $stats['review'] }}</div><div class="sub up">↗ 1 dari kemarin</div></div></div>
-                <div class="drafter-stat"><div class="ico green"><i class="bi bi-check-circle"></i></div><div><div class="label">Completed</div><div class="value">{{ $stats['completed'] }}</div><div class="sub up">↗ 3 dari kemarin</div></div></div>
-                <div class="drafter-stat"><div class="ico red"><i class="bi bi-shield-exclamation"></i></div><div><div class="label">Terlambat</div><div class="value">{{ $stats['terlambat'] }}</div><div class="sub up">↗ 1 dari kemarin</div></div></div>
+                <div class="drafter-stat"><div class="ico blue"><i class="bi bi-pencil-square"></i></div><div><div class="label">Request Baru</div><div class="value">{{ $stats['baru'] }}</div><div class="sub">Data saat ini</div></div></div>
+                <div class="drafter-stat"><div class="ico orange"><i class="bi bi-shield-check"></i></div><div><div class="label">Drafting</div><div class="value">{{ $stats['drafting'] }}</div><div class="sub">Data saat ini</div></div></div>
+                <div class="drafter-stat"><div class="ico purple"><i class="bi bi-hourglass-split"></i></div><div><div class="label">Review</div><div class="value">{{ $stats['review'] }}</div><div class="sub">Perlu ditindaklanjuti</div></div></div>
+                <div class="drafter-stat"><div class="ico green"><i class="bi bi-check-circle"></i></div><div><div class="label">Completed</div><div class="value">{{ $stats['completed'] }}</div><div class="sub">Data saat ini</div></div></div>
+                <div class="drafter-stat"><div class="ico red"><i class="bi bi-shield-exclamation"></i></div><div><div class="label">Terlambat</div><div class="value">{{ $stats['terlambat'] }}</div><div class="sub">Perlu ditindaklanjuti</div></div></div>
             </div>
 
             <div class="card-r">

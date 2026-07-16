@@ -5,18 +5,21 @@ namespace App\Http\Controllers\Sales;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\Lead;
+use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
     public function index(Request $request)
     {
-        $query = $this->leadQueryForCurrentUser()->with('customer')->latest();
+        $query = Lead::query()
+            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->latest();
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('instansi', 'like', "%$s%")
@@ -31,7 +34,7 @@ class LeadController extends Controller
 
         $leads = $query->paginate(10)->withQueryString();
 
-        $base = $this->leadQueryForCurrentUser();
+        $base = Lead::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
             'total' => (clone $base)->count(),
             'lead' => (clone $base)->whereIn('stage', ['lead', 'identify'])->count(),
@@ -46,14 +49,15 @@ class LeadController extends Controller
 
     public function create()
     {
-        return view('sales.leads.create');
+        $salesList = User::assignableSales();
+        return view('sales.leads.create', compact('salesList'));
     }
 
     public function store(Request $request)
     {
         $data = $this->validateData($request);
         $data['code'] = CodeGenerator::next(Lead::class, 'LD', 5, true);
-        $data['sales_id'] = Auth::id();
+        $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : $data['sales_id'];
         $data['created_by'] = Auth::id();
         $data['stage'] = 'lead';
         $data['status'] = 'aktif';
@@ -81,34 +85,33 @@ class LeadController extends Controller
 
     public function show(Lead $lead)
     {
-        abort_unless($this->canManageLead($lead), 403);
-        $lead->load('praLead', 'customer.primaryPic', 'designRequests', 'documents', 'quotations', 'activities');
+        $this->ensureAccess($lead);
+        $lead->load('praLead', 'customer', 'designRequests', 'documents', 'quotations');
         return view('sales.leads.show', compact('lead'));
     }
 
     public function edit(Lead $lead)
     {
-        abort_unless($this->canManageLead($lead), 403);
-        $lead->load('documents');
-        return view('sales.leads.edit', compact('lead'));
+        $this->ensureAccess($lead);
+        $salesList = User::assignableSales();
+        return view('sales.leads.edit', compact('lead', 'salesList'));
     }
 
     public function update(Request $request, Lead $lead)
     {
-        abort_unless($this->canManageLead($lead), 403);
-        DB::transaction(function () use ($request, $lead) {
-            $lead->update($this->validateData($request));
-            app(LeadCustomerConnector::class)->ensureForLead($lead->fresh('customer'));
-            $this->storeLeadDocuments($request, $lead->fresh());
-        });
-
-        Logger::record('updated', "Lead {$lead->instansi} diperbarui dan data Customer disinkronkan", $lead);
-        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead diperbarui dan data Customer ikut disinkronkan.');
+        $this->ensureAccess($lead);
+        $data = $this->validateData($request);
+        if (Auth::user()->isSales()) {
+            unset($data['sales_id']);
+        }
+        $lead->update($data);
+        Logger::record('updated', "Lead {$lead->instansi} diperbarui", $lead);
+        return redirect()->route('sales.leads.show', $lead)->with('success', 'Lead diperbarui.');
     }
 
     public function destroy(Lead $lead)
     {
-        abort_unless($this->canManageLead($lead), 403);
+        $this->ensureAccess($lead);
         $lead->delete();
         return redirect()->route('sales.leads.index')->with('success', 'Lead dihapus.');
     }
@@ -161,11 +164,14 @@ class LeadController extends Controller
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
             'initial_note' => ['nullable', 'string'],
-            'initial_followup_date' => ['nullable', 'date'],
-            'contact_preference' => ['nullable', 'string', 'max:100'],
-            'best_contact_time' => ['nullable', 'string', 'max:100'],
-            'documents' => ['nullable', 'array', 'max:5'],
-            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'sales_id' => [
+                Rule::requiredIf(fn () => ! Auth::user()->isSales()),
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
         $data['scope_items'] = array_values(array_filter($request->input('scope_items', [])));
         unset($data['documents']);
@@ -173,31 +179,12 @@ class LeadController extends Controller
         return $data;
     }
 
-    protected function storeLeadDocuments(Request $request, Lead $lead): void
+    protected function ensureAccess(Lead $lead): void
     {
-        if (! $request->hasFile('documents')) {
-            return;
-        }
-
-        foreach (array_slice($request->file('documents', []), 0, 5) as $file) {
-            if (! $file || ! $file->isValid()) {
-                continue;
-            }
-
-            $path = $file->store('documents', 'public');
-
-            Document::create([
-                'documentable_type' => Lead::class,
-                'documentable_id' => $lead->id,
-                'name' => $file->getClientOriginalName(),
-                'category' => 'lead',
-                'description' => 'Dokumen pendukung lead',
-                'file_path' => $path,
-                'file_type' => $file->getClientOriginalExtension(),
-                'file_size' => $file->getSize(),
-                'uploaded_by' => Auth::id(),
-            ]);
-        }
+        abort_if(
+            Auth::user()->isSales() && (int) $lead->sales_id !== (int) Auth::id(),
+            403,
+            'Lead ini bukan milik Anda.'
+        );
     }
-
 }

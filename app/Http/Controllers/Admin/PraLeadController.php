@@ -12,6 +12,7 @@ use App\Services\CodeGenerator;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class PraLeadController extends Controller
 {
@@ -147,7 +148,7 @@ class PraLeadController extends Controller
             'pic_position' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255'],
-            'source' => ['required', 'string'],
+            'source' => ['required', Rule::in(array_keys(PraLead::sources()))],
             'lab_type' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'initial_need' => ['nullable', 'string'],
@@ -155,7 +156,14 @@ class PraLeadController extends Controller
             'est_value_min' => ['nullable', 'numeric'],
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
-            'assigned_sales_id' => ['nullable', 'exists:users,id'],
+            'assigned_sales_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
+            'action' => ['nullable', 'in:save,draft,send'],
         ]);
     }
 }

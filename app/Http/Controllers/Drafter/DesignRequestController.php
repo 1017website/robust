@@ -15,6 +15,7 @@ class DesignRequestController extends Controller
     public function index(Request $request)
     {
         $query = DesignRequest::with('sales', 'productionPic', 'documents')
+            ->where('production_pic_id', Auth::id())
             ->orderByRaw('deadline is null, deadline asc')
             ->latest();
 
@@ -41,11 +42,11 @@ class DesignRequestController extends Controller
         $salesUsers = User::assignableSales();
 
         $stats = [
-            'baru' => DesignRequest::whereIn('status', ['assigned', 'draft'])->count(),
-            'drafting' => DesignRequest::where('status', 'drafting')->count(),
-            'review' => DesignRequest::where('status', 'review')->count(),
-            'completed' => DesignRequest::where('status', 'completed')->count(),
-            'terlambat' => DesignRequest::whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
+            'baru' => DesignRequest::where('production_pic_id', Auth::id())->whereIn('status', ['assigned', 'draft'])->count(),
+            'drafting' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'drafting')->count(),
+            'review' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'review')->count(),
+            'completed' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'completed')->count(),
+            'terlambat' => DesignRequest::where('production_pic_id', Auth::id())->whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
         ];
 
         return view('drafter.design_requests.index', compact('designRequests', 'stats', 'selected', 'salesUsers'));
@@ -53,14 +54,16 @@ class DesignRequestController extends Controller
 
     public function show(DesignRequest $designRequest)
     {
+        $this->ensureAssigned($designRequest);
         $designRequest->load('items', 'sales', 'documents', 'lead', 'customer');
         return view('drafter.design_requests.show', compact('designRequest'));
     }
 
     public function updateProgress(Request $request, DesignRequest $designRequest)
     {
+        $this->ensureAssigned($designRequest);
         $data = $request->validate([
-            'status' => ['required', 'string'],
+            'status' => ['required', 'in:'.implode(',', array_keys(DesignRequest::statuses()))],
             'progress' => ['required', 'integer', 'min:0', 'max:100'],
             'production_note' => ['nullable', 'string'],
         ]);
@@ -71,16 +74,33 @@ class DesignRequestController extends Controller
 
     public function submitFeedback(Request $request, DesignRequest $designRequest)
     {
+        $this->ensureAssigned($designRequest);
         $data = $request->validate([
+            'action' => ['required', 'in:save,review,submit'],
             'dimensions' => ['nullable', 'array'],
+            'dimensions.*.item' => ['nullable', 'string', 'max:255'],
+            'dimensions.*.size' => ['nullable', 'string', 'max:255'],
             'materials' => ['nullable', 'array'],
+            'materials.*.item' => ['nullable', 'string', 'max:255'],
+            'materials.*.material' => ['nullable', 'string', 'max:255'],
+            'materials.*.finish' => ['nullable', 'string', 'max:255'],
             'accessories' => ['nullable', 'array'],
+            'accessories.*' => ['nullable', 'string', 'max:255'],
             'material_estimation' => ['nullable', 'array'],
+            'material_estimation.*.material' => ['nullable', 'string', 'max:255'],
+            'material_estimation.*.qty' => ['nullable', 'string', 'max:100'],
             'cost_material' => ['nullable', 'numeric'],
             'cost_production' => ['nullable', 'numeric'],
             'cost_installation' => ['nullable', 'numeric'],
             'technical_note' => ['nullable', 'string'],
             'items' => ['nullable', 'array'],
+            'items.*.category' => ['nullable', 'string', 'max:100'],
+            'items.*.name' => ['nullable', 'string', 'max:255'],
+            'items.*.specification' => ['nullable', 'string', 'max:1000'],
+            'items.*.qty' => ['nullable', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['nullable', 'string', 'max:50'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.margin' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         DB::transaction(function () use ($designRequest, $data, $request) {
@@ -97,12 +117,12 @@ class DesignRequestController extends Controller
                 'status' => match ($request->input('action')) {
                     'submit' => 'completed',
                     'review' => 'review',
-                    default => $designRequest->status ?: 'drafting',
+                    'save' => $designRequest->status === 'assigned' ? 'drafting' : $designRequest->status,
                 },
                 'progress' => match ($request->input('action')) {
                     'submit' => 100,
                     'review' => max((int) $designRequest->progress, 75),
-                    default => max((int) $designRequest->progress, 25),
+                    'save' => max((int) $designRequest->progress, 25),
                 },
                 'submitted_at' => $request->input('action') === 'submit' ? now() : $designRequest->submitted_at,
             ]);
@@ -132,5 +152,15 @@ class DesignRequestController extends Controller
             : 'Feedback design request berhasil disimpan.';
 
         return redirect()->route('drafter.design-requests.index')->with('success', $message);
+    }
+
+    protected function ensureAssigned(DesignRequest $designRequest): void
+    {
+        abort_unless(
+            Auth::user()->isAdministrator()
+                || (int) $designRequest->production_pic_id === (int) Auth::id(),
+            403,
+            'Design request ini tidak ditugaskan kepada Anda.'
+        );
     }
 }

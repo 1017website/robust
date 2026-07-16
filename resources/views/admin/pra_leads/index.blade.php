@@ -2,21 +2,8 @@
 @section('title', 'Pra Leads')
 @section('content')
 @php
-    $sourceLabels = [
-        'whatsapp' => 'WhatsApp',
-        'website' => 'Website',
-        'referensi' => 'Referensi',
-        'telepon' => 'Telepon',
-        'email' => 'Email',
-        'lainnya' => 'Lainnya',
-    ];
-    $statusLabels = [
-        'draft' => 'Draft',
-        'assigned' => 'Ditugaskan',
-        'waiting_acceptance' => 'Menunggu Konfirmasi Sales',
-        'accepted' => 'Diterima Sales',
-        'rejected' => 'Ditolak Sales',
-    ];
+    $sourceLabels = \App\Models\PraLead::sources();
+    $statusLabels = \App\Models\PraLead::statuses();
 @endphp
 
 <x-page-header title="Pra Leads" subtitle="Kelola prospek baru sebelum menjadi lead dan ditugaskan ke sales.">
@@ -367,7 +354,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function setField(name, value) {
         var el = form?.querySelector('[name="' + name + '"]');
-        if (el) el.value = value || '';
+        if (!el) return;
+        if (numberInputKind(el)) setNumberInputValue(el, value);
+        else el.value = value || '';
     }
 
     function syncSalesQuickPick(value) {

@@ -37,4 +37,15 @@ class Activity extends Model
             'penawaran' => 'Penawaran',
         ];
     }
+
+    public static function statuses(): array
+    {
+        return [
+            'scheduled' => 'Scheduled',
+            'in_progress' => 'In Progress',
+            'pending' => 'Pending',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+        ];
+    }
 }

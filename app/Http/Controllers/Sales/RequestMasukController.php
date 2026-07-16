@@ -69,6 +69,11 @@ class RequestMasukController extends Controller
                 return $existingLead->fresh('customer');
             }
 
+        if ($praLead->status !== 'waiting_acceptance') {
+            return back()->with('error', 'Request ini sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($praLead) {
             $praLead->update(['status' => 'accepted', 'responded_at' => now()]);
 
             $lead = Lead::create([
@@ -105,7 +110,10 @@ class RequestMasukController extends Controller
 
     public function reject(Request $request, PraLead $praLead)
     {
-        abort_unless($this->canProcess($praLead), 403);
+        abort_if($praLead->assigned_sales_id !== Auth::id(), 403);
+        if ($praLead->status !== 'waiting_acceptance') {
+            return back()->with('error', 'Request ini sudah diproses sebelumnya.');
+        }
         $request->validate(['reject_reason' => ['required', 'string', 'max:500']]);
 
         $praLead->update([

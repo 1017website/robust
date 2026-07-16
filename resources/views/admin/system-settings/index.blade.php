@@ -26,6 +26,10 @@
                         <label class="form-label small fw-semibold">Tagline / Deskripsi Singkat</label>
                         <input type="text" name="company_tagline" class="form-control" value="{{ old('company_tagline', $settings['company_tagline']) }}" maxlength="140">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Target Penjualan Bulanan (Rp)</label>
+                        <input type="text" inputmode="numeric" data-rupiah name="sales_monthly_target" class="form-control" value="{{ old('sales_monthly_target', $settings['sales_monthly_target']) }}">
+                    </div>
                 </div>
 
                 <div class="row g-3 mt-1">

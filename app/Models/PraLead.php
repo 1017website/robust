@@ -32,4 +32,16 @@ class PraLead extends Model
             'rejected' => 'Ditolak Sales',
         ];
     }
+
+    public static function sources(): array
+    {
+        return [
+            'whatsapp' => 'WhatsApp',
+            'website' => 'Website',
+            'referensi' => 'Referensi',
+            'telepon' => 'Telepon',
+            'email' => 'Email',
+            'lainnya' => 'Lainnya',
+        ];
+    }
 }

@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body>
@@ -61,14 +61,14 @@
                 </div>
                 <a href="{{ $calendarRoute }}" class="topbar-icon d-none d-md-inline-flex"><i class="bi bi-calendar3"></i></a>
                 <div class="dropdown">
-                    <a href="#" class="user-chip" data-bs-toggle="dropdown">
+                    <button type="button" class="user-chip" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="avatar">{{ strtoupper(substr($u->name,0,1)) }}</div>
                         <div class="d-none d-md-block">
                             <div class="name">{{ $u->name }}</div>
                             <div class="role">{{ $u->roleLabel() }}</div>
                         </div>
                         <i class="bi bi-chevron-down ms-1"></i>
-                    </a>
+                    </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Profil</a></li>
                         <li><hr class="dropdown-divider"></li>
@@ -83,6 +83,7 @@
         </header>
 
         <main class="content">
+            @include('components.context-nav', ['contextTitle' => trim($__env->yieldContent('title', 'Dashboard'))])
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button class="btn-close" data-bs-dismiss="alert"></button></div>
             @endif
@@ -104,7 +105,7 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="{{ asset('js/app.js') }}"></script>
+<script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

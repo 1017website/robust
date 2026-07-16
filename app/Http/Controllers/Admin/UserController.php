@@ -13,7 +13,8 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::query();
+        $allowedRoles = $this->allowedRoles($request->user());
+        $query = User::query()->when(! $request->user()->isAdministrator(), fn ($q) => $q->where('role', '!=', 'administrator'));
 
         if ($q = $request->get('q')) {
             $query->where(function ($w) use ($q) {
@@ -31,14 +32,15 @@ class UserController extends Controller
 
         $users = $query->latest()->paginate(15)->withQueryString();
 
+        $statsScope = fn () => User::query()->when(! $request->user()->isAdministrator(), fn ($q) => $q->where('role', '!=', 'administrator'));
         $stats = [
-            'total' => User::count(),
-            'active' => User::where('is_active', true)->count(),
-            'inactive' => User::where('is_active', false)->count(),
-            'admin' => User::whereIn('role', ['administrator', 'sales_admin'])->count(),
+            'total' => $statsScope()->count(),
+            'active' => $statsScope()->where('is_active', true)->count(),
+            'inactive' => $statsScope()->where('is_active', false)->count(),
+            'admin' => $statsScope()->whereIn('role', ['administrator', 'sales_admin'])->count(),
         ];
 
-        return view('admin.users.index', compact('users', 'stats'));
+        return view('admin.users.index', compact('users', 'stats', 'allowedRoles'));
     }
 
     public function store(Request $request)
@@ -46,7 +48,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', Rule::in(array_keys(User::roles()))],
+            'role' => ['required', Rule::in(array_keys($this->allowedRoles($request->user())))],
             'job_title' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'confirmed', Password::min(6)],
@@ -63,10 +65,11 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        abort_if(! $request->user()->isAdministrator() && $user->isAdministrator(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role' => ['required', Rule::in(array_keys(User::roles()))],
+            'role' => ['required', Rule::in(array_keys($this->allowedRoles($request->user())))],
             'job_title' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['nullable', 'confirmed', Password::min(6)],
@@ -74,8 +77,11 @@ class UserController extends Controller
         ]);
 
         // Cegah administrator menonaktifkan / menurunkan dirinya sendiri (kunci terakhir)
-        if ($user->id === $request->user()->id && $data['role'] !== 'administrator') {
+        if ($user->id === $request->user()->id && $request->user()->isAdministrator() && $data['role'] !== 'administrator') {
             return back()->with('error', 'Anda tidak dapat mengubah role akun sendiri.');
+        }
+        if ($user->id === $request->user()->id && ! $request->boolean('is_active', true)) {
+            return back()->with('error', 'Anda tidak dapat menonaktifkan akun sendiri.');
         }
 
         $update = [
@@ -97,6 +103,7 @@ class UserController extends Controller
 
     public function toggle(Request $request, User $user)
     {
+        abort_if(! $request->user()->isAdministrator() && $user->isAdministrator(), 403);
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'Anda tidak dapat menonaktifkan akun sendiri.');
         }
@@ -107,6 +114,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        abort_if(! $request->user()->isAdministrator() && $user->isAdministrator(), 403);
         if ($user->id === $request->user()->id) {
             return back()->with('error', 'Anda tidak dapat menghapus akun sendiri.');
         }
@@ -117,6 +125,16 @@ class UserController extends Controller
 
         $user->delete();
 
-        return back()->with('success', 'User berhasil dihapus.');
+        return back()->with('success', 'User berhasil diarsipkan.');
+    }
+
+    protected function allowedRoles(User $actor): array
+    {
+        $roles = User::roles();
+        if (! $actor->isAdministrator()) {
+            unset($roles['administrator']);
+        }
+
+        return $roles;
     }
 }
