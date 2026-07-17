@@ -29,6 +29,9 @@
         @if($errors->any())
             <div class="alert alert-danger py-2 small">{{ $errors->first() }}</div>
         @endif
+        @if(session('error'))
+            <div class="alert alert-warning py-2 small">{{ session('error') }}</div>
+        @endif
 
         <form method="POST" action="{{ route('login') }}">
             @csrf
@@ -50,8 +53,10 @@
         <div class="mt-4 pt-3 border-top">
             <div class="small text-muted mb-2">Akun demo:</div>
             <div class="small text-muted-2" style="line-height:1.8">
-                <div><strong>Admin:</strong> admin@robust.test</div>
+                <div><strong>Administrator:</strong> superadmin@robust.test</div>
+                <div><strong>Sales Admin:</strong> admin@robust.test</div>
                 <div><strong>Sales:</strong> sales@robust.test</div>
+                <div><strong>SPV Sales:</strong> spv@robust.test</div>
                 <div><strong>Drafter:</strong> drafter@robust.test</div>
                 <div>Password semua: <code>password</code></div>
             </div>
