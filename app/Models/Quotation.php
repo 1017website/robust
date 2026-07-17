@@ -116,7 +116,13 @@ class Quotation extends Model
 
     public function estimatedCostTotal(): float
     {
-        return (float) ($this->designRequest?->cost_total ?? 0);
+        $itemCost = $this->items->sum(
+            fn (QuotationItem $item) => (float) $item->qty * (float) $item->cost_price
+        );
+
+        return $itemCost > 0
+            ? round($itemCost, 2)
+            : (float) ($this->designRequest?->cost_total ?? 0);
     }
 
     public function estimatedGrossProfit(): float

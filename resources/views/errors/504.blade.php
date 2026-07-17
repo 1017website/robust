@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 504, 'title' => 'Layanan terlalu lama merespons', 'message' => 'Salah satu layanan pendukung belum merespons tepat waktu. Silakan coba kembali.', 'tone' => '#d98200'])

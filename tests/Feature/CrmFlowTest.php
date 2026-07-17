@@ -682,4 +682,99 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->delete(route('admin.pra-leads.destroy', $praLead->fresh()))->assertRedirect();
         $this->assertSoftDeleted('pra_leads', ['id' => $praLead->id]);
     }
+
+    public function test_quotation_price_margin_owner_error_page_and_pdf_are_consistent(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $otherSales = User::factory()->create(['role' => 'sales']);
+        $spv = User::factory()->create(['role' => 'sales_spv']);
+        $customer = Customer::create([
+            'name' => 'Customer Margin Otomatis',
+            'pipeline_stage' => 'follow_up',
+            'sales_id' => $sales->id,
+        ]);
+
+        $payload = [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'project_name' => 'Lab Margin Otomatis',
+            'delivery_method' => 'email',
+            'quote_date' => now()->format('Y-m-d'),
+            'valid_until' => now()->addDays(30)->format('Y-m-d'),
+            'priority' => 'medium',
+            'currency' => 'IDR',
+            'discount_type' => 'percent',
+            'discount_value' => 0,
+            'tax_percent' => 11,
+            'target_margin' => 1, // Nilai browser harus diabaikan dan dihitung ulang.
+            'items' => [[
+                'name' => 'Wall Bench',
+                'qty' => 2,
+                'unit' => 'Unit',
+                'cost_price' => 1000000,
+                'margin' => 20,
+            ]],
+            'action' => 'draft',
+        ];
+
+        $response = $this->actingAs($sales)->post(route('sales.quotations.store'), $payload);
+        $quotation = Quotation::where('project_name', 'Lab Margin Otomatis')->firstOrFail();
+        $response->assertRedirect(route('sales.quotations.show', $quotation));
+
+        $item = $quotation->items()->firstOrFail();
+        $this->assertSame($sales->id, (int) $quotation->sales_id);
+        $this->assertSame(1000000.0, (float) $item->cost_price);
+        $this->assertSame(1250000.0, (float) $item->unit_price);
+        $this->assertSame(2500000.0, (float) $item->total);
+        $this->assertSame(20.0, (float) $quotation->target_margin);
+        $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))->assertSuccessful();
+
+        $this->actingAs($otherSales)->get(route('sales.quotations.show', $quotation))
+            ->assertForbidden()
+            ->assertSee('Akses ditolak')
+            ->assertSee('Penawaran ini bukan milik Anda.');
+
+        $quotation->update([
+            'status' => 'approved',
+            'approved_by' => $spv->id,
+            'approved_at' => now(),
+        ]);
+        $pdf = $this->actingAs($sales)->get(route('sales.quotations.pdf', $quotation));
+        $pdf->assertSuccessful()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-1.4', $pdf->getContent());
+        $this->assertStringContainsString('PENAWARAN HARGA', $pdf->getContent());
+    }
+
+    public function test_customer_index_updates_the_detail_panel_for_non_superadmin_roles(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $salesSpv = User::factory()->create(['role' => 'sales_spv']);
+        $firstCustomer = Customer::create([
+            'name' => 'Customer Detail Pertama',
+            'pipeline_stage' => 'identify',
+            'sales_id' => $sales->id,
+        ]);
+        $selectedCustomer = Customer::create([
+            'name' => 'Customer Detail Terpilih',
+            'pipeline_stage' => 'follow_up',
+            'sales_id' => $sales->id,
+        ]);
+
+        foreach ([$sales, $salesAdmin, $salesSpv] as $user) {
+            $response = $this->actingAs($user)->get(route('sales.customers.index', [
+                'customer' => $selectedCustomer->id,
+            ]));
+
+            $response->assertSuccessful()
+                ->assertSee('Customer Detail Terpilih')
+                ->assertSee('data-selected-customer="'.$selectedCustomer->id.'"', false)
+                ->assertSee('data-customer-href=', false);
+        }
+
+        $this->actingAs($sales)->get(route('sales.customers.index', [
+            'customer' => $firstCustomer->id,
+        ]))->assertSuccessful()
+            ->assertSee('data-selected-customer="'.$firstCustomer->id.'"', false);
+    }
 }

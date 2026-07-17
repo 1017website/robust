@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 400, 'title' => 'Permintaan tidak dapat diproses', 'message' => 'Data permintaan tidak sesuai. Periksa kembali isian atau tautan yang digunakan.', 'tone' => '#d98200'])

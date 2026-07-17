@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 419, 'title' => 'Sesi telah berakhir', 'message' => 'Halaman terlalu lama terbuka atau token keamanan sudah kedaluwarsa. Muat ulang lalu coba lagi.', 'tone' => '#d98200'])

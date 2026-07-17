@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 500, 'title' => 'Terjadi gangguan pada sistem', 'message' => 'Permintaan belum dapat diselesaikan. Tim administrator dapat memeriksa log untuk detailnya.', 'tone' => '#e0524a'])

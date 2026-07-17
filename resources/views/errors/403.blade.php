@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 403, 'title' => 'Akses ditolak', 'message' => ($exception ?? null)?->getMessage() ?: 'Anda tidak memiliki izin untuk membuka atau mengubah data ini.', 'tone' => '#e0524a'])

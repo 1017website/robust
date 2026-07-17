@@ -916,6 +916,13 @@ canvas{display:block;max-width:100%}
 .drafter-ui .spec-card .table-wrap>.table-r{width:100%;min-width:100%!important;table-layout:fixed}
 .drafter-ui .spec-card .table-r th,.drafter-ui .spec-card .table-r td{white-space:normal;overflow-wrap:anywhere}
 
+/* Quotation auto-pricing columns stay legible and scroll as one table on narrower screens. */
+.table-wrap>.quotation-item-table{min-width:1120px!important}
+.quotation-item-table .it-cost{min-width:120px}
+.quotation-item-table .it-price-display,.quotation-item-table .it-total{display:inline-block;white-space:nowrap}
+tr.customer-select-row{cursor:pointer}
+tr.customer-select-row:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}
+
 @media(max-width:1536px){
     .drafter-stat-grid.six,.drafter-stat-grid.five{grid-template-columns:repeat(3,minmax(180px,1fr))}
     .drafter-dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}

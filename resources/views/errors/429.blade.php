@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 429, 'title' => 'Terlalu banyak permintaan', 'message' => 'Sistem menerima terlalu banyak permintaan dalam waktu singkat. Tunggu sebentar lalu coba lagi.', 'tone' => '#7a48dc'])

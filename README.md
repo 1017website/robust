@@ -3,6 +3,10 @@
 Sales CRM berbasis **Laravel 12 + MySQL** untuk perusahaan Laboratory Furniture & Equipment.
 Frontend menggunakan Bootstrap 5 via CDN (tanpa build step), cocok untuk shared hosting / cPanel.
 
+## Dokumentasi
+
+- [User Guide Bahasa Indonesia](docs/USER_GUIDE.md) — tutorial penggunaan per role dari Pra Lead sampai Project dan Request PO.
+
 ## Role
 - **Sales Admin** — kelola pra lead, distribusi ke sales, monitoring workload & acceptance rate
 - **Sales** — request masuk, lead, design request, quotation (wizard 4 langkah), customer, project

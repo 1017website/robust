@@ -9,6 +9,9 @@
                 'specification' => $i->specification,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
+                'cost_price' => (float) $i->cost_price > 0
+                    ? $i->cost_price
+                    : (float) $i->unit_price * (1 - ((float) $i->margin / 100)),
                 'unit_price' => $i->unit_price,
                 'margin' => $i->margin,
             ])->values()->all();
@@ -19,7 +22,8 @@
                 'specification' => $i->specification,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
-                'unit_price' => $i->unit_price,
+                'cost_price' => $i->unit_price,
+                'unit_price' => 0,
                 'margin' => $i->margin,
             ])->values()->all();
         } else {
@@ -97,7 +101,7 @@
                     </select>
                 </div>
                 <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label small fw-semibold">Target Margin (%)</label><input name="target_margin" type="text" inputmode="decimal" data-qty value="{{ old('target_margin', $quotation?->target_margin) }}" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label small fw-semibold">Margin Total Otomatis</label><input type="hidden" name="target_margin" id="targetMargin" value="{{ old('target_margin', $quotation?->target_margin ?? 0) }}"><input id="targetMarginDisplay" value="0%" class="form-control bg-light" readonly></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
             </div>
         </div>
@@ -108,12 +112,12 @@
         <div class="card-r">
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
-                <table class="table-r" id="itemTable">
-                    <thead><tr><th style="width:18%">Item</th><th>Spesifikasi</th><th style="width:90px">Qty</th><th style="width:85px">Unit</th><th style="width:150px">Harga Satuan</th><th style="width:100px">Margin %</th><th style="width:140px">Total</th><th></th></tr></thead>
+                <table class="table-r quotation-item-table" id="itemTable">
+                    <thead><tr><th style="width:17%">Item</th><th>Spesifikasi</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP / Harga Dasar</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual / Unit</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div class="form-text mt-2">Margin per item bersifat informasi kontrol untuk SPV. Total tetap dihitung dari Qty x Harga Satuan.</div>
+            <div class="form-text mt-2">Harga jual dihitung otomatis dari HPP dan margin: HPP / (1 - margin%). Margin total dihitung dari seluruh item.</div>
         </div>
         <div class="d-flex justify-content-between"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
     </div>
@@ -140,6 +144,8 @@
                 <div class="card-r">
                     <div class="card-head"><h2>Ringkasan Harga</h2></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Subtotal</span><span class="fw-num" id="sumSubtotal">Rp 0</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Total HPP</span><span class="fw-num" id="sumCost">Rp 0</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Margin Penjualan</span><span class="fw-num text-success" id="sumMargin">Rp 0 (0%)</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Diskon</span><span class="fw-num text-danger" id="sumDiscount">- Rp 0</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">PPN</span><span class="fw-num" id="sumTax">Rp 0</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Biaya Tambahan</span><span class="fw-num" id="sumAdd">Rp 0</span></div>
@@ -210,19 +216,25 @@ function addItem(data={}){
         <td><input name="items[${i}][specification]" class="form-control form-control-sm" value="${esc(data.specification)}"></td>
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
-        <td><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-price" value="${data.unit_price||0}"></td>
-        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm" value="${data.margin||0}"></td>
+        <td><input name="items[${i}][cost_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-cost" value="${data.cost_price ?? data.unit_price ?? 0}"></td>
+        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-margin" value="${data.margin||0}" min="0" max="99.99"></td>
+        <td><input name="items[${i}][unit_price]" type="hidden" class="it-price" value="0"><span class="fw-num it-price-display">Rp 0</span></td>
         <td class="fw-num it-total">Rp 0</td>
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
     bindNumberInputs(tr);
-    tr.querySelectorAll('.it-qty,.it-price').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
+    tr.querySelectorAll('.it-qty,.it-cost,.it-margin').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);
 }
 function rowTotal(tr){
-    const q=numberValue(tr.querySelector('.it-qty')), p=numberValue(tr.querySelector('.it-price'));
+    const q=numberValue(tr.querySelector('.it-qty')), cost=numberValue(tr.querySelector('.it-cost'));
+    const margin=Math.min(Math.max(numberValue(tr.querySelector('.it-margin')),0),99.99);
+    const p=cost/(1-(margin/100));
+    tr.querySelector('.it-price').value=Number.isFinite(p)?p.toFixed(2):0;
+    tr.querySelector('.it-price-display').textContent=rupiah(p);
     tr.querySelector('.it-total').textContent = rupiah(q*p);
+    return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost};
 }
 document.getElementById('addItem').onclick=()=>addItem();
 if(itemsData.length){ itemsData.forEach(addItem); } else { addItem(); }
@@ -264,10 +276,14 @@ customerSelect?.addEventListener('change', function(){
 });
 
 function recalc(){
-    let sub=0;
+    let sub=0, totalCost=0;
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
-        sub += numberValue(tr.querySelector('.it-qty'))*numberValue(tr.querySelector('.it-price'));
+        const row=rowTotal(tr);
+        sub += row.total;
+        totalCost += row.totalCost;
     });
+    const marginAmount=Math.max(0,sub-totalCost);
+    const marginPercent=sub>0?(marginAmount/sub*100):0;
     const dType=document.getElementById('discType').value, dVal=numberValue(document.getElementById('discValue'));
     let disc = dType==='percent' ? sub*dVal/100 : dVal; disc=Math.min(disc,sub);
     const afterDisc = sub-disc;
@@ -275,6 +291,10 @@ function recalc(){
     let add=0; document.querySelectorAll('.cost-amt').forEach(el=>add+=numberValue(el));
     const grand = afterDisc+tax+add;
     document.getElementById('sumSubtotal').textContent=rupiah(sub);
+    document.getElementById('sumCost').textContent=rupiah(totalCost);
+    document.getElementById('sumMargin').textContent=`${rupiah(marginAmount)} (${new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(marginPercent)}%)`;
+    document.getElementById('targetMargin').value=marginPercent.toFixed(2);
+    document.getElementById('targetMarginDisplay').value=`${new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(marginPercent)}%`;
     document.getElementById('sumDiscount').textContent='- '+rupiah(disc);
     document.getElementById('sumTax').textContent=rupiah(tax);
     document.getElementById('sumAdd').textContent=rupiah(add);
@@ -298,6 +318,8 @@ function buildReview(){
         <table class="table-r"><thead><tr><th>Item</th><th>Qty</th><th>Harga</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="d-flex justify-content-end mt-3"><div style="min-width:240px">
             <div class="d-flex justify-content-between"><span class="text-muted-2">Subtotal</span><span class="fw-num">${document.getElementById('sumSubtotal').textContent}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted-2">Total HPP</span><span class="fw-num">${document.getElementById('sumCost').textContent}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted-2">Margin</span><span class="fw-num text-success">${document.getElementById('sumMargin').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Diskon</span><span class="fw-num">${document.getElementById('sumDiscount').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">PPN</span><span class="fw-num">${document.getElementById('sumTax').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Biaya Tambahan</span><span class="fw-num">${document.getElementById('sumAdd').textContent}</span></div>

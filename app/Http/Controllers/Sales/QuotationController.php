@@ -42,7 +42,7 @@ class QuotationController extends Controller
             ? DesignRequest::with('items', 'lead', 'customer', 'sales')->find($request->get('dr'))
             : null;
 
-        if ($designRequest && Auth::user()->isSales() && $designRequest->sales_id !== Auth::id()) {
+        if ($designRequest && ! $this->canAccessDesignRequestForQuotation($designRequest)) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
@@ -71,9 +71,7 @@ class QuotationController extends Controller
                 'customer_name' => $data['customer_name'],
                 'pic_name' => $data['pic_name'] ?? null,
                 'project_name' => $data['project_name'],
-                'sales_id' => $designRequest?->sales_id
-                    ?: Customer::find($link['customer_id'])?->sales_id
-                    ?: Auth::id(),
+                'sales_id' => $this->quotationSalesId($designRequest),
                 'delivery_method' => $data['delivery_method'],
                 'quote_date' => $data['quote_date'],
                 'valid_until' => $data['valid_until'],
@@ -85,7 +83,7 @@ class QuotationController extends Controller
                 'discount_value' => $data['discount_value'] ?? 0,
                 'discount_reason' => $data['discount_reason'] ?? null,
                 'tax_percent' => $data['tax_percent'],
-                'target_margin' => $data['target_margin'] ?? 0,
+                'target_margin' => 0,
                 'additional_costs' => array_values($data['additional_costs'] ?? []),
                 'status' => $submitApproval ? 'waiting_approval' : 'draft',
                 'submitted_for_approval_at' => $submitApproval ? now() : null,
@@ -179,7 +177,7 @@ class QuotationController extends Controller
                 'discount_value' => $data['discount_value'] ?? 0,
                 'discount_reason' => $data['discount_reason'] ?? null,
                 'tax_percent' => $data['tax_percent'],
-                'target_margin' => $data['target_margin'] ?? 0,
+                'target_margin' => 0,
                 'additional_costs' => array_values($data['additional_costs'] ?? []),
                 'status' => $submitApproval ? 'waiting_approval' : 'draft',
                 'submitted_for_approval_at' => $submitApproval ? now() : $quotation->submitted_for_approval_at,
@@ -340,7 +338,7 @@ class QuotationController extends Controller
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
             'tax_percent' => ['required', 'numeric', 'min:0'],
-            'target_margin' => ['nullable', 'numeric', 'min:0'],
+            'target_margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'additional_costs' => ['nullable', 'array'],
             'additional_costs.*.label' => ['nullable', 'string', 'max:100'],
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
@@ -350,8 +348,9 @@ class QuotationController extends Controller
             'items.*.specification' => ['nullable', 'string', 'max:1000'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'items.*.margin' => ['nullable', 'numeric', 'min:0'],
+            'items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
         ]);
     }
 
@@ -362,7 +361,7 @@ class QuotationController extends Controller
         }
 
         $designRequest = DesignRequest::with('lead', 'customer')->findOrFail($designRequestId);
-        if (Auth::user()->isSales() && $designRequest->sales_id !== Auth::id()) {
+        if (! $this->canAccessDesignRequestForQuotation($designRequest)) {
             abort(403, 'Design request ini bukan milik Anda.');
         }
 
@@ -383,16 +382,19 @@ class QuotationController extends Controller
 
         foreach ($items as $i => $item) {
             $qty = (float) $item['qty'];
-            $unitPrice = (float) $item['unit_price'];
+            $costPrice = (float) ($item['cost_price'] ?? $item['unit_price'] ?? 0);
+            $margin = min(max((float) ($item['margin'] ?? 0), 0), 99.99);
+            $unitPrice = QuotationCalculator::sellingPrice($costPrice, $margin);
             $quotation->items()->create([
                 'category' => $item['category'] ?? null,
                 'name' => $item['name'],
                 'specification' => $item['specification'] ?? null,
                 'qty' => $qty,
                 'unit' => $item['unit'] ?? 'Unit',
+                'cost_price' => $costPrice,
                 'unit_price' => $unitPrice,
-                'margin' => $item['margin'] ?? 0,
-                'total' => $qty * $unitPrice,
+                'margin' => $margin,
+                'total' => round($qty * $unitPrice, 2),
                 'sort_order' => $i,
             ]);
         }
@@ -465,7 +467,7 @@ class QuotationController extends Controller
 
     protected function ensureOwner(Quotation $quotation): void
     {
-        if (Auth::user()->isSales() && $quotation->sales_id !== Auth::id()) {
+        if (Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id()) {
             abort(403, 'Penawaran ini bukan milik Anda.');
         }
     }

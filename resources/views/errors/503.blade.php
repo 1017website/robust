@@ -1,0 +1,1 @@
+@include('errors._layout', ['code' => 503, 'title' => 'Layanan sedang tidak tersedia', 'message' => 'Sistem mungkin sedang menjalani pemeliharaan. Silakan coba kembali beberapa saat lagi.', 'tone' => '#1d6fe0'])
