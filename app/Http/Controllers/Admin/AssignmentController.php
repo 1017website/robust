@@ -8,6 +8,7 @@ use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\Quotation;
 use App\Models\User;
+use App\Services\ExcelWorkbook;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,7 @@ class AssignmentController extends Controller
             $assigned = PraLead::where('assigned_sales_id', $s->id)->whereIn('status', ['waiting_acceptance', 'accepted', 'rejected'])->count();
             $accepted = PraLead::where('assigned_sales_id', $s->id)->where('status', 'accepted')->count();
             $rejected = PraLead::where('assigned_sales_id', $s->id)->where('status', 'rejected')->count();
+
             return [
                 'sales' => $s,
                 'assigned' => $assigned,
@@ -52,25 +54,24 @@ class AssignmentController extends Controller
         $leads = Lead::with('sales')->latest()->take(60)->get();
         $projects = Project::with('quotation.sales', 'quotation.customer')->latest()->take(6)->get();
 
-        if ($request->get('export') === 'csv') {
-            return response()->streamDownload(function () use ($workload, $acceptance) {
-                $output = fopen('php://output', 'w');
-                fwrite($output, "\xEF\xBB\xBF");
-                fputcsv($output, ['Sales', 'Request Masuk', 'Leads Aktif', 'Design Request', 'Penawaran Aktif', 'Project Aktif', 'Acceptance Rate'], ';');
-                $acceptanceBySales = $acceptance->keyBy(fn ($row) => $row['sales']->id);
-                foreach ($workload as $row) {
-                    fputcsv($output, [
-                        $row['sales']->name,
-                        $row['request_masuk'],
-                        $row['leads_aktif'],
-                        $row['design_request'],
-                        $row['penawaran_aktif'],
-                        $row['project_aktif'],
-                        ($acceptanceBySales[$row['sales']->id]['rate'] ?? 0).'%',
-                    ], ';');
-                }
-                fclose($output);
-            }, 'assignment-sales-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        if ($request->get('export') === 'excel') {
+            $acceptanceBySales = $acceptance->keyBy(fn ($row) => $row['sales']->id);
+            $rows = $workload->map(fn ($row) => [
+                $row['sales']->name,
+                $row['request_masuk'],
+                $row['leads_aktif'],
+                $row['design_request'],
+                $row['penawaran_aktif'],
+                $row['project_aktif'],
+                ($acceptanceBySales[$row['sales']->id]['rate'] ?? 0).'%',
+            ]);
+
+            return ExcelWorkbook::download(
+                'assignment-sales-'.now()->format('Y-m-d').'.xlsx',
+                ['Sales', 'Request Masuk', 'Leads Aktif', 'Design Request', 'Penawaran Aktif', 'Project Aktif', 'Acceptance Rate'],
+                $rows,
+                'Assignment Sales'
+            );
         }
 
         return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats', 'leads', 'projects'));

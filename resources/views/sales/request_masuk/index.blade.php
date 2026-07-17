@@ -68,7 +68,7 @@
         <aside class="sales-detail" id="detail-request">
             @if($selected)
                 <div class="sales-detail-head"><div><h5 class="mb-0 fw-black">Detail Request</h5></div><a class="btn btn-sm btn-soft" href="{{ route('sales.request-masuk.index') }}"><i class="bi bi-x-lg"></i></a></div>
-                <div class="sales-detail-body">
+                <div class="sales-detail-body request-detail-body">
                     <div class="d-flex flex-wrap gap-2 mb-2"><span class="status-soft st-blue">NEW REQUEST</span>@if($selected->assigned_sales_id)<span class="badge rounded-pill text-bg-success"><i class="bi bi-person-check-fill me-1"></i>Assigned dari Pra Leads</span>@endif</div>
                     <div class="sales-detail-title">{{ $selected->instansi }}</div>
                     <div class="small text-muted-2 mb-3">Request dikirim oleh Admin pada {{ optional($selected->sent_at ?? $selected->created_at)->translatedFormat('d M Y, H:i') }}</div>
@@ -86,7 +86,7 @@
                             <div class="small text-muted-2">{{ $selected->initial_need ?: 'Belum ada deskripsi kebutuhan.' }}</div>
                         </div></div>
                         <div class="col-md-6"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-card h-100"><h6>Estimasi Potensi</h6><div class="text-success fw-bold fs-5">{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</div><div class="text-center fw-bold my-1">-</div><div class="text-success fw-bold fs-5">{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</div></div></div>
+                        <div class="col-md-6"><div class="info-card h-100"><h6>Estimasi Nilai Proyek <i class="bi bi-info-circle text-muted" title="Rentang perkiraan nilai proyek berdasarkan kebutuhan awal, bukan harga penawaran final."></i></h6><div class="small text-muted-2 mb-2">Rentang awal, bukan harga penawaran final</div><div class="estimate-range"><span><small>Minimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</strong></span><i class="bi bi-arrow-right"></i><span><small>Maksimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</strong></span></div></div></div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">

@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', function () {
+    var keepAliveMeta = document.querySelector('meta[name="session-keep-alive-url"]');
+    if (keepAliveMeta) {
+        window.setInterval(function () {
+            if (document.visibilityState !== 'visible') return;
+            fetch(keepAliveMeta.content, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).catch(function () {});
+        }, 15 * 60 * 1000);
+    }
     // Sidebar drawer (mobile/tablet)
     var t = document.getElementById('sidebarToggle');
     var sb = document.getElementById('sidebar');

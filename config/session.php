@@ -4,7 +4,8 @@ use Illuminate\Support\Str;
 
 return [
     'driver' => env('SESSION_DRIVER', 'database'),
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // Satu hari kerja. Keep-alive di layout akan memperpanjang sesi selama aplikasi aktif.
+    'lifetime' => (int) env('SESSION_LIFETIME', 480),
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
     'encrypt' => env('SESSION_ENCRYPT', false),
     'files' => storage_path('framework/sessions'),

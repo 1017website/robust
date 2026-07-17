@@ -69,7 +69,7 @@
                         @forelse($customers as $cust)
                             <tr class="{{ $selected && $selected->id === $cust->id ? 'selected' : '' }}">
                                 <td>{{ $customers->firstItem()+$loop->index }}</td>
-                                <td><a href="{{ route('sales.customers.show',$cust) }}" class="fw-bold">{{ $cust->name }}</a></td>
+                                <td><a href="{{ route('sales.customers.index', array_merge(request()->except(['page','hide_detail']), ['customer'=>$cust->id])) }}#customer-detail" class="fw-bold">{{ $cust->name }}</a></td>
                                 <td>{{ $cust->category ?: '-' }}</td>
                                 <td>{{ $cust->primaryPic?->name ?? $cust->pic_name ?? '-' }}</td>
                                 <td>{{ $cust->sales?->name ?? '-' }}</td>
@@ -89,15 +89,29 @@
             </section>
         </main>
 
-        <aside class="sa-customer-side">
+        <aside class="sa-customer-side" id="customer-detail">
             @if($selected)
                 <div class="sa-card">
                 <div class="d-flex justify-content-between align-items-start"><div><h2 class="mb-2">{{ $selected->name }}</h2><span class="status-soft {{ $stageClass($selected->pipeline_stage) }}">{{ \App\Models\Customer::stages()[$selected->pipeline_stage] ?? $selected->pipeline_stage }}</span></div><a class="btn btn-sm btn-link text-dark" href="{{ route('sales.customers.index', array_merge(request()->except('page'), ['hide_detail'=>1])) }}" aria-label="Tutup detail"><i class="bi bi-x-lg"></i></a></div>
-                    <div class="sa-detail-tabs"><span class="active">Overview</span><span>Projects</span><span>Penawaran</span><span>Activities</span><span>Documents</span><span>Contacts</span></div>
-                    <div class="sa-info-card"><h6>Informasi Customer</h6><div class="sa-info-grid"><div><i class="bi bi-building"></i><span>Jenis Customer</span><strong>{{ $selected->category ?: '-' }}</strong></div><div><i class="bi bi-globe"></i><span>Website</span><strong>{{ $selected->website ?: '-' }}</strong></div><div><i class="bi bi-geo-alt"></i><span>Alamat</span><strong>{{ $selected->address ?: '-' }}</strong></div><div><i class="bi bi-envelope"></i><span>Email</span><strong>{{ $selected->email ?: '-' }}</strong></div><div><i class="bi bi-telephone"></i><span>Telepon</span><strong>{{ $selected->phone ?: '-' }}</strong></div><div><i class="bi bi-calendar"></i><span>Tahun Kerja Sama</span><strong>{{ $selected->partner_since?->format('Y') ?? '-' }}</strong></div></div></div>
-                    <div class="sa-two-col mt-3"><div class="sa-info-card"><h6>PIC Customer</h6>@forelse($selected->pics()->take(2)->get() as $pic)<div class="sa-pic-row"><span>{{ $loop->iteration }}</span><strong>{{ $pic->name }}<small>{{ $pic->position }}</small></strong><em>{{ $pic->phone }}</em></div>@empty<div class="small text-muted-2">Belum ada PIC.</div>@endforelse</div><div class="sa-info-card"><h6>Sales Owner</h6><div class="sa-person"><span class="sa-avatar">{{ strtoupper(substr($selected->sales?->name ?? 'S',0,1)) }}</span><strong>{{ $selected->sales?->name ?? '-' }}<small>{{ $selected->sales?->job_title ?? 'Sales' }}</small></strong></div></div></div>
-                    <div class="sa-info-card mt-3"><h6>Statistik</h6><div class="sa-mini-stat-grid"><div><strong>{{ $selected->projects()->count() }}</strong><span>Total Project</span></div><div><strong>{{ \App\Support\Format::rupiahShort($selected->quotations()->sum('grand_total')) }}</strong><span>Total Nilai</span></div><div><strong>{{ $selected->quotations()->count() }}</strong><span>Total Penawaran</span></div><div><strong>{{ $selected->probability }}%</strong><span>Win Rate</span></div></div></div>
-                    <div class="sa-info-card mt-3"><h6>Timeline Project</h6>@forelse($selected->projects()->latest()->take(4)->get() as $project)<div class="sa-timeline-row"><i></i><span>{{ $project->created_at?->translatedFormat('M Y') }}<strong>{{ $project->name }}</strong></span><em>{{ $project->status }}</em></div>@empty<div class="small text-muted-2">Belum ada project.</div>@endforelse</div>
+                    <div class="sa-detail-tabs" role="tablist" aria-label="Detail customer">
+                        <button type="button" class="active" data-customer-tab="overview">Overview</button>
+                        <button type="button" data-customer-tab="projects">Projects <span>{{ $selected->projects->count() }}</span></button>
+                        <button type="button" data-customer-tab="quotations">Penawaran <span>{{ $selected->quotations->count() }}</span></button>
+                        <button type="button" data-customer-tab="activities">Activities <span>{{ $selected->activities->count() }}</span></button>
+                        <button type="button" data-customer-tab="documents">Documents <span>{{ $selected->documents->count() }}</span></button>
+                        <button type="button" data-customer-tab="contacts">Contacts <span>{{ $selected->pics->count() }}</span></button>
+                    </div>
+                    <div class="customer-tab-panel active" data-customer-panel="overview">
+                        <div class="sa-info-card"><h6>Informasi Customer</h6><div class="sa-info-grid"><div><i class="bi bi-building"></i><span>Jenis Customer</span><strong>{{ $selected->category ?: '-' }}</strong></div><div><i class="bi bi-globe"></i><span>Website</span><strong>{{ $selected->website ?: '-' }}</strong></div><div><i class="bi bi-geo-alt"></i><span>Alamat</span><strong>{{ $selected->address ?: '-' }}</strong></div><div><i class="bi bi-envelope"></i><span>Email</span><strong>{{ $selected->email ?: '-' }}</strong></div><div><i class="bi bi-telephone"></i><span>Telepon</span><strong>{{ $selected->phone ?: '-' }}</strong></div><div><i class="bi bi-calendar"></i><span>Tahun Kerja Sama</span><strong>{{ $selected->partner_since?->format('Y') ?? '-' }}</strong></div></div></div>
+                        <div class="sa-two-col mt-3"><div class="sa-info-card"><h6>PIC Customer</h6>@forelse($selected->pics->take(2) as $pic)<div class="sa-pic-row"><span>{{ $loop->iteration }}</span><strong>{{ $pic->name }}<small>{{ $pic->position }}</small></strong><em>{{ $pic->phone }}</em></div>@empty<div class="small text-muted-2">Belum ada PIC.</div>@endforelse</div><div class="sa-info-card"><h6>Sales Owner</h6><div class="sa-person"><span class="sa-avatar">{{ strtoupper(substr($selected->sales?->name ?? 'S',0,1)) }}</span><strong>{{ $selected->sales?->name ?? '-' }}<small>{{ $selected->sales?->job_title ?? 'Sales' }}</small></strong></div></div></div>
+                        <div class="sa-info-card mt-3"><h6>Statistik</h6><div class="sa-mini-stat-grid"><div><strong>{{ $selected->projects->count() }}</strong><span>Total Project</span></div><div><strong>{{ \App\Support\Format::rupiahShort($selected->quotations->sum('grand_total')) }}</strong><span>Total Nilai</span></div><div><strong>{{ $selected->quotations->count() }}</strong><span>Total Penawaran</span></div><div><strong>{{ $selected->probability }}%</strong><span>Win Rate</span></div></div></div>
+                        <div class="sa-info-card mt-3"><h6>Timeline Project</h6>@forelse($selected->projects->take(4) as $project)<div class="sa-timeline-row"><i></i><span>{{ $project->created_at?->translatedFormat('M Y') }}<strong>{{ $project->name }}</strong></span><em>{{ $project->status }}</em></div>@empty<div class="small text-muted-2">Belum ada project.</div>@endforelse</div>
+                    </div>
+                    <div class="customer-tab-panel" data-customer-panel="projects"><div class="sa-info-card"><h6>Daftar Project</h6>@forelse($selected->projects as $project)<div class="customer-panel-row"><span><strong>{{ $project->name }}</strong><small>{{ $project->created_at?->translatedFormat('d M Y') }}</small></span><x-status-badge :status="$project->status" /></div>@empty<x-empty text="Belum ada project." />@endforelse</div></div>
+                    <div class="customer-tab-panel" data-customer-panel="quotations"><div class="sa-info-card"><h6>Daftar Penawaran</h6>@forelse($selected->quotations as $quotation)<div class="customer-panel-row"><span><strong>{{ $quotation->code }}</strong><small>{{ \App\Support\Format::rupiahShort($quotation->grand_total) }}</small></span><x-status-badge :status="$quotation->status" /></div>@empty<x-empty text="Belum ada penawaran." />@endforelse</div></div>
+                    <div class="customer-tab-panel" data-customer-panel="activities"><div class="sa-info-card"><h6>Aktivitas Terbaru</h6>@forelse($selected->activities as $activity)<div class="customer-panel-row"><span><strong>{{ $activity->title }}</strong><small>{{ $activity->activity_date?->translatedFormat('d M Y') }} · {{ \App\Models\Activity::types()[$activity->type] ?? $activity->type }}</small></span><x-status-badge :status="$activity->status" /></div>@empty<x-empty text="Belum ada aktivitas." />@endforelse</div></div>
+                    <div class="customer-tab-panel" data-customer-panel="documents"><div class="sa-info-card"><h6>Dokumen Customer</h6>@forelse($selected->documents as $document)<div class="customer-panel-row"><span><strong>{{ $document->name }}</strong><small>{{ $document->humanSize() }} · {{ $document->created_at?->translatedFormat('d M Y') }}</small></span><i class="bi bi-file-earmark-text text-primary"></i></div>@empty<x-empty text="Belum ada dokumen." />@endforelse</div></div>
+                    <div class="customer-tab-panel" data-customer-panel="contacts"><div class="sa-info-card"><h6>Kontak Customer</h6>@forelse($selected->pics as $pic)<div class="customer-contact-row"><span class="sa-avatar">{{ strtoupper(substr($pic->name,0,1)) }}</span><span><strong>{{ $pic->name }}</strong><small>{{ $pic->position ?: 'PIC Customer' }}</small><small>{{ $pic->phone ?: '-' }} · {{ $pic->email ?: '-' }}</small></span></div>@empty<x-empty text="Belum ada kontak." />@endforelse</div></div>
                     @unless(auth()->user()->isSalesSpv())<div class="sa-detail-actions"><a href="{{ route('sales.customers.edit',$selected) }}" class="btn btn-soft"><i class="bi bi-pencil"></i>Edit</a><a href="{{ route('sales.projects.create') }}" class="btn btn-soft"><i class="bi bi-plus-lg"></i>Project Baru</a><a href="{{ route('sales.quotations.create',['customer'=>$selected->id]) }}" class="btn btn-primary"><i class="bi bi-file-earmark-plus"></i>Buat Penawaran</a></div>@endunless
                 </div>
             @else
@@ -109,6 +123,14 @@
 @push('scripts')
 <script>
     robustChart('saCustomerSeg','doughnut',['Identify','Approaching','Follow Up','Won'],[{{ $stats['identify'] }},{{ $stats['approaching'] }},{{ $stats['follow_up'] }},{{ $stats['won'] }}],['#60a5fa','#f59e0b','#8b5cf6','#10b981']);
+    document.querySelectorAll('[data-customer-tab]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            document.querySelectorAll('[data-customer-tab]').forEach(function (tab) { tab.classList.remove('active'); });
+            document.querySelectorAll('[data-customer-panel]').forEach(function (panel) { panel.classList.remove('active'); });
+            button.classList.add('active');
+            document.querySelector('[data-customer-panel="' + button.dataset.customerTab + '"]')?.classList.add('active');
+        });
+    });
 </script>
 @endpush
 @else

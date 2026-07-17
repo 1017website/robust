@@ -42,16 +42,16 @@
             <div class="sales-kanban mb-3">
                 @foreach($pipeline as $stage => $data)
                     <div class="kanban-col">
-                        <div class="kh {{ $stageClass($stage) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer</span></div>
+                        <a class="kh {{ $stageClass($stage) }} text-decoration-none" href="{{ route('sales.customers.index',['status'=>$stage]) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer <i class="bi bi-chevron-right"></i></span></a>
                         @forelse($data['customers']->take(4) as $cust)
-                            <div class="kanban-card">
+                            <a class="kanban-card text-reset text-decoration-none" href="{{ route('activities.index', array_merge(request()->except(['page','hide_detail']), ['customer_id'=>$cust->id])) }}#activity-customer-detail">
                                 <div class="fw-bold">{{ $cust->name }}</div>
                                 <div class="small text-muted-2">{{ $cust->primaryPic?->name ?? $cust->sales?->name ?? '-' }}</div>
                                 <div class="kanban-meta mt-2">
                                     <span>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span>
                                     <span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span>
                                 </div>
-                            </div>
+                            </a>
                         @empty
                             <div class="small text-muted-2">Belum ada customer.</div>
                         @endforelse
@@ -133,7 +133,7 @@
                 <div class="p-3 d-flex flex-wrap justify-content-between gap-3"><span class="small text-muted-2">Menampilkan {{ $activities->firstItem() ?? 0 }} - {{ $activities->lastItem() ?? 0 }} dari {{ $activities->total() }} data</span>{{ $activities->links() }}</div>
             </section>
         </main>
-        <aside class="sa-activity-side">
+        <aside class="sa-activity-side" id="activity-customer-detail">
             <div class="sa-card">
                 <div class="d-flex justify-content-end"><a href="{{ route('activities.index', request()->except('activity', 'page')) }}" class="btn btn-sm btn-link text-dark"><i class="bi bi-x-lg"></i></a></div>
                 @if($selectedActivity)

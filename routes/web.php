@@ -1,29 +1,29 @@
 <?php
 
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\GlobalSearchController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\PraLeadController;
 use App\Http\Controllers\Admin\AssignmentController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\PraLeadController;
 use App\Http\Controllers\Admin\PurchaseOrderRequestController;
 use App\Http\Controllers\Admin\SystemSettingController;
-use App\Http\Controllers\Sales\RequestMasukController;
-use App\Http\Controllers\Sales\LeadController;
-use App\Http\Controllers\Sales\DesignRequestController as SalesDesignRequestController;
-use App\Http\Controllers\Sales\QuotationController;
-use App\Http\Controllers\Sales\CustomerController;
-use App\Http\Controllers\Sales\ProjectController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Drafter\DesignRequestController as DrafterDesignRequestController;
 use App\Http\Controllers\Drafter\ProjectController as DrafterProjectController;
 use App\Http\Controllers\Drafter\TaskController as DrafterTaskController;
-use App\Http\Controllers\Spv\QuotationApprovalController;
+use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Sales\CustomerController;
+use App\Http\Controllers\Sales\DesignRequestController as SalesDesignRequestController;
+use App\Http\Controllers\Sales\LeadController;
+use App\Http\Controllers\Sales\ProjectController;
+use App\Http\Controllers\Sales\QuotationController;
+use App\Http\Controllers\Sales\RequestMasukController;
 use App\Http\Controllers\Shared\ActivityController;
 use App\Http\Controllers\Shared\CalendarController;
-use App\Http\Controllers\Shared\ReportController;
 use App\Http\Controllers\Shared\DocumentController;
 use App\Http\Controllers\Shared\PipelineController;
+use App\Http\Controllers\Shared\ReportController;
+use App\Http\Controllers\Spv\QuotationApprovalController;
 use Illuminate\Support\Facades\Route;
 
 // ---------- Guest ----------
@@ -33,6 +33,12 @@ Route::post('/login', [LoginController::class, 'login']);
 
 // ---------- Authenticated ----------
 Route::middleware('auth')->group(function () {
+    Route::get('/session/keep-alive', function () {
+        request()->session()->put('last_activity_at', now()->timestamp);
+
+        return response()->noContent();
+    })->name('session.keep-alive');
+
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', [GlobalSearchController::class, 'index'])->name('global-search.index');

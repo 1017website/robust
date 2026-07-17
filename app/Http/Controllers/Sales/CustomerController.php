@@ -46,7 +46,21 @@ class CustomerController extends Controller
             'lost' => $scope()->where('pipeline_stage', 'lost')->count(),
             'maintaining' => $scope()->where('pipeline_stage', 'maintaining')->count(),
         ];
-        $selectedCustomer = $request->boolean('hide_detail') ? null : $customers->first();
+        $selectedCustomer = null;
+        if (! $request->boolean('hide_detail')) {
+            $detailQuery = Customer::with([
+                'pics',
+                'sales',
+                'projects' => fn ($query) => $query->latest(),
+                'quotations' => fn ($query) => $query->latest(),
+                'activities' => fn ($query) => $query->latest('activity_date'),
+                'documents' => fn ($query) => $query->latest(),
+            ])->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+
+            $selectedCustomer = $request->filled('customer')
+                ? $detailQuery->find($request->integer('customer'))
+                : ($customers->first() ? $detailQuery->find($customers->first()->id) : null);
+        }
         $salesList = User::assignableSales();
 
         return view('sales.customers.index', compact('customers', 'stats', 'selectedCustomer', 'salesList'));
@@ -55,6 +69,7 @@ class CustomerController extends Controller
     public function create()
     {
         $salesList = User::assignableSales();
+
         return view('sales.customers.create', compact('salesList'));
     }
 
@@ -74,10 +89,12 @@ class CustomerController extends Controller
                     'is_primary' => true,
                 ]);
             }
+
             return $customer;
         });
 
         Logger::record('created', "Customer {$customer->name} ditambahkan", $customer);
+
         return redirect()->route('sales.customers.show', $customer)->with('success', 'Customer berhasil disimpan.');
     }
 
@@ -85,6 +102,7 @@ class CustomerController extends Controller
     {
         $this->ensureAccess($customer);
         $customer->load('pics', 'sales', 'projects', 'quotations', 'activities');
+
         return view('sales.customers.show', compact('customer'));
     }
 
@@ -93,6 +111,7 @@ class CustomerController extends Controller
         $this->ensureAccess($customer);
         $customer->load('primaryPic');
         $salesList = User::assignableSales();
+
         return view('sales.customers.edit', compact('customer', 'salesList'));
     }
 
@@ -116,6 +135,7 @@ class CustomerController extends Controller
             }
         });
         Logger::record('updated', "Customer {$customer->name} diperbarui", $customer);
+
         return redirect()->route('sales.customers.show', $customer)->with('success', 'Customer diperbarui.');
     }
 

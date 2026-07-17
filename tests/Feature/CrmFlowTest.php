@@ -7,8 +7,8 @@ use App\Models\Customer;
 use App\Models\DesignRequest;
 use App\Models\Document;
 use App\Models\Lead;
-use App\Models\Project;
 use App\Models\PraLead;
+use App\Models\Project;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\SystemSetting;
@@ -441,7 +441,7 @@ class CrmFlowTest extends TestCase
             ->assertDontSee('Dokumen Milik Drafter Kedua');
     }
 
-    public function test_assignment_export_returns_real_csv(): void
+    public function test_assignment_export_returns_real_excel_workbook(): void
     {
         $admin = User::factory()->create(['role' => 'sales_admin']);
         $sales = User::factory()->create(['role' => 'sales', 'name' => 'Sales Export Test', 'is_active' => true]);
@@ -461,11 +461,18 @@ class CrmFlowTest extends TestCase
             'stage' => 'lead',
         ]);
 
-        $response = $this->actingAs($admin)->get(route('admin.assignment.index', ['export' => 'csv']));
+        $response = $this->actingAs($admin)->get(route('admin.assignment.index', ['export' => 'excel']));
 
         $response->assertSuccessful();
-        $this->assertStringContainsString('text/csv', $response->headers->get('content-type'));
-        $this->assertStringContainsString('Sales Export Test', $response->streamedContent());
+        $this->assertStringContainsString('spreadsheetml.sheet', $response->headers->get('content-type'));
+        $this->assertStringContainsString('.xlsx', $response->headers->get('content-disposition'));
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()));
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+
+        $this->assertStringContainsString('Sales Export Test', $sheet);
     }
 
     public function test_sales_document_and_search_results_respect_ownership(): void

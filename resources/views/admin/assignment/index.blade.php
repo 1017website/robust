@@ -14,7 +14,7 @@
         </div>
         <div class="page-actions">
             <span class="btn btn-soft"><i class="bi bi-calendar3 me-1"></i>Periode: {{ now()->startOfWeek()->translatedFormat('d') }} - {{ now()->endOfWeek()->translatedFormat('d M Y') }}</span>
-            <a class="btn btn-soft" href="{{ route('admin.assignment.index', ['export' => 'csv']) }}"><i class="bi bi-download me-1"></i>Export CSV</a>
+            <a class="btn btn-soft" href="{{ route('admin.assignment.index', ['export' => 'excel']) }}"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Export Excel</a>
         </div>
     </div>
 
