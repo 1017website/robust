@@ -840,7 +840,7 @@ canvas{display:block;max-width:100%}
 .drafter-ui .card-head h2{margin:0;color:var(--dr-navy);font-size:15px;font-weight:900}
 
 .drafter-stat-grid{display:grid;gap:14px;margin-bottom:18px}
-.drafter-stat-grid.six{grid-template-columns:repeat(6,minmax(150px,1fr))}
+.drafter-stat-grid.six{grid-template-columns:repeat(6,minmax(0,1fr))}
 .drafter-stat-grid.five{grid-template-columns:repeat(5,minmax(165px,1fr))}
 .drafter-stat-grid.four{grid-template-columns:repeat(4,minmax(190px,1fr))}
 .drafter-stat{display:flex;align-items:center;gap:13px;min-height:98px;padding:15px;background:#fff;border:1px solid var(--dr-line);border-radius:15px;box-shadow:0 7px 20px rgba(20,59,121,.03)}
