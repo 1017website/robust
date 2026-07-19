@@ -25,6 +25,8 @@
                         <div class="col-md-6"><label class="form-label small fw-bold">No. Telepon</label><input name="phone" value="{{ old('phone') }}" class="form-control"></div>
                         <div class="col-md-8"><label class="form-label small fw-bold">Alamat</label><textarea name="address" rows="3" class="form-control">{{ old('address') }}</textarea></div>
                         <div class="col-md-4"><label class="form-label small fw-bold">Kota</label><input name="city" value="{{ old('city') }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small fw-bold">Area / Lokasi Customer</label><input name="area" value="{{ old('area') }}" class="form-control" placeholder="Contoh: Gedung A, Jakarta"></div>
+                        <div class="col-md-6"><label class="form-label small fw-bold">Divisi Customer</label><input name="division" value="{{ old('division') }}" class="form-control" placeholder="Contoh: Laboratorium / Engineering"></div>
                     </div>
                 </div>
                 <div class="sales-form-card">

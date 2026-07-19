@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Drafter;
 
 use App\Http\Controllers\Controller;
 use App\Models\DesignRequest;
+use App\Models\ItemMaster;
 use App\Models\User;
 use App\Services\Logger;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class DesignRequestController extends Controller
     public function index(Request $request)
     {
         $query = DesignRequest::with('sales', 'productionPic', 'documents')
-            ->where('production_pic_id', Auth::id())
+            ->when(Auth::user()->isDrafter(), fn ($query) => $query->where('production_pic_id', Auth::id()))
             ->orderByRaw('deadline is null, deadline asc')
             ->latest();
 
@@ -41,12 +42,12 @@ class DesignRequestController extends Controller
         $selected = $designRequests->first()?->load('sales', 'documents', 'lead', 'items');
         $salesUsers = User::assignableSales();
 
+        $base = fn () => DesignRequest::query()->when(Auth::user()->isDrafter(), fn ($query) => $query->where('production_pic_id', Auth::id()));
         $stats = [
-            'baru' => DesignRequest::where('production_pic_id', Auth::id())->whereIn('status', ['assigned', 'draft'])->count(),
-            'drafting' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'drafting')->count(),
-            'review' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'review')->count(),
-            'completed' => DesignRequest::where('production_pic_id', Auth::id())->where('status', 'completed')->count(),
-            'terlambat' => DesignRequest::where('production_pic_id', Auth::id())->whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
+            'baru' => $base()->whereIn('status', ['assigned', 'draft'])->count(),
+            'drafting' => $base()->where('status', 'drafting')->count(), 'review' => $base()->where('status', 'review')->count(),
+            'completed' => $base()->where('status', 'completed')->count(),
+            'terlambat' => $base()->whereNotIn('status', ['completed', 'rejected'])->whereDate('deadline', '<', today())->count(),
         ];
 
         return view('drafter.design_requests.index', compact('designRequests', 'stats', 'selected', 'salesUsers'));
@@ -55,12 +56,14 @@ class DesignRequestController extends Controller
     public function show(DesignRequest $designRequest)
     {
         $this->ensureAssigned($designRequest);
-        $designRequest->load('items', 'sales', 'documents', 'lead', 'customer');
-        return view('drafter.design_requests.show', compact('designRequest'));
+        $designRequest->load('items.itemMaster', 'sales', 'documents.uploader', 'lead', 'customer', 'quotations.purchaseOrderRequest');
+        $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        return view('drafter.design_requests.show', compact('designRequest', 'itemMasters'));
     }
 
     public function updateProgress(Request $request, DesignRequest $designRequest)
     {
+        abort_unless(Auth::user()->isProduction() || Auth::user()->isAdministrator(), 403, 'Progress hanya dapat diperbarui oleh Produksi.');
         $this->ensureAssigned($designRequest);
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', array_keys(DesignRequest::statuses()))],
@@ -74,6 +77,7 @@ class DesignRequestController extends Controller
 
     public function submitFeedback(Request $request, DesignRequest $designRequest)
     {
+        abort_unless(Auth::user()->isProduction() || Auth::user()->isAdministrator(), 403, 'Spesifikasi dan costing hanya dapat diisi oleh Produksi.');
         $this->ensureAssigned($designRequest);
         $data = $request->validate([
             'action' => ['required', 'in:save,review,submit'],
@@ -95,7 +99,9 @@ class DesignRequestController extends Controller
             'technical_note' => ['nullable', 'string'],
             'items' => ['nullable', 'array'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
+            'items.*.item_master_id' => ['nullable', 'exists:item_masters,id'],
             'items.*.name' => ['nullable', 'string', 'max:255'],
+            'items.*.variant' => ['nullable', 'string', 'max:255'],
             'items.*.specification' => ['nullable', 'string', 'max:1000'],
             'items.*.qty' => ['nullable', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
@@ -133,7 +139,9 @@ class DesignRequestController extends Controller
                     if (empty($item['name'])) continue;
                     $designRequest->items()->create([
                         'category' => $item['category'] ?? null,
+                        'item_master_id' => $item['item_master_id'] ?? null,
                         'name' => $item['name'],
+                        'variant' => $item['variant'] ?? null,
                         'specification' => $item['specification'] ?? null,
                         'qty' => $item['qty'] ?? 1,
                         'unit' => $item['unit'] ?? 'Unit',
@@ -145,7 +153,7 @@ class DesignRequestController extends Controller
             }
         });
 
-        Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh drafter", $designRequest);
+        Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh Produksi", $designRequest);
 
         $message = $request->input('action') === 'submit'
             ? 'Berhasil submit final ke sales.'
@@ -158,6 +166,7 @@ class DesignRequestController extends Controller
     {
         abort_unless(
             Auth::user()->isAdministrator()
+                || Auth::user()->isProduction()
                 || (int) $designRequest->production_pic_id === (int) Auth::id(),
             403,
             'Design request ini tidak ditugaskan kepada Anda.'

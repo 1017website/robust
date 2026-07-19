@@ -27,6 +27,7 @@ class Customer extends Model
     public function quotations(): HasMany { return $this->hasMany(Quotation::class); }
     public function activities(): HasMany { return $this->hasMany(Activity::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
+    public function purchaseOrderRequests(): HasMany { return $this->hasMany(PurchaseOrderRequest::class); }
 
     public static function stages(): array
     {

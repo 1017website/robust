@@ -65,9 +65,10 @@ class DesignRequestController extends Controller
     public function create(Request $request)
     {
         $lead = $request->get('lead') ? $this->leadQuery()->findOrFail($request->get('lead')) : null;
-        $drafters = User::where('role', 'drafter')->where('is_active', true)->get();
+        $drafters = User::assignableDraftersQuery()->get();
+        $drafterWorkloads = $this->drafterWorkloads($drafters);
         $salesList = User::assignableSales();
-        return view('sales.design_requests.create', compact('lead', 'drafters', 'salesList'));
+        return view('sales.design_requests.create', compact('lead', 'drafters', 'drafterWorkloads', 'salesList'));
     }
 
     public function store(Request $request)
@@ -94,6 +95,8 @@ class DesignRequestController extends Controller
                 $q->where('is_active', true)->orWhereNull('is_active');
             }))],
             'production_note' => ['nullable', 'string', 'max:300'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:10240'],
             'sales_id' => [
                 Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
                 'nullable',
@@ -134,7 +137,20 @@ class DesignRequestController extends Controller
             $lead->update(['stage' => 'design_request']);
         }
 
+        unset($data['attachments']);
         $designRequest = DesignRequest::create($data);
+        foreach ($request->file('attachments', []) as $attachment) {
+            $designRequest->documents()->create([
+                'name' => pathinfo($attachment->getClientOriginalName(), PATHINFO_FILENAME),
+                'category' => 'sales_sketch',
+                'description' => 'Sketsa/lampiran awal dari sales',
+                'file_path' => $attachment->store('design-requests/sales-sketches', 'public'),
+                'file_type' => $attachment->getClientOriginalExtension(),
+                'file_size' => $attachment->getSize(),
+                'version' => 'v1.0', 'revision_number' => 1, 'is_current' => true,
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
         Logger::record('created', "Design Request {$designRequest->code} dibuat", $designRequest);
 
         return redirect()

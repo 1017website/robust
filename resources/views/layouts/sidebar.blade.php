@@ -6,11 +6,11 @@
     $companyLogo = \App\Models\SystemSetting::assetUrl('company_logo');
 
     $drafterNewDesignRequestCount = 0;
-    if ($role === 'drafter' && class_exists(\App\Models\DesignRequest::class)) {
+    if (in_array($role, ['drafter', 'production'], true) && class_exists(\App\Models\DesignRequest::class)) {
         try {
             $drafterNewDesignRequestCount = \App\Models\DesignRequest::query()
                 ->where('status', 'assigned')
-                ->where('production_pic_id', $u->id)
+                ->when($role === 'drafter', fn ($query) => $query->where('production_pic_id', $u->id))
                 ->count()
                 + \App\Models\DesignRequest::query()
                     ->where('status', 'assigned')
@@ -53,6 +53,8 @@
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
+        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
@@ -65,6 +67,8 @@
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
         $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
+        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
@@ -74,7 +78,7 @@
         $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
-    } elseif ($role === 'drafter') {
+    } elseif (in_array($role, ['drafter', 'production'], true)) {
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $drafterNewDesignRequestCount);
         $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
         $pushItem($menuGroups, 'Tasks', 'drafter.tasks.index', 'drafter.tasks.*', 'bi-ui-checks');
@@ -88,6 +92,7 @@
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
+        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
@@ -95,7 +100,7 @@
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     }
 
-    $showLogoutButton = in_array($role, ['drafter', 'sales'], true);
+    $showLogoutButton = in_array($role, ['drafter', 'production', 'sales'], true);
 @endphp
 
 <aside class="sidebar" id="sidebar">

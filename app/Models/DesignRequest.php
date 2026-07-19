@@ -31,9 +31,16 @@ class DesignRequest extends Model
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
     public function sales(): BelongsTo { return $this->belongsTo(User::class, 'sales_id'); }
     public function productionPic(): BelongsTo { return $this->belongsTo(User::class, 'production_pic_id'); }
+    /** Nama relasi baru; productionPic dipertahankan untuk kompatibilitas data lama. */
+    public function drafter(): BelongsTo { return $this->belongsTo(User::class, 'production_pic_id'); }
     public function items(): HasMany { return $this->hasMany(DesignRequestItem::class); }
     public function quotations(): HasMany { return $this->hasMany(Quotation::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
+
+    public function hasPrePo(): bool
+    {
+        return $this->quotations()->whereHas('purchaseOrderRequest')->exists();
+    }
 
     public static function statuses(): array
     {

@@ -20,6 +20,9 @@
         <form method="POST" action="{{ route('sales.quotations.won',$quotation) }}" class="d-inline">@csrf<button class="btn btn-success btn-sm"><i class="bi bi-check2-circle me-1"></i>Customer Setuju</button></form>
         <form method="POST" action="{{ route('sales.quotations.lost',$quotation) }}" class="d-inline">@csrf<button class="btn btn-soft btn-sm text-danger">Customer Tidak Setuju</button></form>
     @endif
+    @if($quotation->canCreatePurchaseOrderRequest())
+        <a href="{{ route('admin.purchase-order-requests.create',['quotation'=>$quotation->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i>Buat Request PO</a>
+    @endif
 </x-page-header>
 
 @if($quotation->status === 'revision')
@@ -39,7 +42,7 @@
                     <tbody>
                     @foreach($quotation->items as $it)
                         <tr>
-                            <td class="fw-semibold">{{ $it->name }}</td>
+                            <td class="fw-semibold">{{ $it->name }}@if($it->variant)<small class="d-block text-primary">{{ $it->variant }}</small>@endif @if($it->itemMaster)<small class="d-block text-muted-2">{{ $it->itemMaster->code }}</small>@endif</td>
                             <td class="small">{{ $it->specification ?: '—' }}</td>
                             <td>{{ rtrim(rtrim(number_format($it->qty,2),'0'),'.') }} {{ $it->unit }}</td>
                             <td class="fw-num">{{ \App\Support\Format::rupiah($it->cost_price) }}</td>
@@ -98,6 +101,7 @@
                     <div class="col-md-4"><div class="text-muted-2">No PO Accurate</div><div class="fw-semibold">{{ $quotation->purchaseOrderRequest->accurate_po_number ?: '—' }}</div></div>
                     <div class="col-md-4"><div class="text-muted-2">Tanggal Request</div><div class="fw-semibold">{{ $quotation->purchaseOrderRequest->request_date?->format('d M Y') ?: '—' }}</div></div>
                 </div>
+                <a href="{{ route('admin.purchase-order-requests.show',$quotation->purchaseOrderRequest) }}" class="btn btn-soft btn-sm mt-3">Lihat Request PO</a>
             </div>
         @endif
     </div>
@@ -114,7 +118,7 @@
         <div class="card-r">
             <div class="card-head"><h2>Kontrol Margin</h2></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Margin Total Otomatis</span><span class="fw-semibold">{{ rtrim(rtrim(number_format($quotation->target_margin,2),'0'),'.') }}%</span></div>
-            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Estimasi Cost Drafter</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->estimatedCostTotal()) }}</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Estimasi Cost Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->estimatedCostTotal()) }}</span></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Estimasi Gross Profit</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->estimatedGrossProfit()) }}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Estimasi Margin</span><strong>{{ number_format($quotation->estimatedGrossMarginPercent(), 2) }}%</strong></div>
         </div>

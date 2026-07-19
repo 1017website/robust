@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\DesignRequest;
 use App\Models\Document;
 use App\Models\Lead;
+use App\Models\Invoice;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\PurchaseOrderRequest;
@@ -368,11 +369,12 @@ class CrmFlowTest extends TestCase
         $this->assertSoftDeleted('users', ['id' => $target->id]);
     }
 
-    public function test_drafter_cannot_change_another_drafters_assignment(): void
+    public function test_only_production_can_change_design_request_progress(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $assigned = User::factory()->create(['role' => 'drafter']);
         $other = User::factory()->create(['role' => 'drafter']);
+        $production = User::factory()->create(['role' => 'production']);
         $request = DesignRequest::create([
             'code' => 'DR-TEST-'.str()->random(6),
             'customer_name' => 'Customer Drafter Test',
@@ -389,6 +391,11 @@ class CrmFlowTest extends TestCase
         ])->assertForbidden();
 
         $this->actingAs($assigned)->put(route('drafter.design-requests.progress', $request), [
+            'status' => 'drafting',
+            'progress' => 25,
+        ])->assertForbidden();
+
+        $this->actingAs($production)->put(route('drafter.design-requests.progress', $request), [
             'status' => 'drafting',
             'progress' => 25,
         ])->assertRedirect();
@@ -538,6 +545,7 @@ class CrmFlowTest extends TestCase
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $drafter = User::factory()->create(['role' => 'drafter']);
+        $production = User::factory()->create(['role' => 'production']);
         $spv = User::factory()->create(['role' => 'sales_spv']);
         $admin = User::factory()->create(['role' => 'sales_admin']);
         $customer = Customer::create([
@@ -560,7 +568,28 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect(route('sales.design-requests.index'));
 
         $designRequest = DesignRequest::where('project_name', 'Lab End To End')->firstOrFail();
-        $this->actingAs($drafter)->post(route('drafter.design-requests.feedback', $designRequest), [
+        Storage::fake('public');
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => DesignRequest::class, 'documentable_id' => $designRequest->id,
+            'name' => 'Gambar Request', 'category' => 'request_drawing',
+            'file' => UploadedFile::fake()->create('request.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+        $requestDrawing = Document::where('name', 'Gambar Request')->firstOrFail();
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => DesignRequest::class, 'documentable_id' => $designRequest->id,
+            'name' => 'Gambar Request Rev 2', 'category' => 'request_drawing',
+            'replaces_document_id' => $requestDrawing->id, 'revision_note' => 'Update layout',
+            'file' => UploadedFile::fake()->create('request-r2.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+        $this->assertFalse($requestDrawing->fresh()->is_current);
+        $this->assertDatabaseHas('documents', ['parent_document_id' => $requestDrawing->id, 'revision_number' => 2, 'is_current' => 1]);
+
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => DesignRequest::class, 'documentable_id' => $designRequest->id,
+            'name' => 'Gambar Fabrikasi', 'category' => 'fabrication_drawing',
+            'file' => UploadedFile::fake()->create('fabrikasi.pdf', 20, 'application/pdf'),
+        ])->assertStatus(422);
+        $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
             'cost_material' => 1000000,
             'cost_production' => 500000,
             'cost_installation' => 250000,
@@ -631,6 +660,10 @@ class CrmFlowTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
+            'project_number' => 'PRJ-MANUAL-001',
+            'customer_name' => $customer->name,
+            'customer_area' => 'Area Pengujian',
+            'customer_division' => 'Laboratorium',
             'request_date' => now()->format('Y-m-d'),
             'customer_po_number' => 'PO-CUSTOMER-TEST',
             'checklist' => [
@@ -641,6 +674,11 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $poRequest = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => DesignRequest::class, 'documentable_id' => $designRequest->id,
+            'name' => 'Gambar Fabrikasi', 'category' => 'fabrication_drawing',
+            'file' => UploadedFile::fake()->create('fabrikasi.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
         $this->actingAs($admin)->put(route('admin.purchase-order-requests.update', $poRequest), [
             'status' => 'po_created',
             'accurate_po_number' => 'ACC-PO-TEST',
@@ -651,6 +689,23 @@ class CrmFlowTest extends TestCase
         $this->assertSame('po_created', $poRequest->fresh()->status);
         $this->assertSame('request_po_created', $quotation->fresh()->status);
         $this->assertNotNull(Project::where('quotation_id', $quotation->id)->first());
+
+        $this->actingAs($admin)->post(route('admin.invoices.store'), [
+            'purchase_order_request_id' => $poRequest->id,
+            'invoice_date' => now()->format('Y-m-d'),
+            'terms' => [[
+                'description' => 'Pelunasan', 'percentage' => 100,
+                'amount' => (float) $quotation->fresh()->grand_total,
+                'due_date' => now()->addDays(14)->format('Y-m-d'),
+            ]],
+        ])->assertRedirect();
+        $invoice = Invoice::where('purchase_order_request_id', $poRequest->id)->firstOrFail();
+        $term = $invoice->terms()->firstOrFail();
+        $this->actingAs($admin)->put(route('admin.invoices.terms.update', [$invoice, $term]), [
+            'status' => 'paid', 'paid_date' => now()->format('Y-m-d'),
+        ])->assertRedirect();
+        $this->assertSame('paid', $invoice->fresh()->status);
+        $this->assertSame('paid', $poRequest->fresh()->status);
     }
 
     public function test_pra_lead_assignment_and_acceptance_does_not_duplicate_lead(): void

@@ -13,10 +13,10 @@
                 <div class="card-head"><h2>Data Penawaran</h2></div>
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Pilih Penawaran Approved / Customer Setuju *</label>
-                    <select name="quotation_id" class="form-select" required>
+                    <select name="quotation_id" id="quotationSelect" class="form-select" required>
                         <option value="">Pilih Penawaran</option>
                         @foreach($quotations as $q)
-                            <option value="{{ $q->id }}" @selected(old('quotation_id', $quotation?->id) == $q->id)>
+                            <option value="{{ $q->id }}" data-customer="{{ $q->customer_name }}" data-area="{{ $q->customer?->area ?: $q->customer?->city }}" data-division="{{ $q->customer?->division }}" data-address="{{ $q->customer?->address }}" data-pic="{{ $q->customer?->primaryPic?->name ?: $q->pic_name }}" data-phone="{{ $q->customer?->phone }}" @selected(old('quotation_id', $quotation?->id) == $q->id)>
                                 {{ $q->code }} — {{ $q->customer_name }} — {{ $q->project_name }} — {{ \App\Support\Format::rupiah($q->grand_total) }}
                             </option>
                         @endforeach
@@ -27,6 +27,10 @@
                     <div class="form-text">Data yang tampil adalah penawaran yang sudah approved/dikirim/customer setuju dan belum pernah dibuatkan Request PO.</div>
                 </div>
                 <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Nomor Proyek *</label><input name="project_number" value="{{ old('project_number') }}" class="form-control" placeholder="Isi manual" required></div>
+                    <div class="col-md-8"><label class="form-label small fw-semibold">Nama Customer *</label><input id="customerName" name="customer_name" value="{{ old('customer_name',$quotation?->customer_name) }}" class="form-control" required></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">Area / Lokasi Customer</label><input id="customerArea" name="customer_area" value="{{ old('customer_area',$quotation?->customer?->area ?: $quotation?->customer?->city) }}" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">Divisi Customer</label><input id="customerDivision" name="customer_division" value="{{ old('customer_division',$quotation?->customer?->division) }}" class="form-control"></div>
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold">Tanggal Request *</label>
                         <input type="date" name="request_date" value="{{ old('request_date', date('Y-m-d')) }}" class="form-control" required>
@@ -45,9 +49,9 @@
             <div class="card-r">
                 <div class="card-head"><h2>Data untuk Input Accurate</h2></div>
                 <div class="row g-3">
-                    <div class="col-md-12"><label class="form-label small fw-semibold">Alamat Pengiriman / Lokasi Project</label><textarea name="delivery_address" rows="2" class="form-control">{{ old('delivery_address') }}</textarea></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">PIC Penerima / Project</label><input name="delivery_pic_name" value="{{ old('delivery_pic_name') }}" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label small fw-semibold">No HP PIC</label><input name="delivery_pic_phone" value="{{ old('delivery_pic_phone') }}" class="form-control"></div>
+                    <div class="col-md-12"><label class="form-label small fw-semibold">Alamat Pengiriman / Lokasi Project</label><textarea id="deliveryAddress" name="delivery_address" rows="2" class="form-control">{{ old('delivery_address',$quotation?->customer?->address) }}</textarea></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">PIC Penerima / Project</label><input id="deliveryPic" name="delivery_pic_name" value="{{ old('delivery_pic_name',$quotation?->customer?->primaryPic?->name ?: $quotation?->pic_name) }}" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">No HP PIC</label><input id="deliveryPhone" name="delivery_pic_phone" value="{{ old('delivery_pic_phone',$quotation?->customer?->phone) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Nama NPWP / Billing</label><input name="npwp_name" value="{{ old('npwp_name') }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Nomor NPWP</label><input name="npwp_number" value="{{ old('npwp_number') }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Termin Pembayaran</label><input name="payment_term" value="{{ old('payment_term') }}" class="form-control" placeholder="Contoh: DP 50%, Pelunasan 50% sebelum kirim"></div>
@@ -81,4 +85,11 @@
         </div>
     </div>
 </form>
+@push('scripts')<script>
+document.getElementById('quotationSelect')?.addEventListener('change', function(){
+    const option=this.options[this.selectedIndex]; if(!option?.value) return;
+    const values={customerName:'customer',customerArea:'area',customerDivision:'division',deliveryAddress:'address',deliveryPic:'pic',deliveryPhone:'phone'};
+    Object.entries(values).forEach(([id,key])=>{ const el=document.getElementById(id); if(el && !el.value) el.value=option.dataset[key]||''; });
+});
+</script>@endpush
 @endsection

@@ -24,6 +24,7 @@ class DashboardController extends Controller
             'sales_admin' => $this->adminDashboard(),
             'sales_spv' => $this->spvDashboard(),
             'drafter' => $this->drafterDashboard(),
+            'production' => $this->drafterDashboard(),
             default => $this->salesDashboard(),
         };
     }
@@ -157,7 +158,7 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $activeStatuses = ['assigned', 'drafting', 'costing', 'review'];
-        $base = fn () => DesignRequest::query()->where('production_pic_id', $user->id);
+        $base = fn () => DesignRequest::query()->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id));
 
         $stats = [
             'request_baru' => $base()->where('status', 'assigned')->count(),
@@ -169,7 +170,7 @@ class DashboardController extends Controller
         ];
 
         $myTasks = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->whereIn('status', $activeStatuses)
             ->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END')
             ->orderBy('deadline')
@@ -177,7 +178,7 @@ class DashboardController extends Controller
             ->get();
 
         $queue = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->whereIn('status', ['assigned', 'drafting', 'costing', 'review'])
             ->latest()
             ->take(6)
@@ -192,7 +193,7 @@ class DashboardController extends Controller
         ]);
 
         $deadlineAlerts = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->whereIn('status', $activeStatuses)
             ->whereNotNull('deadline')
             ->whereDate('deadline', '<=', today()->addDays(2))
@@ -201,21 +202,21 @@ class DashboardController extends Controller
             ->get();
 
         $revisionRequests = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->whereIn('status', ['rejected', 'review'])
             ->latest('updated_at')
             ->take(3)
             ->get();
 
         $waitingSalesApproval = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->where('status', 'completed')
             ->latest('submitted_at')
             ->take(3)
             ->get();
 
         $activityTimeline = DesignRequest::with('sales')
-            ->where('production_pic_id', $user->id)
+            ->when($user->isDrafter(), fn ($query) => $query->where('production_pic_id', $user->id))
             ->latest('updated_at')
             ->take(5)
             ->get();

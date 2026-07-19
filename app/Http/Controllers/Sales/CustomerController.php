@@ -150,6 +150,8 @@ class CustomerController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
             'city' => ['nullable', 'string', 'max:100'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'division' => ['nullable', 'string', 'max:255'],
             'pipeline_stage' => ['required', Rule::in(array_keys(Customer::stages()))],
             'probability' => ['nullable', 'integer', 'min:0', 'max:100'],
             'pic_name' => ['nullable', 'string', 'max:255'],

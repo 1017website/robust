@@ -40,7 +40,7 @@
                     <td>{{ $user->email }}</td>
                     <td>{{ $user->job_title ?? '—' }}</td>
                     <td>
-                        @php($rc = ['administrator'=>'danger','sales_admin'=>'primary','sales_spv'=>'success','sales'=>'info','drafter'=>'warning'][$user->role] ?? 'secondary')
+                        @php($rc = ['administrator'=>'danger','sales_admin'=>'primary','sales_spv'=>'success','sales'=>'info','drafter'=>'warning','production'=>'secondary'][$user->role] ?? 'secondary')
                         <span class="badge text-bg-{{ $rc }}">{{ $user->roleLabel() }}</span>
                     </td>
                     <td>

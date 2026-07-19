@@ -4,6 +4,8 @@
 @php($progress = $requestPo->checklistProgress())
 <x-page-header :title="$requestPo->code" :subtitle="($requestPo->quotation?->customer_name ?: 'Customer').' · '.($requestPo->quotation?->project_name ?: 'Project')">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    @if(!auth()->user()->isSales() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
+    @if(!auth()->user()->isSales() && $requestPo->invoice)<a href="{{ route('admin.invoices.show',$requestPo->invoice) }}" class="btn btn-soft btn-sm">Lihat Invoice</a>@endif
 </x-page-header>
 
 <div class="row g-3">
@@ -11,6 +13,9 @@
         <div class="card-r">
             <div class="card-head"><h2>Data Penawaran</h2><x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div>
             <div class="row g-3 small">
+                <div class="col-md-3"><div class="text-muted-2">Nomor Proyek</div><div class="fw-semibold">{{ $requestPo->project_number ?: '—' }}</div></div>
+                <div class="col-md-3"><div class="text-muted-2">Area / Lokasi</div><div class="fw-semibold">{{ $requestPo->customer_area ?: '—' }}</div></div>
+                <div class="col-md-3"><div class="text-muted-2">Divisi Customer</div><div class="fw-semibold">{{ $requestPo->customer_division ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">No Penawaran</div><div class="fw-semibold">{{ $requestPo->quotation?->code ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">Customer</div><div class="fw-semibold">{{ $requestPo->quotation?->customer_name ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">Sales</div><div class="fw-semibold">{{ $requestPo->quotation?->sales?->name ?: '—' }}</div></div>

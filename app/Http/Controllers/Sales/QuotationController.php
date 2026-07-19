@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Sales;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\ItemMaster;
 use App\Models\Quotation;
 use App\Models\QuotationApprovalHistory;
 use App\Services\CodeGenerator;
@@ -50,7 +51,8 @@ class QuotationController extends Controller
         $completedDR = DesignRequest::where('status', 'completed')
             ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->get();
-        return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR'));
+        $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR', 'itemMasters'));
     }
 
     public function store(Request $request)
@@ -121,7 +123,7 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        $quotation->load('items', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
+        $quotation->load('items.itemMaster', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
         return view('sales.quotations.show', compact('quotation'));
     }
 
@@ -139,8 +141,9 @@ class QuotationController extends Controller
         $completedDR = DesignRequest::where('status', 'completed')
             ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->get();
+        $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
 
-        return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR'));
+        return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR', 'itemMasters'));
     }
 
     public function update(Request $request, Quotation $quotation)
@@ -344,7 +347,9 @@ class QuotationController extends Controller
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
+            'items.*.item_master_id' => ['nullable', 'exists:item_masters,id'],
             'items.*.name' => ['required', 'string', 'max:255'],
+            'items.*.variant' => ['nullable', 'string', 'max:255'],
             'items.*.specification' => ['nullable', 'string', 'max:1000'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
@@ -387,7 +392,9 @@ class QuotationController extends Controller
             $unitPrice = QuotationCalculator::sellingPrice($costPrice, $margin);
             $quotation->items()->create([
                 'category' => $item['category'] ?? null,
+                'item_master_id' => $item['item_master_id'] ?? null,
                 'name' => $item['name'],
+                'variant' => $item['variant'] ?? null,
                 'specification' => $item['specification'] ?? null,
                 'qty' => $qty,
                 'unit' => $item['unit'] ?? 'Unit',

@@ -32,6 +32,7 @@ class User extends Authenticatable
     public function isSalesAdmin(): bool { return $this->role === 'sales_admin'; }
     public function isSales(): bool { return $this->role === 'sales'; }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
+    public function isProduction(): bool { return $this->role === 'production'; }
     public function isSalesSpv(): bool { return $this->role === 'sales_spv'; }
 
     /** True untuk administrator maupun sales_admin (level admin ke atas). */
@@ -47,7 +48,8 @@ class User extends Authenticatable
             'sales_admin' => 'Sales Admin',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
-            'drafter' => 'Produksi / Drafter',
+            'drafter' => 'Drafter',
+            'production' => 'Produksi',
             default => $this->role,
         };
     }
@@ -60,7 +62,8 @@ class User extends Authenticatable
             'sales_admin' => 'Sales Admin',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
-            'drafter' => 'Produksi / Drafter',
+            'drafter' => 'Drafter',
+            'production' => 'Produksi',
         ];
     }
 
@@ -85,6 +88,14 @@ class User extends Authenticatable
     public static function assignableSales()
     {
         return static::assignableSalesQuery()->get();
+    }
+
+    public static function assignableDraftersQuery(): Builder
+    {
+        return static::query()
+            ->whereRaw('LOWER(role) = ?', ['drafter'])
+            ->where(fn (Builder $query) => $query->where('is_active', true)->orWhereNull('is_active'))
+            ->orderBy('name');
     }
 
     public function leads(): HasMany { return $this->hasMany(Lead::class, 'sales_id'); }

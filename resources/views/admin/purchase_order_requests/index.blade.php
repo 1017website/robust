@@ -18,11 +18,12 @@
     </form>
     <div class="table-wrap">
         <table class="table-r">
-            <thead><tr><th>No Request</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO Accurate</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>No Request</th><th>No Proyek</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO Accurate</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($requests as $r)
                 <tr>
                     <td class="fw-semibold">{{ $r->code }}</td>
+                    <td>{{ $r->project_number ?: '—' }}</td>
                     <td>{{ $r->quotation?->code ?: '—' }}</td>
                     <td>{{ $r->quotation?->customer_name ?: '—' }}</td>
                     <td>{{ $r->quotation?->project_name ?: '—' }}</td>
@@ -32,7 +33,7 @@
                     <td><a href="{{ route('admin.purchase-order-requests.show',$r) }}" class="btn btn-sm btn-soft">Detail</a></td>
                 </tr>
             @empty
-                <tr><td colspan="8"><x-empty text="Belum ada Request PO." /></td></tr>
+                <tr><td colspan="9"><x-empty text="Belum ada Request PO." /></td></tr>
             @endforelse
             </tbody>
         </table>

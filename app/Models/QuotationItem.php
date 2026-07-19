@@ -17,4 +17,5 @@ class QuotationItem extends Model
     ];
 
     public function quotation(): BelongsTo { return $this->belongsTo(Quotation::class); }
+    public function itemMaster(): BelongsTo { return $this->belongsTo(ItemMaster::class); }
 }

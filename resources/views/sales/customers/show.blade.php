@@ -13,6 +13,8 @@
                 <div class="col-md-6"><div class="small text-muted-2">Email</div><div class="fw-semibold">{{ $customer->email ?? '—' }}</div></div>
                 <div class="col-md-6"><div class="small text-muted-2">Telepon</div><div class="fw-semibold">{{ $customer->phone ?? '—' }}</div></div>
                 <div class="col-md-6"><div class="small text-muted-2">Kota</div><div class="fw-semibold">{{ $customer->city ?? '—' }}</div></div>
+                <div class="col-md-6"><div class="small text-muted-2">Area / Lokasi</div><div class="fw-semibold">{{ $customer->area ?? '—' }}</div></div>
+                <div class="col-md-6"><div class="small text-muted-2">Divisi Customer</div><div class="fw-semibold">{{ $customer->division ?? '—' }}</div></div>
                 <div class="col-md-6"><div class="small text-muted-2">Website</div><div class="fw-semibold">{{ $customer->website ?? '—' }}</div></div>
                 <div class="col-12"><div class="small text-muted-2">Alamat</div><div>{{ $customer->address ?? '—' }}</div></div>
             </div>

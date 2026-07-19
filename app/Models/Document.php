@@ -7,16 +7,24 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Document extends Model
 {
     use HasDeploymentSafeSoftDeletes;
 
     protected $guarded = ['id'];
-    protected $casts = ['tags' => 'array'];
+    protected $casts = ['tags' => 'array', 'is_current' => 'boolean', 'revision_number' => 'integer'];
 
     public function documentable(): MorphTo { return $this->morphTo(); }
     public function uploader(): BelongsTo { return $this->belongsTo(User::class, 'uploaded_by'); }
+    public function parent(): BelongsTo { return $this->belongsTo(Document::class, 'parent_document_id'); }
+    public function revisions(): HasMany { return $this->hasMany(Document::class, 'parent_document_id')->orderByDesc('revision_number'); }
+
+    public function revisionLabel(): string
+    {
+        return 'Rev '.(int) ($this->revision_number ?: 1);
+    }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
@@ -24,14 +32,13 @@ class Document extends Model
             return $query;
         }
 
-        if ($user->isDrafter()) {
+        if ($user->isDrafter() || $user->isProduction()) {
             return $query->where(function (Builder $documentQuery) use ($user) {
                 $documentQuery->where('uploaded_by', $user->id)
                     ->orWhere(function (Builder $designQuery) use ($user) {
                         $designQuery->where('documentable_type', DesignRequest::class)
-                            ->whereIn('documentable_id', DesignRequest::query()
-                                ->select('id')
-                                ->where('production_pic_id', $user->id));
+                            ->whereIn('documentable_id', DesignRequest::query()->select('id')
+                                ->when($user->isDrafter(), fn (Builder $query) => $query->where('production_pic_id', $user->id)));
                     });
             });
         }

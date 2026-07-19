@@ -15,7 +15,8 @@ class PurchaseOrderRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = PurchaseOrderRequest::with('quotation.sales', 'requester')->latest();
+        $query = PurchaseOrderRequest::with('quotation.sales', 'requester')->latest()
+            ->when(Auth::user()->isSales(), fn ($query) => $query->whereHas('quotation', fn ($quotation) => $quotation->where('sales_id', Auth::id())));
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('code', 'like', "%$s%")
@@ -36,10 +37,13 @@ class PurchaseOrderRequestController extends Controller
 
     public function create(Request $request)
     {
-        $quotation = $request->get('quotation') ? Quotation::with('sales', 'purchaseOrderRequest')->find($request->get('quotation')) : null;
-        $quotations = Quotation::with('sales')
+        $quotationQuery = Quotation::with('sales', 'customer.primaryPic', 'purchaseOrderRequest')
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+        $quotation = $request->get('quotation') ? (clone $quotationQuery)->findOrFail($request->get('quotation')) : null;
+        $quotations = Quotation::with('sales', 'customer.primaryPic')
             ->whereIn('status', ['approved', 'sent_to_customer', 'customer_accepted'])
             ->whereDoesntHave('purchaseOrderRequest')
+            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest('approved_at')
             ->get();
 
@@ -51,6 +55,7 @@ class PurchaseOrderRequestController extends Controller
         $data = $this->validatedData($request, true);
 
         $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
+        abort_if(Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id(), 403);
         if (! $quotation->canCreatePurchaseOrderRequest()) {
             return back()->withInput()->with('error', 'Request PO hanya bisa dibuat dari penawaran yang sudah approved / dikirim / disetujui customer dan belum pernah dibuatkan Request PO.');
         }
@@ -65,6 +70,11 @@ class PurchaseOrderRequestController extends Controller
             $poRequest = PurchaseOrderRequest::create([
                 'code' => CodeGenerator::next(PurchaseOrderRequest::class, 'RPO', 4, true),
                 'quotation_id' => $quotation->id,
+                'customer_id' => $quotation->customer_id,
+                'project_number' => $data['project_number'],
+                'customer_name' => $data['customer_name'],
+                'customer_area' => $data['customer_area'] ?? null,
+                'customer_division' => $data['customer_division'] ?? null,
                 'requested_by' => Auth::id(),
                 'request_date' => $data['request_date'],
                 'customer_po_number' => $data['customer_po_number'] ?? null,
@@ -93,14 +103,16 @@ class PurchaseOrderRequestController extends Controller
 
     public function show(PurchaseOrderRequest $purchaseOrderRequest)
     {
-        $purchaseOrderRequest->load('quotation.items', 'quotation.sales', 'requester');
+        abort_if(Auth::user()->isSales() && (int) $purchaseOrderRequest->quotation?->sales_id !== (int) Auth::id(), 403);
+        $purchaseOrderRequest->load('quotation.items', 'quotation.sales', 'requester', 'invoice');
         return view('admin.purchase_order_requests.show', ['requestPo' => $purchaseOrderRequest]);
     }
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
     {
+        abort_if(Auth::user()->isSales(), 403, 'Update proses Request PO hanya untuk Sales Admin.');
         $data = $request->validate([
-            'status' => ['required', 'in:submitted,processing_accurate,po_created,cancelled'],
+            'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::statuses()))],
             'accurate_po_number' => ['nullable', 'string', 'max:100'],
             'accurate_po_date' => ['nullable', 'date'],
             'accurate_note' => ['nullable', 'string', 'max:1500'],
@@ -130,7 +142,7 @@ class PurchaseOrderRequestController extends Controller
             'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
             'checklist' => $checklist,
             'checklist_completed_at' => $this->isChecklistComplete($checklist) ? now() : null,
-            'processed_at' => in_array($data['status'], ['processing_accurate', 'po_created'], true) ? now() : $purchaseOrderRequest->processed_at,
+            'processed_at' => in_array($data['status'], ['processing_accurate', 'po_created', 'production', 'installation', 'invoicing', 'paid'], true) ? now() : $purchaseOrderRequest->processed_at,
         ]);
 
         Logger::record('updated', "Status Request PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
@@ -141,6 +153,10 @@ class PurchaseOrderRequestController extends Controller
     protected function validatedData(Request $request, bool $creating = false): array
     {
         $rules = [
+            'project_number' => ['required', 'string', 'max:100'],
+            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_area' => ['nullable', 'string', 'max:255'],
+            'customer_division' => ['nullable', 'string', 'max:255'],
             'request_date' => ['required', 'date'],
             'customer_po_number' => ['nullable', 'string', 'max:100'],
             'customer_po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],

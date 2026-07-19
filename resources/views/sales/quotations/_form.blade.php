@@ -5,7 +5,9 @@
         if ($isEdit) {
             $itemsSource = $quotation->items->map(fn ($i) => [
                 'category' => $i->category,
+                'item_master_id' => $i->item_master_id,
                 'name' => $i->name,
+                'variant' => $i->variant,
                 'specification' => $i->specification,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
@@ -18,7 +20,9 @@
         } elseif ($designRequest) {
             $itemsSource = $designRequest->items->map(fn ($i) => [
                 'category' => $i->category,
+                'item_master_id' => $i->item_master_id,
                 'name' => $i->name,
+                'variant' => $i->variant,
                 'specification' => $i->specification,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
@@ -113,7 +117,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:17%">Item</th><th>Spesifikasi</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP / Harga Dasar</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual / Unit</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th>Spesifikasi</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -153,7 +157,7 @@
                     <div class="d-flex justify-content-between"><strong>Grand Total</strong><strong class="fw-num" id="sumGrand">Rp 0</strong></div>
                     @if($designRequest?->cost_total)
                         <hr>
-                        <div class="d-flex justify-content-between small"><span class="text-muted-2">Estimasi Cost Drafter</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_total) }}</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted-2">Estimasi Cost Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_total) }}</span></div>
                     @endif
                 </div>
             </div>
@@ -179,6 +183,7 @@
 @push('scripts')
 <script>
 const itemsData = @json($itemsSource);
+const itemMasters = @json($itemMasters ?? []);
 const costsData = @json(array_values($costsSource ?? []));
 let step = 1, itemIdx = 0, costIdx = 0;
 const rupiah = n => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n||0));
@@ -210,9 +215,11 @@ function validateStep(){
 function addItem(data={}){
     const i = itemIdx++;
     const tr = document.createElement('tr');
+    const masterOptions = itemMasters.map(m => `<option value="${m.id}" ${String(data.item_master_id||'')===String(m.id)?'selected':''}>${esc(m.category ? m.category+' · '+m.name : m.name)}${m.variant ? ' · '+esc(m.variant) : ''}</option>`).join('');
     tr.innerHTML = `
-        <td><input name="items[${i}][name]" class="form-control form-control-sm" value="${esc(data.name)}" required>
+        <td><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
+        <td><input name="items[${i}][name]" class="form-control form-control-sm mb-1 it-name" value="${esc(data.name)}" required placeholder="Nama item"><input name="items[${i}][variant]" class="form-control form-control-sm it-variant" value="${esc(data.variant)}" placeholder="Detail: Laci 3 / Layout L / Layout U"></td>
         <td><input name="items[${i}][specification]" class="form-control form-control-sm" value="${esc(data.specification)}"></td>
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
@@ -223,6 +230,18 @@ function addItem(data={}){
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
     bindNumberInputs(tr);
+    tr.querySelector('.it-master').addEventListener('change', function(){
+        const master = itemMasters.find(m => String(m.id) === this.value);
+        if(!master) return;
+        tr.querySelector('[name$="[category]"]').value = master.category || '';
+        tr.querySelector('.it-name').value = master.name || '';
+        tr.querySelector('.it-variant').value = master.variant || '';
+        tr.querySelector('[name$="[specification]"]').value = master.specification || '';
+        tr.querySelector('[name$="[unit]"]').value = master.unit || 'Unit';
+        tr.querySelector('.it-cost').value = master.default_cost_price || 0;
+        tr.querySelector('.it-margin').value = master.default_margin || 0;
+        bindNumberInputs(tr); rowTotal(tr); recalc();
+    });
     tr.querySelectorAll('.it-qty,.it-cost,.it-margin').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PurchaseOrderRequest extends Model
 {
@@ -23,10 +24,22 @@ class PurchaseOrderRequest extends Model
         return $this->belongsTo(Quotation::class);
     }
 
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
+    public function canCreateInvoice(): bool
+    {
+        return $this->status !== 'cancelled' && ! $this->invoice()->exists();
+    }
+
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
+
+    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
     public static function checklistItems(): array
     {
@@ -66,6 +79,10 @@ class PurchaseOrderRequest extends Model
             'submitted' => 'Diajukan ke Accurate',
             'processing_accurate' => 'Diproses di Accurate',
             'po_created' => 'PO Accurate Dibuat',
+            'production' => 'Produksi',
+            'installation' => 'Installasi',
+            'invoicing' => 'Invoicing',
+            'paid' => 'Lunas',
             'cancelled' => 'Dibatalkan',
         ];
     }

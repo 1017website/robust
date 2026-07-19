@@ -8,6 +8,7 @@ use App\Models\CustomerPic;
 use App\Models\DesignRequest;
 use App\Models\DesignRequestItem;
 use App\Models\Lead;
+use App\Models\ItemMaster;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\ProjectTerm;
@@ -54,6 +55,20 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'), 'role' => 'drafter',
             'job_title' => 'Drafter / Produksi', 'phone' => '081200000004', 'is_active' => true,
         ]);
+        User::create([
+            'name' => 'Tim Produksi', 'email' => 'production@robust.test',
+            'password' => Hash::make('password'), 'role' => 'production',
+            'job_title' => 'Production Engineer', 'phone' => '081200000006', 'is_active' => true,
+        ]);
+
+        foreach ([
+            ['ITM-0001', 'Meja Laboratorium', 'Meja Layout', 'Layout L', 'Unit'],
+            ['ITM-0002', 'Meja Laboratorium', 'Meja Layout', 'Layout U', 'Unit'],
+            ['ITM-0003', 'Storage', 'Base Cabinet', 'Laci 3', 'Unit'],
+            ['ITM-0004', 'Storage', 'Base Cabinet', 'Laci 4', 'Unit'],
+        ] as [$code, $category, $name, $variant, $unit]) {
+            ItemMaster::create(compact('code', 'category', 'name', 'variant', 'unit') + ['is_active' => true]);
+        }
 
         // ---------- Customers ----------
         $c1 = Customer::create([

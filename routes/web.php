@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AssignmentController;
+use App\Http\Controllers\Admin\InvoiceController;
+use App\Http\Controllers\Admin\ItemMasterController;
 use App\Http\Controllers\Admin\PraLeadController;
 use App\Http\Controllers\Admin\PurchaseOrderRequestController;
 use App\Http\Controllers\Admin\SystemSettingController;
@@ -61,7 +63,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Calendar & Reports juga untuk drafter
-    Route::middleware('role:drafter')->group(function () {
+    Route::middleware('role:drafter,production')->group(function () {
         Route::get('/drafter/calendar', [CalendarController::class, 'index'])->name('drafter.calendar.index');
         Route::get('/drafter/reports', [ReportController::class, 'index'])->name('drafter.reports.index');
     });
@@ -81,12 +83,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/assignment', [AssignmentController::class, 'index'])->name('assignment.index');
         Route::post('/assignment/reassign', [AssignmentController::class, 'reassign'])->name('assignment.reassign');
 
-        Route::get('/request-po', [PurchaseOrderRequestController::class, 'index'])->name('purchase-order-requests.index');
-        Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
-        Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
-        Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
-        Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');
-
         // System Settings khusus Administrator / Superadmin
         Route::middleware('role:administrator')->group(function () {
             Route::get('/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
@@ -100,6 +96,27 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::put('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/item-masters', [ItemMasterController::class, 'index'])->name('item-masters.index');
+        Route::post('/item-masters', [ItemMasterController::class, 'store'])->name('item-masters.store');
+        Route::put('/item-masters/{itemMaster}', [ItemMasterController::class, 'update'])->name('item-masters.update');
+    });
+
+    // Request PO terintegrasi langsung dari penawaran; sales dapat membuat tanpa input ulang.
+    Route::middleware('role:administrator,sales_admin,sales')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/request-po', [PurchaseOrderRequestController::class, 'index'])->name('purchase-order-requests.index');
+        Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
+        Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
+        Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
+        Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');
+    });
+
+    Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+        Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+        Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::put('/invoices/{invoice}/terms/{term}', [InvoiceController::class, 'updateTerm'])->name('invoices.terms.update');
     });
 
     // ---------- Sales ----------
@@ -156,7 +173,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- Drafter ----------
-    Route::middleware('role:drafter')->prefix('drafter')->name('drafter.')->group(function () {
+    Route::middleware('role:drafter,production')->prefix('drafter')->name('drafter.')->group(function () {
         Route::get('/design-requests', [DrafterDesignRequestController::class, 'index'])->name('design-requests.index');
         Route::get('/design-requests/{designRequest}', [DrafterDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::put('/design-requests/{designRequest}/progress', [DrafterDesignRequestController::class, 'updateProgress'])->name('design-requests.progress');
