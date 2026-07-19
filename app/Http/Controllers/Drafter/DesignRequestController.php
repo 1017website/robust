@@ -39,7 +39,11 @@ class DesignRequestController extends Controller
         }
 
         $designRequests = $query->paginate(8)->withQueryString();
-        $selected = $designRequests->first()?->load('sales', 'documents', 'lead', 'items');
+        $selected = $request->filled('design_request')
+            ? $designRequests->getCollection()->firstWhere('id', (int) $request->get('design_request'))
+            : null;
+        $selected ??= $designRequests->first();
+        $selected?->load('sales', 'documents', 'lead', 'items');
         $salesUsers = User::assignableSales();
 
         $base = fn () => DesignRequest::query()->when(Auth::user()->isDrafter(), fn ($query) => $query->where('production_pic_id', Auth::id()));

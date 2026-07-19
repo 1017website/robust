@@ -36,7 +36,10 @@ class DocumentController extends Controller
         ];
 
         if (Auth::user()->isDrafter()) {
-            $selectedDocument = $documents->first();
+            $selectedDocument = $request->filled('document')
+                ? $documents->getCollection()->firstWhere('id', (int) $request->get('document'))
+                : null;
+            $selectedDocument ??= $documents->first();
             return view('drafter.documents.index', compact('documents', 'stats', 'selectedDocument'));
         }
 

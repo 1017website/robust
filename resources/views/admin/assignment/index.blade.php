@@ -2,9 +2,8 @@
 @section('title', 'Assignment')
 @section('content')
 @php
-    $selectedRow = collect($workload)->sortByDesc('leads_aktif')->first();
-    $selectedSales = $selectedRow['sales'] ?? ($salesList->first());
     $acceptMap = collect($acceptance)->keyBy(fn($r) => $r['sales']->id);
+    $previewUrl = fn($id) => route('admin.assignment.index', array_merge(request()->query(), ['sales' => $id])).'#assignment-detail';
 @endphp
 <div class="sales-admin-ui">
     <div class="sa-page-head">
@@ -35,7 +34,7 @@
                         <tbody>
                             @foreach($workload as $row)
                                 @php($total = $row['request_masuk'] + $row['leads_aktif'] + $row['design_request'] + $row['penawaran_aktif'] + $row['project_aktif'])
-                                <tr class="{{ $selectedSales && $selectedSales->id === $row['sales']->id ? 'selected' : '' }}">
+                                <tr class="{{ $selectedSales && $selectedSales->id === $row['sales']->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($row['sales']->id) }}" tabindex="0" role="link" aria-label="Tampilkan workload sales">
                                     <td><div class="sa-person"><span class="sa-avatar">{{ strtoupper(substr($row['sales']->name,0,1)) }}</span><strong>{{ $row['sales']->name }}</strong></div></td>
                                     <td class="text-warning fw-bold">{{ $row['request_masuk'] }}</td>
                                     <td><div class="sa-inline-progress"><span>{{ $row['leads_aktif'] }}</span><div><b style="width:{{ min(100,$row['leads_aktif']*5) }}%"></b></div></div></td>
@@ -105,7 +104,7 @@
             </section>
         </div>
 
-        <aside class="sa-card sa-assignment-side">
+        <aside class="sa-card sa-assignment-side" id="assignment-detail">
             @if($selectedSales)
                 @php($selectedAccept = $acceptMap[$selectedSales->id] ?? ['rate'=>0])
                 <div class="text-center">

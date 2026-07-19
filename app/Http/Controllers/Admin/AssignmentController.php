@@ -53,6 +53,11 @@ class AssignmentController extends Controller
 
         $leads = Lead::with('sales')->latest()->take(60)->get();
         $projects = Project::with('quotation.sales', 'quotation.customer')->latest()->take(6)->get();
+        $defaultSelectedRow = $workload->sortByDesc('leads_aktif')->first();
+        $selectedSales = $request->filled('sales')
+            ? $salesList->firstWhere('id', (int) $request->get('sales'))
+            : null;
+        $selectedSales ??= $defaultSelectedRow['sales'] ?? $salesList->first();
 
         if ($request->get('export') === 'excel') {
             $acceptanceBySales = $acceptance->keyBy(fn ($row) => $row['sales']->id);
@@ -74,7 +79,7 @@ class AssignmentController extends Controller
             );
         }
 
-        return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats', 'leads', 'projects'));
+        return view('admin.assignment.index', compact('salesList', 'workload', 'acceptance', 'stats', 'leads', 'projects', 'selectedSales'));
     }
 
     public function reassign(Request $request)

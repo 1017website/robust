@@ -70,7 +70,7 @@
                     </thead>
                     <tbody>
                     @forelse($praLeads as $pl)
-                        <tr>
+                        <tr class="pra-preview-row" data-preview-button="pra-detail-{{ $pl->id }}" tabindex="0" role="button" aria-label="Tampilkan preview pra lead">
                             <td>{{ $praLeads->firstItem() + $loop->index }}</td>
                             <td>
                                 <div class="fw-semibold">{{ $pl->instansi }}</div>
@@ -96,7 +96,7 @@
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-soft" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                     <div class="dropdown-menu dropdown-menu-end">
-                                        <button type="button" class="dropdown-item pra-load-detail"
+                                        <button type="button" class="dropdown-item pra-load-detail" id="pra-detail-{{ $pl->id }}"
                                             data-instansi="{{ e($pl->instansi) }}"
                                             data-pic="{{ e($pl->pic_name) }}"
                                             data-phone="{{ e($pl->phone) }}"
@@ -316,6 +316,20 @@ document.addEventListener('DOMContentLoaded', function () {
             setText('previewSales', btn.dataset.sales || '—');
             setText('previewStatus', btn.dataset.status || 'Status');
             document.getElementById('praLeadPanel')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
+    });
+
+    document.querySelectorAll('.pra-preview-row').forEach(function (row) {
+        function showRowPreview(event) {
+            if (event.target.closest('a, button, input, select, textarea, label, form, .dropdown')) return;
+            document.getElementById(row.dataset.previewButton)?.click();
+        }
+
+        row.addEventListener('click', showRowPreview);
+        row.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            showRowPreview(event);
         });
     });
 

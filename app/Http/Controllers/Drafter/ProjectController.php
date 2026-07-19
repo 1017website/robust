@@ -35,7 +35,10 @@ class ProjectController extends Controller
         }
 
         $projects = $query->paginate(8)->withQueryString();
-        $selectedProject = $projects->first();
+        $selectedProject = $request->filled('project')
+            ? $projects->getCollection()->firstWhere('id', (int) $request->get('project'))
+            : null;
+        $selectedProject ??= $projects->first();
 
         $base = Project::query()
             ->when(! $user->isAdministrator(), function ($q) use ($user) {

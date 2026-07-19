@@ -4,6 +4,7 @@
 @php
     $statusText = fn($s) => \App\Models\DesignRequest::statuses()[$s] ?? \Illuminate\Support\Str::headline($s);
     $selected = $selected ?? $designRequests->first();
+    $previewUrl = fn($id) => route('drafter.design-requests.index', array_merge(request()->query(), ['design_request' => $id])).'#design-request-detail';
 @endphp
 <div class="drafter-ui">
     <div class="drafter-page-head">
@@ -38,7 +39,7 @@
                         <tbody>
                         @forelse($designRequests as $dr)
                             @php($late = $dr->deadline && $dr->deadline->isPast() && !in_array($dr->status, ['completed','rejected']))
-                            <tr class="{{ $selected && $selected->id === $dr->id ? 'selected' : '' }}">
+                            <tr class="{{ $selected && $selected->id === $dr->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($dr->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview design request">
                                 <td class="fw-bold"><a href="{{ route('drafter.design-requests.show', $dr) }}">{{ $dr->code }}</a></td>
                                 <td>{{ $dr->customer_name }}</td>
                                 <td>{{ $dr->project_name }}</td>
@@ -59,7 +60,7 @@
             </div>
         </main>
 
-        <aside class="drafter-detail">
+        <aside class="drafter-detail" id="design-request-detail">
             @if($selected)
                 <div class="detail-top">
                     <div><h2>{{ $selected->code }}</h2><div class="text-muted-2">{{ $selected->customer_name }}</div></div>

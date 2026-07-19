@@ -46,7 +46,10 @@ class RequestMasukController extends Controller
             'ditolak' => PraLead::where('assigned_sales_id', $uid)->where('status', 'rejected')->whereDate('responded_at', '>=', today()->subDays(7))->count(),
         ];
 
-        $selectedRequest = $requests->first();
+        $selectedRequest = $request->filled('request')
+            ? $requests->getCollection()->firstWhere('id', (int) $request->get('request'))
+            : null;
+        $selectedRequest ??= $requests->first();
 
         return view('sales.request_masuk.index', compact('requests', 'stats', 'selectedRequest'));
     }

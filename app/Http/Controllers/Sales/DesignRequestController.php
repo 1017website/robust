@@ -55,7 +55,10 @@ class DesignRequestController extends Controller
             'completed' => (clone $base)->where('status', 'completed')->count(),
         ];
 
-        $selectedRequest = $designRequests->first();
+        $selectedRequest = $request->filled('design_request')
+            ? $designRequests->getCollection()->firstWhere('id', (int) $request->get('design_request'))
+            : null;
+        $selectedRequest ??= $designRequests->first();
         $salesList = User::assignableSales();
         $drafters = User::where('role', 'drafter')->where('is_active', true)->orderBy('name')->get();
 

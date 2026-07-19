@@ -5,6 +5,7 @@
     $selected = $selectedLead;
     $stageLabel = fn($s) => match($s) {'lead'=>'Lead','design_request'=>'Design Request','penawaran'=>'Penawaran','negosiasi'=>'Negosiasi','won'=>'Won / Closing','lost'=>'Lost', default => ucfirst(str_replace('_',' ',$s ?? '-'))};
     $statusClass = fn($s) => match($s) {'active','aktif','won'=>'st-green','lost','inactive'=>'st-red','qualified'=>'st-blue', default=>'st-gray'};
+    $previewUrl = fn($id) => route('sales.leads.index', array_merge(request()->query(), ['lead' => $id])).'#lead-detail';
 @endphp
 <div class="sales-ui">
     <div class="sales-page-head">
@@ -40,7 +41,7 @@
                         <thead><tr><th>No</th><th>Instansi / PIC</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Stage</th><th>Prioritas</th><th>Tanggal</th><th>Aksi</th></tr></thead>
                         <tbody>
                         @forelse($leads as $lead)
-                            <tr class="{{ $selected && $selected->id === $lead->id ? 'selected' : '' }}">
+                            <tr class="{{ $selected && $selected->id === $lead->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($lead->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview lead">
                                 <td>{{ $leads->firstItem()+$loop->index }}</td>
                                 <td><a class="fw-bold" href="{{ route('sales.leads.show',$lead) }}">{{ $lead->instansi }}</a><div class="small text-muted-2">{{ $lead->pic_name }} · {{ $lead->phone }}</div></td>
                                 <td><div class="fw-bold text-truncate-cell">{{ $lead->lab_name ?: '-' }}</div><div class="small text-muted-2 text-truncate-cell">{{ $lead->need_description ?: '-' }}</div></td>
@@ -73,7 +74,7 @@
             <button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button>
         </form>
 
-        <aside class="sales-detail">
+        <aside class="sales-detail" id="lead-detail">
             @if($selected)
                 <div class="sales-detail-head"><div><h5 class="fw-black mb-0">Detail Lead</h5><div class="small text-muted-2">{{ $selected->code }}</div></div><a href="{{ route('sales.leads.show',$selected) }}" class="btn btn-sm btn-primary">Buka Detail</a></div>
                 <div class="sales-detail-body lead-detail-body">

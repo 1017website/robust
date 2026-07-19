@@ -6,6 +6,7 @@
     $sourceClass = fn($source) => match(strtolower($source ?? '')) {
         'whatsapp' => 'st-green', 'website' => 'st-blue', 'email' => 'st-red', 'referensi' => 'st-purple', default => 'st-gray'
     };
+    $previewUrl = fn($id) => route('sales.request-masuk.index', array_merge(request()->query(), ['request' => $id])).'#detail-request';
 @endphp
 <div class="sales-ui">
     <div class="sales-main-grid">
@@ -43,7 +44,7 @@
                         <thead><tr><th>Customer / Instansi</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Admin Pengirim</th><th>Prioritas</th><th>Status</th><th>Diterima</th><th></th></tr></thead>
                         <tbody>
                         @forelse($requests as $req)
-                            <tr class="{{ $selected && $selected->id === $req->id ? 'selected' : '' }}">
+                            <tr class="{{ $selected && $selected->id === $req->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($req->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview request">
                                 <td>
                                     <div class="d-flex gap-3 align-items-center"><div class="logo-avatar"><i class="bi bi-building"></i></div><div><div class="fw-bold">{{ $req->instansi }}</div><div class="small text-muted-2">{{ $req->pic_name }}</div>@if($req->assigned_sales_id)<span class="badge rounded-pill text-bg-success mt-1"><i class="bi bi-person-check-fill me-1"></i>Assigned dari Pra Leads</span>@endif</div></div>
                                 </td>
@@ -53,7 +54,7 @@
                                 <td><span class="status-soft {{ $req->priority === 'high' ? 'st-red' : ($req->priority === 'low' ? 'st-green' : 'st-yellow') }}">{{ ucfirst($req->priority) }}</span></td>
                                 <td><span class="status-soft st-blue">Baru</span></td>
                                 <td>{{ optional($req->sent_at ?? $req->created_at)->isToday() ? 'Hari ini' : optional($req->sent_at ?? $req->created_at)->diffForHumans() }}<div class="small text-muted-2">{{ optional($req->sent_at ?? $req->created_at)->format('H:i') }}</div></td>
-                                <td><a href="#detail-request" class="btn btn-sm btn-soft"><i class="bi bi-chevron-right"></i></a></td>
+                                <td><a href="{{ $previewUrl($req->id) }}" class="btn btn-sm btn-soft" aria-label="Tampilkan preview request"><i class="bi bi-chevron-right"></i></a></td>
                             </tr>
                         @empty
                             <tr><td colspan="8"><x-empty text="Tidak ada request masuk saat ini." /></td></tr>

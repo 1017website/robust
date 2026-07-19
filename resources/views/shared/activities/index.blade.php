@@ -113,7 +113,7 @@
                         <thead><tr><th>Waktu</th><th>Customer</th><th>Pipeline Stage</th><th>Jenis Aktivitas</th><th>Judul / Topik</th><th>Sales PIC</th><th>Status</th><th>Durasi</th><th>Aksi</th></tr></thead>
                         <tbody>
                         @forelse($activities as $act)
-                            <tr>
+                            <tr class="{{ $selectedActivity && $selectedActivity->id === $act->id ? 'selected' : '' }}" data-detail-href="{{ $activityUrl($act->id) }}#activity-customer-detail" tabindex="0" role="link" aria-label="Tampilkan detail aktivitas">
                                 <td>{{ $act->activity_time ? \Illuminate\Support\Carbon::parse($act->activity_time)->format('H:i') : '-' }}</td>
                                 <td>{{ $act->customer?->name ?? $act->lead?->instansi ?? '-' }}</td>
                                 <td><span class="status-soft {{ $stageClass($act->pipeline_stage) }}">{{ $stageLabel($act->pipeline_stage) }}</span></td>
@@ -161,6 +161,12 @@
 @php
     $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
     $typeClass = fn($t) => match($t) {'meeting'=>'sorange','call'=>'sblue','survey_lokasi'=>'sgreen','presentasi'=>'spurple','follow_up'=>'sorange','whatsapp'=>'sgreen','email'=>'sred','penawaran'=>'steal', default=>'sblue'};
+    $salesActivityPreviewUrls = $activities->getCollection()->map(function ($activity) {
+        $customerId = $activity->customer_id ?: $activity->lead?->customer_id;
+        return $customerId
+            ? route('activities.index', array_merge(request()->query(), ['preview_customer' => $customerId])).'#activity-customer-detail'
+            : null;
+    })->values();
 @endphp
 <div class="sales-ui">
     <div class="sales-main-grid">
@@ -187,6 +193,20 @@
         </aside>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    const salesActivityPreviewUrls = @json($salesActivityPreviewUrls);
+    document.querySelectorAll('.sales-ui .sales-table tbody tr').forEach(function (row, index) {
+        const previewUrl = salesActivityPreviewUrls[index];
+        if (!previewUrl) return;
+        row.dataset.detailHref = previewUrl;
+        row.tabIndex = 0;
+        row.setAttribute('role', 'link');
+        row.setAttribute('aria-label', 'Tampilkan preview customer aktivitas');
+    });
+</script>
+@endpush
 
 @endif
 @endsection

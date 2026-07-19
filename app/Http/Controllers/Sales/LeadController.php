@@ -43,7 +43,10 @@ class LeadController extends Controller
             'penawaran' => (clone $base)->where('stage', 'penawaran')->count(),
             'won' => (clone $base)->where(function ($q) { $q->whereIn('stage', ['won', 'closing'])->orWhere('status', 'won'); })->count(),
         ];
-        $selectedLead = $leads->first();
+        $selectedLead = $request->filled('lead')
+            ? $leads->getCollection()->firstWhere('id', (int) $request->get('lead'))
+            : null;
+        $selectedLead ??= $leads->first();
 
         return view('sales.leads.index', compact('leads', 'stats', 'selectedLead'));
     }

@@ -922,6 +922,8 @@ canvas{display:block;max-width:100%}
 .quotation-item-table .it-price-display,.quotation-item-table .it-total{display:inline-block;white-space:nowrap}
 tr.customer-select-row{cursor:pointer}
 tr.customer-select-row:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}
+[data-detail-href],tr.pra-preview-row{cursor:pointer}
+[data-detail-href]:focus-visible,tr.pra-preview-row:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}
 
 @media(max-width:1536px){
     .drafter-stat-grid.six,.drafter-stat-grid.five{grid-template-columns:repeat(3,minmax(180px,1fr))}

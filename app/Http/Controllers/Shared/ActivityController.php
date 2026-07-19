@@ -89,10 +89,11 @@ class ActivityController extends Controller
         });
 
         $stageWithCustomer = $pipeline->first(fn ($data) => $data['customers']->isNotEmpty());
+        $previewCustomerId = $request->get('preview_customer', $request->get('customer_id'));
         $selectedCustomer = $request->boolean('hide_detail')
             ? null
-            : ($request->get('customer_id')
-                ? $customerScope()->find($request->get('customer_id'))
+            : ($previewCustomerId
+                ? $customerScope()->find($previewCustomerId)
                 : ($stageWithCustomer ? $stageWithCustomer['customers']->first() : $customerScope()->first()));
         $salesUsers = User::assignableSales();
         $customers = $customerScope()->orderBy('name')->get();

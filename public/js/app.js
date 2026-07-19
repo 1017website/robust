@@ -38,6 +38,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if (window.innerWidth >= 1200) setSidebar(false);
     });
 
+    // Baris pada layout tabel + preview memilih data yang tampil di panel detail.
+    function openDetailRow(event) {
+        var row = event.target.closest('[data-detail-href]');
+        if (!row) return;
+        if (event.target.closest('a, button, input, select, textarea, label, form, .dropdown')) return;
+        window.location.assign(row.dataset.detailHref);
+    }
+
+    document.addEventListener('click', openDetailRow);
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        var row = event.target.closest('[data-detail-href]');
+        if (!row || event.target !== row) return;
+        event.preventDefault();
+        openDetailRow(event);
+    });
+
     // Dropdown aksi tabel perlu keluar dari container overflow agar seluruh menu terlihat.
     document.addEventListener('shown.bs.dropdown', function (e) {
         var toggle = e.target.closest('[data-bs-toggle="dropdown"]');
