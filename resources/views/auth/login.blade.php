@@ -58,6 +58,7 @@
                 <div><strong>Sales:</strong> sales@robust.test</div>
                 <div><strong>SPV Sales:</strong> spv@robust.test</div>
                 <div><strong>Drafter:</strong> drafter@robust.test</div>
+                <div><strong>Produksi:</strong> production@robust.test</div>
                 <div>Password semua: <code>password</code></div>
             </div>
         </div>
