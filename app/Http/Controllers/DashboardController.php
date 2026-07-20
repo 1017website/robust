@@ -24,7 +24,10 @@ class DashboardController extends Controller
             'sales_admin' => $this->adminDashboard(),
             'sales_spv' => $this->spvDashboard(),
             'drafter' => $this->drafterDashboard(),
-            'production' => $this->drafterDashboard(),
+            'production' => redirect()->route('drafter.projects.index'),
+            'qc' => redirect()->route('drafter.projects.index'),
+            'delivery' => redirect()->route('drafter.projects.index'),
+            'administration' => redirect()->route('administration.project-monitoring.index'),
             default => $this->salesDashboard(),
         };
     }

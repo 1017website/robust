@@ -24,10 +24,10 @@ class Format
         return match (strtolower($status)) {
             'draft', 'new', 'baru' => 'secondary',
             'assigned', 'scheduled', 'terjadwal', 'identify', 'sent_to_customer', 'processing_accurate' => 'info',
-            'waiting_acceptance', 'waiting_approval', 'pending', 'menunggu', 'drafting', 'approaching', 'revision', 'submitted' => 'warning',
-            'accepted', 'approved', 'completed', 'selesai', 'won', 'won_closing', 'won / closing', 'customer_accepted', 'request_po_created', 'po_created', 'aktif', 'paid', 'follow_up' => 'success',
+            'waiting_acceptance', 'waiting_approval', 'pending', 'menunggu', 'drafting', 'approaching', 'revision', 'submitted', 'stock' => 'warning',
+            'accepted', 'approved', 'completed', 'selesai', 'won', 'won_closing', 'won / closing', 'customer_accepted', 'request_po_created', 'po_created', 'aktif', 'paid', 'follow_up', 'production_finished' => 'success',
             'rejected', 'customer_rejected', 'lost', 'cancelled', 'overdue', 'terlambat' => 'danger',
-            'costing', 'review', 'negotiation', 'maintaining' => 'primary',
+            'costing', 'review', 'reviewed', 'negotiation', 'maintaining', 'production' => 'primary',
             default => 'secondary',
         };
     }

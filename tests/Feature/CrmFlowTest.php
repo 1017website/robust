@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\DesignRevision;
 use App\Models\Document;
 use App\Models\Lead;
 use App\Models\Invoice;
 use App\Models\PraLead;
 use App\Models\Project;
+use App\Models\ProjectWorkflow;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\SystemSetting;
@@ -62,6 +64,78 @@ class CrmFlowTest extends TestCase
                 $this->actingAs($user)->get(route($routeName))->assertSuccessful();
             }
         }
+    }
+
+    public function test_project_operational_workflow_monitoring_and_design_revision_history(): void
+    {
+        Storage::fake('public');
+
+        $sales = User::factory()->create(['role' => 'sales']);
+        $production = User::factory()->create(['role' => 'production']);
+        $qc = User::factory()->create(['role' => 'qc']);
+        $delivery = User::factory()->create(['role' => 'delivery']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $administration = User::factory()->create(['role' => 'administration']);
+        $customer = Customer::create(['name' => 'Customer Workflow', 'pipeline_stage' => 'identify', 'sales_id' => $sales->id]);
+        $project = Project::create([
+            'code' => 'PRJ-WORKFLOW-001',
+            'name' => 'Project Workflow Test',
+            'customer_id' => $customer->id,
+            'project_manager_id' => $sales->id,
+            'internal_team' => [$drafter->id],
+            'status' => 'ongoing',
+            'total_value' => 100000000,
+        ]);
+
+        $this->actingAs($production)->put(route('project-workflow.production', $project), [
+            'production_status' => 'production_finished',
+            'production_report_completed' => 1,
+            'production_report' => UploadedFile::fake()->create('checklist-produksi.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
+            'qc_completed' => 1,
+            'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($delivery)->put(route('project-workflow.delivery', $project), [
+            'delivery_out_completed' => 1,
+            'delivery_out_photo' => UploadedFile::fake()->image('do-keluar.jpg'),
+            'delivery_returned_completed' => 1,
+            'delivery_returned_photo' => UploadedFile::fake()->image('ba-kembali.jpg'),
+        ])->assertRedirect();
+
+        $workflow = ProjectWorkflow::where('project_id', $project->id)->firstOrFail();
+        $this->assertSame('production_finished', $workflow->production_status);
+        $this->assertTrue($workflow->production_report_completed);
+        $this->assertTrue($workflow->qc_completed);
+        $this->assertTrue($workflow->delivery_out_completed);
+        $this->assertTrue($workflow->delivery_returned_completed);
+
+        $this->actingAs($drafter)->post(route('design-revisions.store', $project), [
+            'revision_date' => now()->format('Y-m-d'),
+            'notes' => 'Perubahan layout meja dan jalur utility.',
+            'revision_file' => UploadedFile::fake()->create('revision-1.pdf', 50, 'application/pdf'),
+        ])->assertRedirect();
+
+        $revision = DesignRevision::where('project_id', $project->id)->firstOrFail();
+        $this->assertSame(1, $revision->revision_number);
+        $this->assertSame('submitted', $revision->status);
+
+        $this->actingAs($drafter)->put(route('design-revisions.status', [$project, $revision]), [
+            'status' => 'reviewed',
+        ])->assertRedirect();
+        $this->assertSame('reviewed', $revision->fresh()->status);
+
+        $this->actingAs($administration)->get(route('administration.project-monitoring.index'))
+            ->assertSuccessful()
+            ->assertSee('Project Workflow Test')
+            ->assertSee('Production Finished');
+
+        $this->actingAs($sales)->get(route('project-workspace.show', $project))
+            ->assertSuccessful()
+            ->assertSee('Revision 1')
+            ->assertSee('QC Selesai');
     }
 
     public function test_breadcrumb_and_back_button_render_on_list_create_and_detail_pages(): void

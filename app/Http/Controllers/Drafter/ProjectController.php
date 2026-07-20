@@ -14,7 +14,8 @@ class ProjectController extends Controller
         $user = Auth::user();
 
         $query = Project::with('customer', 'projectManager', 'quotation')
-            ->when(! $user->isAdministrator(), function ($q) use ($user) {
+            ->with('workflow')
+            ->when($user->isDrafter(), function ($q) use ($user) {
                 $q->where(function ($w) use ($user) {
                     $w->where('project_manager_id', $user->id)
                         ->orWhereJsonContains('internal_team', (string) $user->id)
@@ -41,7 +42,7 @@ class ProjectController extends Controller
         $selectedProject ??= $projects->first();
 
         $base = Project::query()
-            ->when(! $user->isAdministrator(), function ($q) use ($user) {
+            ->when($user->isDrafter(), function ($q) use ($user) {
                 $q->where(function ($w) use ($user) {
                     $w->where('project_manager_id', $user->id)
                         ->orWhereJsonContains('internal_team', (string) $user->id)

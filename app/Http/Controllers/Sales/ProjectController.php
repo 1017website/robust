@@ -88,8 +88,14 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         abort_unless($this->canViewProject($project), 403);
-        $project->load('customer', 'projectManager', 'quotation', 'terms', 'activities', 'documents');
-        return view('sales.projects.show', compact('project'));
+        $project->load([
+            'customer', 'projectManager', 'quotation', 'terms', 'activities', 'documents',
+            'workflow.productionUpdater', 'workflow.qcUpdater', 'workflow.deliveryUpdater',
+            'designRevisions.creator', 'designRevisions.statusUpdater',
+        ]);
+        $workflow = $project->workflow ?: $project->workflow()->make();
+
+        return view('projects.workspace', compact('project', 'workflow'));
     }
 
     protected function eligibleQuotationQuery(): Builder

@@ -7,13 +7,16 @@ use App\Http\Controllers\Admin\PraLeadController;
 use App\Http\Controllers\Admin\PurchaseOrderRequestController;
 use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Administration\ProjectMonitoringController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Drafter\DesignRequestController as DrafterDesignRequestController;
+use App\Http\Controllers\Drafter\DesignRevisionController;
 use App\Http\Controllers\Drafter\ProjectController as DrafterProjectController;
 use App\Http\Controllers\Drafter\TaskController as DrafterTaskController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Operations\ProjectWorkflowController;
 use App\Http\Controllers\Sales\CustomerController;
 use App\Http\Controllers\Sales\DesignRequestController as SalesDesignRequestController;
 use App\Http\Controllers\Sales\LeadController;
@@ -24,6 +27,7 @@ use App\Http\Controllers\Shared\ActivityController;
 use App\Http\Controllers\Shared\CalendarController;
 use App\Http\Controllers\Shared\DocumentController;
 use App\Http\Controllers\Shared\PipelineController;
+use App\Http\Controllers\Shared\ProjectWorkspaceController;
 use App\Http\Controllers\Shared\ReportController;
 use App\Http\Controllers\Spv\QuotationApprovalController;
 use Illuminate\Support\Facades\Route;
@@ -51,7 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // ---------- Shared (sales + admin) ----------
-    Route::middleware('role:administrator,sales,sales_admin,sales_spv')->group(function () {
+    Route::middleware('role:administrator,sales,sales_admin,sales_spv,administration')->group(function () {
         Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
         Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
         Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
@@ -63,7 +67,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Calendar & Reports juga untuk drafter
-    Route::middleware('role:drafter,production')->group(function () {
+    Route::middleware('role:drafter,production,qc,delivery')->group(function () {
         Route::get('/drafter/calendar', [CalendarController::class, 'index'])->name('drafter.calendar.index');
         Route::get('/drafter/reports', [ReportController::class, 'index'])->name('drafter.reports.index');
     });
@@ -72,6 +76,29 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+
+    // Workspace project lintas divisi: seluruh informasi, workflow, dan histori design.
+    Route::get('/project-workspace/{project}', [ProjectWorkspaceController::class, 'show'])->name('project-workspace.show');
+    Route::get('/project-workspace/{project}/workflow/{type}', [ProjectWorkflowController::class, 'attachment'])->name('project-workflow.attachment');
+    Route::get('/project-workspace/{project}/design-revisions/{designRevision}', [DesignRevisionController::class, 'attachment'])->name('design-revisions.attachment');
+
+    Route::middleware('role:administrator,sales_admin,administration')->prefix('administration')->name('administration.')->group(function () {
+        Route::get('/project-monitoring', [ProjectMonitoringController::class, 'index'])->name('project-monitoring.index');
+    });
+
+    Route::middleware('role:production')->group(function () {
+        Route::put('/project-workspace/{project}/production', [ProjectWorkflowController::class, 'updateProduction'])->name('project-workflow.production');
+    });
+    Route::middleware('role:qc')->group(function () {
+        Route::put('/project-workspace/{project}/qc', [ProjectWorkflowController::class, 'updateQc'])->name('project-workflow.qc');
+    });
+    Route::middleware('role:delivery')->group(function () {
+        Route::put('/project-workspace/{project}/delivery', [ProjectWorkflowController::class, 'updateDelivery'])->name('project-workflow.delivery');
+    });
+    Route::middleware('role:drafter,administration')->group(function () {
+        Route::post('/project-workspace/{project}/design-revisions', [DesignRevisionController::class, 'store'])->name('design-revisions.store');
+        Route::put('/project-workspace/{project}/design-revisions/{designRevision}/status', [DesignRevisionController::class, 'updateStatus'])->name('design-revisions.status');
+    });
 
     // ---------- Sales Admin ----------
     Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
@@ -178,7 +205,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/design-requests/{designRequest}', [DrafterDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::put('/design-requests/{designRequest}/progress', [DrafterDesignRequestController::class, 'updateProgress'])->name('design-requests.progress');
         Route::post('/design-requests/{designRequest}/feedback', [DrafterDesignRequestController::class, 'submitFeedback'])->name('design-requests.feedback');
-        Route::get('/projects', [DrafterProjectController::class, 'index'])->name('projects.index');
         Route::get('/tasks', [DrafterTaskController::class, 'index'])->name('tasks.index');
+    });
+
+    Route::middleware('role:drafter,production,qc,delivery,administration')->prefix('drafter')->name('drafter.')->group(function () {
+        Route::get('/projects', [DrafterProjectController::class, 'index'])->name('projects.index');
     });
 });

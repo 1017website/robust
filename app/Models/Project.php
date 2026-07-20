@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Project extends Model
@@ -28,6 +29,8 @@ class Project extends Model
     public function terms(): HasMany { return $this->hasMany(ProjectTerm::class); }
     public function activities(): HasMany { return $this->hasMany(Activity::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
+    public function workflow(): HasOne { return $this->hasOne(ProjectWorkflow::class); }
+    public function designRevisions(): HasMany { return $this->hasMany(DesignRevision::class)->orderByDesc('revision_number'); }
 
     public static function statuses(): array
     {
