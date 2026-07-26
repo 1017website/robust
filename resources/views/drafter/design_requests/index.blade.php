@@ -66,7 +66,7 @@
                     <div><h2>{{ $selected->code }}</h2><div class="text-muted-2">{{ $selected->customer_name }}</div></div>
                     <x-status-badge :status="$selected->status" :label="$statusText($selected->status)" />
                 </div>
-                <div class="detail-tabs"><span class="active">Detail</span><span>Riwayat</span><span>Revisi</span><span>Dokumen</span></div>
+                <div class="detail-tabs"><a class="active" href="{{ route('drafter.design-requests.show', $selected) }}#brief">Detail</a><a href="{{ route('drafter.design-requests.show', $selected) }}#history">Riwayat</a><a href="{{ route('drafter.design-requests.show', $selected) }}#revisions">Revisi</a><a href="{{ route('drafter.design-requests.show', $selected) }}#documents">Dokumen</a></div>
                 <div class="info-card">
                     <h6>Informasi Umum</h6>
                     <div class="detail-grid two">

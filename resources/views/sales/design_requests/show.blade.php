@@ -5,6 +5,8 @@
     $statusClass = match($designRequest->status) {
         'completed' => 'st-green',
         'drafting' => 'st-blue',
+        'drawing_uploaded', 'revision_drawing_uploaded' => 'st-blue',
+        'revision_requested' => 'st-purple',
         'costing' => 'st-yellow',
         'review' => 'st-purple',
         'assigned' => 'st-yellow',
@@ -12,6 +14,9 @@
         default => 'st-gray',
     };
     $priorityClass = in_array($designRequest->priority, ['urgent', 'high'], true) ? 'st-red' : 'st-blue';
+    $openRevision = $designRequest->revisionRequests->first(
+        fn ($revision) => in_array($revision->status, ['requested', 'drawing_uploaded'], true)
+    );
 @endphp
 
 <div class="sales-ui">
@@ -35,8 +40,15 @@
         </div>
     </div>
 
+    <nav class="d-tabs big mb-3" aria-label="Bagian design request">
+        <a href="#detail" class="active"><i class="bi bi-shield-check me-1"></i>Detail</a>
+        <a href="#history"><i class="bi bi-clock-history me-1"></i>Riwayat</a>
+        <a href="#revisions"><i class="bi bi-arrow-repeat me-1"></i>Revisi</a>
+        <a href="#documents"><i class="bi bi-folder2-open me-1"></i>Dokumen</a>
+    </nav>
+
     <div class="row g-3 align-items-start">
-        <div class="col-xl-8">
+        <div class="col-xl-8" id="detail">
             <div class="info-card mb-3">
                 <h6><i class="bi bi-building me-1 text-primary"></i>Informasi Customer</h6>
                 <div class="row g-3">
@@ -102,6 +114,75 @@
                     @endif
                 </div>
             @endif
+
+            <div class="info-card mb-3" id="revisions">
+                <div class="card-head px-0 pt-0">
+                    <div>
+                        <h2>Request & Riwayat Revisi</h2>
+                        <small class="text-muted-2">Setelah revisi diajukan, Drafter mengunggah drawing terbaru dan Produksi mengisi ulang seluruh spesifikasi serta HPP.</small>
+                    </div>
+                </div>
+
+                @if($openRevision)
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-hourglass-split me-2"></i>
+                        Revisi {{ $openRevision->revision_number }} sedang diproses:
+                        {{ $openRevision->status === 'requested' ? 'menunggu drawing dari Drafter' : 'drawing tersedia, menunggu Produksi' }}.
+                    </div>
+                @elseif($designRequest->status === 'completed')
+                    <form method="POST" action="{{ route('sales.design-requests.revision', $designRequest) }}" class="mb-4">
+                        @csrf
+                        <label for="revisionNotes" class="form-label fw-bold">Catatan revisi *</label>
+                        <textarea id="revisionNotes" name="notes" rows="3" class="form-control @error('notes') is-invalid @enderror" required placeholder="Jelaskan bagian yang harus direvisi...">{{ old('notes') }}</textarea>
+                        @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="d-flex justify-content-end mt-2">
+                            <button class="btn btn-warning"><i class="bi bi-arrow-repeat me-1"></i>Ajukan Request Revisi</button>
+                        </div>
+                    </form>
+                @else
+                    <div class="alert alert-light border mb-3">Request revisi tersedia setelah Design Request selesai diproses Produksi.</div>
+                @endif
+
+                <div class="table-wrap">
+                    <table class="table-r compact">
+                        <thead><tr><th>Revisi</th><th>Catatan</th><th>Status</th><th>Request</th><th>Drawing Baru</th><th>Selesai</th></tr></thead>
+                        <tbody>
+                        @forelse($designRequest->revisionRequests as $revision)
+                            <tr>
+                                <td class="fw-bold">Rev {{ $revision->revision_number }}</td>
+                                <td>{{ $revision->notes }}</td>
+                                <td><x-status-badge :status="$revision->status" /></td>
+                                <td>{{ $revision->requested_at?->format('d M Y H:i') ?? '—' }}</td>
+                                <td>{{ $revision->drawing_uploaded_at?->format('d M Y H:i') ?? '—' }}</td>
+                                <td>{{ $revision->completed_at?->format('d M Y H:i') ?? '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6">Belum ada request revisi.</td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="info-card mb-3" id="history">
+                <h6><i class="bi bi-clock-history me-1 text-primary"></i>Riwayat Proses</h6>
+                <div class="d-timeline small">
+                    @foreach($designRequest->revisionRequests as $revision)
+                        <div>
+                            <time>{{ $revision->requested_at?->format('d M H:i') }}</time><span></span>
+                            <p><strong>Revisi {{ $revision->revision_number }}</strong><small>{{ $revision->notes }}</small></p>
+                        </div>
+                    @endforeach
+                    <div>
+                        <time>{{ $designRequest->updated_at->format('d M H:i') }}</time><span></span>
+                        <p><strong>{{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Pembaruan terakhir</small></p>
+                    </div>
+                    <div>
+                        <time>{{ $designRequest->created_at->format('d M H:i') }}</time><span></span>
+                        <p><strong>Design Request dibuat</strong><small>Oleh {{ $designRequest->sales?->name ?? 'Sales' }}</small></p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-xl-4">
@@ -139,11 +220,14 @@
                 </div>
             @endif
 
-            <div class="info-card">
+            <div class="info-card" id="documents">
                 <h6><i class="bi bi-folder2-open me-1 text-primary"></i>Dokumen</h6>
-                @forelse($designRequest->documents as $document)
+                @forelse($designRequest->documents->sortByDesc('created_at') as $document)
                     <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                        <div><strong class="small">{{ $document->name }}</strong><div class="small text-muted-2">{{ $document->humanSize() }}</div></div>
+                        <div>
+                            <strong class="small">{{ $document->name }}</strong>
+                            <div class="small text-muted-2">{{ $document->revisionLabel() }} · {{ $document->created_at?->format('d M Y H:i') }} · {{ $document->humanSize() }}</div>
+                        </div>
                         <a href="{{ asset('storage/'.$document->file_path) }}" class="btn btn-sm btn-soft" target="_blank"><i class="bi bi-download"></i></a>
                     </div>
                 @empty

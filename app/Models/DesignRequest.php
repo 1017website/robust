@@ -36,10 +36,21 @@ class DesignRequest extends Model
     public function items(): HasMany { return $this->hasMany(DesignRequestItem::class); }
     public function quotations(): HasMany { return $this->hasMany(Quotation::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
+    public function revisionRequests(): HasMany { return $this->hasMany(DesignRequestRevisionRequest::class)->orderByDesc('revision_number'); }
 
     public function hasPrePo(): bool
     {
         return $this->quotations()->whereHas('purchaseOrderRequest')->exists();
+    }
+
+    public function hasProductionReadyDocument(?\Illuminate\Support\Carbon $after = null): bool
+    {
+        return $this->documents()
+            ->whereIn('category', ['request_drawing', 'fabrication_drawing', 'supporting_document'])
+            ->where('is_current', true)
+            ->when($after, fn ($query) => $query->where('created_at', '>=', $after))
+            ->whereHas('uploader', fn ($query) => $query->where('role', 'drafter'))
+            ->exists();
     }
 
     public static function statuses(): array
@@ -47,6 +58,9 @@ class DesignRequest extends Model
         return [
             'draft' => 'Draft',
             'assigned' => 'Assigned',
+            'drawing_uploaded' => 'Drawing Uploaded',
+            'revision_requested' => 'Revision Requested',
+            'revision_drawing_uploaded' => 'Revision Drawing Uploaded',
             'drafting' => 'Drafting',
             'costing' => 'Costing',
             'review' => 'Review',

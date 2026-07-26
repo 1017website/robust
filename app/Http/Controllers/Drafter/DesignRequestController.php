@@ -10,7 +10,6 @@ use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class DesignRequestController extends Controller
@@ -62,7 +61,7 @@ class DesignRequestController extends Controller
     public function show(DesignRequest $designRequest)
     {
         $this->ensureAssigned($designRequest);
-        $designRequest->load('items.itemMaster', 'sales', 'documents.uploader', 'lead', 'customer', 'quotations.purchaseOrderRequest');
+        $designRequest->load('items.itemMaster', 'sales', 'documents.uploader', 'lead', 'customer', 'quotations.purchaseOrderRequest', 'revisionRequests.requester');
         $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         return view('drafter.design_requests.show', compact('designRequest', 'itemMasters'));
     }
@@ -84,14 +83,21 @@ class DesignRequestController extends Controller
     public function submitFeedback(Request $request, DesignRequest $designRequest)
     {
         $this->ensureAssigned($designRequest);
-        $isCostEditor = Auth::user()->isProduction() || Auth::user()->isAdministrator();
-        $isImageEditor = Auth::user()->isDrafter() || Auth::user()->isAdministrator();
+        abort_unless(Auth::user()->isProduction(), 403, 'Spesifikasi dan HPP hanya dapat diisi oleh Produksi.');
 
-        if ($request->input('action') === 'submit' && ! $isCostEditor) {
+        $latestRevision = $designRequest->revisionRequests()->latest('revision_number')->first();
+        $productionReady = $latestRevision
+            ? in_array($latestRevision->status, ['drawing_uploaded', 'completed'], true)
+            : $designRequest->hasProductionReadyDocument();
+
+        if (! $productionReady) {
             throw ValidationException::withMessages([
-                'action' => 'Submit final dan penetapan HPP hanya dapat dilakukan oleh Produksi.',
+                'action' => 'Produksi baru dapat mengisi spesifikasi dan HPP setelah Drafter mengunggah drawing atau dokumen terbaru.',
             ]);
         }
+
+        $isCostEditor = true;
+        $isImageEditor = true;
 
         $data = $request->validate([
             'action' => ['required', 'in:save,review,submit'],
@@ -124,7 +130,6 @@ class DesignRequestController extends Controller
             'items.*.margin' => ['nullable', 'numeric', 'min:0'],
             'items.*.is_optional' => ['nullable', 'boolean'],
             'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-            'items.*.remove_image' => ['nullable', 'boolean'],
         ]);
 
         DB::transaction(function () use ($designRequest, $data, $request, $isCostEditor, $isImageEditor) {
@@ -137,7 +142,7 @@ class DesignRequestController extends Controller
                 'status' => match ($request->input('action')) {
                     'submit' => 'completed',
                     'review' => 'review',
-                    'save' => in_array($designRequest->status, ['draft', 'assigned'], true) ? 'drafting' : $designRequest->status,
+                    'save' => in_array($designRequest->status, ['draft', 'assigned', 'drawing_uploaded', 'revision_drawing_uploaded'], true) ? 'costing' : $designRequest->status,
                 },
                 'progress' => match ($request->input('action')) {
                     'submit' => 100,
@@ -160,6 +165,17 @@ class DesignRequestController extends Controller
 
             $designRequest->update($update);
             $this->syncQuotationItems($request, $designRequest, $data['items'] ?? [], $isCostEditor, $isImageEditor);
+
+            if ($request->input('action') === 'submit') {
+                $designRequest->revisionRequests()
+                    ->where('status', 'drawing_uploaded')
+                    ->latest('revision_number')
+                    ->first()
+                    ?->update([
+                        'status' => 'completed',
+                        'completed_at' => now(),
+                    ]);
+            }
         });
 
         Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh ".Auth::user()->roleLabel(), $designRequest);
@@ -205,15 +221,8 @@ class DesignRequestController extends Controller
 
             $image = $request->file("items.{$index}.quotation_image");
             if ($image && $isImageEditor) {
-                if ($item->quotation_image_path) {
-                    Storage::disk('public')->delete($item->quotation_image_path);
-                }
                 $item->quotation_image_path = $image->store("design-request-items/{$designRequest->id}", 'public');
                 $item->quotation_image_name = $image->getClientOriginalName();
-            } elseif ($isImageEditor && ! empty($itemData['remove_image']) && $item->quotation_image_path) {
-                Storage::disk('public')->delete($item->quotation_image_path);
-                $item->quotation_image_path = null;
-                $item->quotation_image_name = null;
             }
 
             $item->save();

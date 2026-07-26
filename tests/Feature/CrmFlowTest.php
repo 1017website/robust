@@ -849,7 +849,7 @@ class CrmFlowTest extends TestCase
         $this->assertSame('paid', $poRequest->fresh()->status);
     }
 
-    public function test_drafter_image_and_structured_spec_are_snapshotted_into_excel_quotation(): void
+    public function test_production_image_and_structured_spec_are_snapshotted_into_excel_quotation(): void
     {
         Storage::fake('public');
         $sales = User::factory()->create(['role' => 'sales']);
@@ -878,6 +878,21 @@ class CrmFlowTest extends TestCase
         $specification = "[General]\nType: FH-150 ECO\nManufacturer: PT. Robust Multilab Solusindo\n[Dimensions (W x D x H, mm)]\nOverall Dimension: 1500 x 890 x 2350\n[Utilities]\nElectrical Socket: Single electric socket, IP55\n@ 4 | pcs | 500000";
 
         $this->actingAs($drafter)->post(route('drafter.design-requests.feedback', $designRequest), [
+            'action' => 'review',
+        ])->assertForbidden();
+
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => DesignRequest::class,
+            'documentable_id' => $designRequest->id,
+            'name' => 'Drawing Fume Hood',
+            'category' => 'request_drawing',
+            'file' => UploadedFile::fake()->create('drawing-fume-hood.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
+            'cost_material' => 5000000,
+            'cost_production' => 2000000,
+            'cost_installation' => 500000,
             'technical_note' => 'Render final untuk penawaran.',
             'items' => [[
                 'category' => 'Fume Hood',
@@ -889,34 +904,13 @@ class CrmFlowTest extends TestCase
                 'unit_price' => 9000000,
                 'quotation_image' => UploadedFile::fake()->image('fh-150.png', 800, 600),
             ]],
-            'action' => 'review',
-        ])->assertRedirect(route('drafter.design-requests.index'));
-
-        $designItem = $designRequest->items()->firstOrFail();
-        $this->assertSame('review', $designRequest->fresh()->status);
-        $this->assertSame(0.0, (float) $designItem->unit_price, 'Drafter tidak boleh menetapkan HPP.');
-        Storage::disk('public')->assertExists($designItem->quotation_image_path);
-
-        $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
-            'cost_material' => 5000000,
-            'cost_production' => 2000000,
-            'cost_installation' => 500000,
-            'technical_note' => 'HPP sudah ditetapkan Produksi.',
-            'items' => [[
-                'id' => $designItem->id,
-                'category' => 'Fume Hood',
-                'name' => 'FUME HOOD ECO',
-                'variant' => 'FUME HOOD FH-150 ECO',
-                'specification' => $specification,
-                'qty' => 1,
-                'unit' => 'Unit',
-                'unit_price' => 9000000,
-            ]],
             'action' => 'submit',
         ])->assertRedirect(route('drafter.design-requests.index'));
 
+        $designItem = $designRequest->items()->firstOrFail();
         $this->assertSame('completed', $designRequest->fresh()->status);
-        $this->assertSame(9000000.0, (float) $designItem->fresh()->unit_price);
+        $this->assertSame(9000000.0, (float) $designItem->unit_price);
+        Storage::disk('public')->assertExists($designItem->quotation_image_path);
 
         $this->actingAs($sales)->post(route('sales.quotations.store'), [
             'design_request_id' => $designRequest->id,

@@ -12,6 +12,7 @@ use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DesignRequestController extends Controller
@@ -187,9 +188,80 @@ class DesignRequestController extends Controller
     public function show(DesignRequest $designRequest)
     {
         abort_unless($this->canViewDesignRequest($designRequest), 403);
-        $designRequest->load('items.itemMaster', 'productionPic', 'documents', 'sales', 'customer.primaryPic', 'lead');
+        $designRequest->load('items.itemMaster', 'productionPic', 'documents.uploader', 'sales', 'customer.primaryPic', 'lead', 'revisionRequests.requester');
 
         return view('sales.design_requests.show', compact('designRequest'));
+    }
+
+    public function requestRevision(Request $request, DesignRequest $designRequest)
+    {
+        abort_unless($this->canViewDesignRequest($designRequest), 403);
+        throw_unless(
+            $designRequest->status === 'completed',
+            \Illuminate\Validation\ValidationException::withMessages([
+                'notes' => 'Revisi baru dapat diminta setelah Design Request selesai diproses Produksi.',
+            ])
+        );
+
+        $data = $request->validate([
+            'notes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($designRequest, $data) {
+            $lockedRequest = DesignRequest::query()->lockForUpdate()->findOrFail($designRequest->id);
+            $hasOpenRevision = $lockedRequest->revisionRequests()
+                ->whereIn('status', ['requested', 'drawing_uploaded'])
+                ->exists();
+
+            throw_if($hasOpenRevision, \Illuminate\Validation\ValidationException::withMessages([
+                'notes' => 'Request revisi sebelumnya masih diproses.',
+            ]));
+
+            $revisionNumber = ((int) $lockedRequest->revisionRequests()->max('revision_number')) + 1;
+            $lockedRequest->load('items');
+            $snapshot = [
+                'status' => $lockedRequest->status,
+                'dimensions' => $lockedRequest->dimensions,
+                'materials' => $lockedRequest->materials,
+                'accessories' => $lockedRequest->accessories,
+                'material_estimation' => $lockedRequest->material_estimation,
+                'cost_material' => $lockedRequest->cost_material,
+                'cost_production' => $lockedRequest->cost_production,
+                'cost_installation' => $lockedRequest->cost_installation,
+                'cost_total' => $lockedRequest->cost_total,
+                'technical_note' => $lockedRequest->technical_note,
+                'items' => $lockedRequest->items->toArray(),
+            ];
+
+            $lockedRequest->revisionRequests()->create([
+                'revision_number' => $revisionNumber,
+                'notes' => $data['notes'],
+                'status' => 'requested',
+                'snapshot' => $snapshot,
+                'requested_by' => Auth::id(),
+                'requested_at' => now(),
+            ]);
+
+            $lockedRequest->items()->delete();
+            $lockedRequest->update([
+                'dimensions' => null,
+                'materials' => null,
+                'accessories' => null,
+                'material_estimation' => null,
+                'cost_material' => 0,
+                'cost_production' => 0,
+                'cost_installation' => 0,
+                'cost_total' => 0,
+                'technical_note' => null,
+                'submitted_at' => null,
+                'status' => 'revision_requested',
+                'progress' => 0,
+            ]);
+        });
+
+        Logger::record('revision_requested', "Revisi Design Request {$designRequest->code} diminta Sales", $designRequest);
+
+        return back()->with('success', 'Request revisi dikirim. Drafter perlu mengunggah revisi drawing/dokumen sebelum Produksi mengisi ulang spesifikasi dan HPP.');
     }
 
     protected function designRequestQuery()

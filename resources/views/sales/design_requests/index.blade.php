@@ -5,7 +5,8 @@
     $selected = $selectedRequest;
     $statusClass = fn($s) => match($s) {
         'completed' => 'st-green',
-        'drafting' => 'st-blue',
+        'drafting', 'drawing_uploaded', 'revision_drawing_uploaded' => 'st-blue',
+        'revision_requested' => 'st-purple',
         'costing' => 'st-yellow',
         'review' => 'st-purple',
         'assigned' => 'st-yellow',

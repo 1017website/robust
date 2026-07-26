@@ -160,6 +160,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/design-requests/create', [SalesDesignRequestController::class, 'create'])->name('design-requests.create');
         Route::post('/design-requests', [SalesDesignRequestController::class, 'store'])->name('design-requests.store');
         Route::get('/design-requests/{designRequest}', [SalesDesignRequestController::class, 'show'])->name('design-requests.show');
+        Route::post('/design-requests/{designRequest}/revision', [SalesDesignRequestController::class, 'requestRevision'])->name('design-requests.revision');
 
         Route::get('/quotations', [QuotationController::class, 'index'])->name('quotations.index');
         Route::get('/quotations/create', [QuotationController::class, 'create'])->name('quotations.create');

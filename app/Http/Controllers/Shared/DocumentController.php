@@ -107,11 +107,40 @@ class DocumentController extends Controller
                 ->where('id', '!=', $document->id)->update(['is_current' => false]);
         }
 
+        if ($documentable instanceof DesignRequest && $user->isDrafter()) {
+            $openRevision = $documentable->revisionRequests()
+                ->where('status', 'requested')
+                ->latest('revision_number')
+                ->first();
+            $hasRevisionHistory = $documentable->revisionRequests()->exists();
+
+            if ($openRevision && $documentable->hasProductionReadyDocument($openRevision->requested_at)) {
+                $openRevision->update([
+                    'status' => 'drawing_uploaded',
+                    'drawing_uploaded_at' => now(),
+                ]);
+                $documentable->update([
+                    'status' => 'revision_drawing_uploaded',
+                    'progress' => max(25, (int) $documentable->progress),
+                ]);
+            } elseif (! $hasRevisionHistory && $documentable->hasProductionReadyDocument()) {
+                $documentable->update([
+                    'status' => 'drawing_uploaded',
+                    'progress' => max(25, (int) $documentable->progress),
+                ]);
+            }
+        }
+
         return back()->with('success', 'Dokumen berhasil diunggah.');
     }
 
     public function destroy(Document $document)
     {
+        abort_if(
+            $document->documentable_type === DesignRequest::class,
+            422,
+            'Drawing dan dokumen Design Request tidak dapat dihapus. Unggah file baru sebagai revisi.'
+        );
         abort_unless($this->canManageDocument($document), 403);
         $document->delete();
         return back()->with('success', 'Dokumen berhasil diarsipkan.');
