@@ -34,7 +34,7 @@
             <div class="card-head"><h2>My Tasks Today</h2><a href="{{ route('drafter.tasks.index') }}" class="btn btn-soft btn-sm">Lihat Semua Tasks <i class="bi bi-arrow-right ms-1"></i></a></div>
             <div class="table-wrap">
                 <table class="drafter-table">
-                    <thead><tr><th>Task</th><th>Project</th><th>Tipe Pekerjaan</th><th>Deadline</th><th>Status</th><th>Prioritas</th><th></th></tr></thead>
+                    <thead><tr><th>Task</th><th>Project</th><th>Tipe Pekerjaan</th><th>Deadline</th><th>Status</th><th>Urgensi</th><th></th></tr></thead>
                     <tbody>
                     @forelse($myTasks as $task)
                         @php($late = $task->deadline && $task->deadline->isPast() && !$task->deadline->isToday())
@@ -44,7 +44,7 @@
                             <td>{{ \Illuminate\Support\Str::headline($task->status === 'costing' ? 'BOQ / Costing' : ($task->outputs[0] ?? 'Layout')) }}</td>
                             <td class="{{ $late ? 'text-danger fw-bold' : '' }}"><i class="bi bi-calendar-event me-1"></i>{{ $task->deadline?->isToday() ? 'Hari ini' : ($task->deadline?->isTomorrow() ? 'Besok' : ($task->deadline?->translatedFormat('d M Y') ?? '—')) }}</td>
                             <td><x-status-badge :status="$task->status" :label="$statusText($task->status)" /></td>
-                            <td><x-status-badge :status="$task->priority" :label="ucfirst($task->priority)" /></td>
+                            <td><x-status-badge :status="in_array($task->priority, ['urgent','high'], true) ? 'overdue' : 'identify'" :label="\App\Models\DesignRequest::urgencyLabel($task->priority)" /></td>
                             <td><a class="btn btn-soft btn-sm" href="{{ route('drafter.design-requests.show', $task) }}">Buka</a></td>
                         </tr>
                     @empty

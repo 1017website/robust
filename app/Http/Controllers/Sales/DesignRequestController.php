@@ -43,7 +43,7 @@ class DesignRequestController extends Controller
         }
 
         if ($priority = $request->get('priority')) {
-            $query->where('priority', $priority);
+            $query->whereIn('priority', $priority === 'urgent' ? ['urgent', 'high'] : ['normal', 'medium', 'low']);
         }
 
         $designRequests = $query->paginate(10)->withQueryString();
@@ -68,11 +68,23 @@ class DesignRequestController extends Controller
     public function create(Request $request)
     {
         $lead = $request->get('lead') ? $this->leadQuery()->findOrFail($request->get('lead')) : null;
+        $leads = $this->leadQuery()
+            ->with('customer.primaryPic')
+            ->orderBy('instansi')
+            ->get();
+        $customers = $this->customerQuery()
+            ->with([
+                'primaryPic',
+                'leads' => fn ($query) => $query->latest(),
+                'projects' => fn ($query) => $query->latest(),
+            ])
+            ->orderBy('name')
+            ->get();
         $drafters = User::assignableDraftersQuery()->get();
         $drafterWorkloads = $this->drafterWorkloads($drafters);
         $salesList = User::assignableSales();
 
-        return view('sales.design_requests.create', compact('lead', 'drafters', 'drafterWorkloads', 'salesList'));
+        return view('sales.design_requests.create', compact('lead', 'leads', 'customers', 'drafters', 'drafterWorkloads', 'salesList'));
     }
 
     public function store(Request $request)
@@ -85,13 +97,19 @@ class DesignRequestController extends Controller
             'project_name' => ['required', 'string', 'max:255'],
             'request_date' => ['required', 'date'],
             'deadline' => ['required', 'date', 'after_or_equal:request_date'],
-            'priority' => ['required', 'in:low,medium,high'],
+            'priority' => ['required', 'in:normal,urgent,low,medium,high'],
             'short_description' => ['required', 'string', 'max:500'],
             'lab_type' => ['nullable', 'string', 'max:255'],
             'capacity' => ['nullable', 'string', 'max:255'],
             'detail_need' => ['required', 'string', 'max:1000'],
             'scope_checklist' => ['nullable', 'array'],
             'scope_checklist.*' => ['nullable', 'string', 'max:120'],
+            'scope_other' => [
+                Rule::requiredIf(fn () => in_array('Lainnya', (array) $request->input('scope_checklist', []), true)),
+                'nullable',
+                'string',
+                'max:255',
+            ],
             'outputs' => ['nullable', 'array'],
             'outputs.*' => ['nullable', 'string', 'max:80'],
             'extra_note' => ['nullable', 'string', 'max:500'],
@@ -130,6 +148,10 @@ class DesignRequestController extends Controller
         }
 
         $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
+        if (($otherIndex = array_search('Lainnya', $data['scope_checklist'], true)) !== false) {
+            $data['scope_checklist'][$otherIndex] = 'Lainnya: '.trim($data['scope_other']);
+        }
+        unset($data['scope_other']);
         $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
         $data['code'] = CodeGenerator::next(DesignRequest::class, 'DR', 3);
         $lead = $this->leadQuery()->find($data['lead_id'] ?? null);

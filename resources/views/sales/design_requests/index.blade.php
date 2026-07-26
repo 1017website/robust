@@ -13,6 +13,7 @@
         'draft' => 'st-gray',
         default => 'st-gray',
     };
+    $urgencyClass = fn($priority) => in_array($priority, ['urgent', 'high'], true) ? 'st-red' : 'st-blue';
     $previewUrl = fn($id) => route('sales.design-requests.index', array_merge(request()->query(), ['design_request' => $id])).'#design-request-detail';
 @endphp
 
@@ -32,6 +33,7 @@
             <div class="card-r p-0 overflow-hidden">
                 <form class="sales-filter-row p-3 pb-0" method="GET">
                     <select name="status" class="form-select"><option value="">Semua Status</option>@foreach(\App\Models\DesignRequest::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')==$k)>{{ $v }}</option>@endforeach</select>
+                    <select name="priority" class="form-select"><option value="">Semua Urgensi</option>@foreach(\App\Models\DesignRequest::urgencyOptions() as $k=>$v)<option value="{{ $k }}" @selected(request('priority')===$k)>{{ $v }}</option>@endforeach</select>
                     @if(!auth()->user()->isSales())<select name="sales_id" class="form-select"><option value="">Semua Sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)request('sales_id')===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select>@endif
                     <select name="production_pic_id" class="form-select"><option value="">Semua Produksi PIC</option>@foreach($drafters as $drafter)<option value="{{ $drafter->id }}" @selected((string)request('production_pic_id')===(string)$drafter->id)>{{ $drafter->name }}</option>@endforeach</select>
                     <div class="sales-search"><i class="bi bi-search"></i><input name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari design request..."></div>
@@ -39,7 +41,7 @@
                 </form>
                 <div class="table-wrap">
                     <table class="sales-table">
-                        <thead><tr><th>No</th><th>Customer / Project</th><th>Kebutuhan</th><th>Status</th><th>PIC Produksi</th><th>Deadline</th><th>Progress</th><th>Terakhir Update</th><th></th></tr></thead>
+                        <thead><tr><th>No</th><th>Customer / Project</th><th>Kebutuhan</th><th>Status</th><th>Urgensi</th><th>PIC Produksi</th><th>Deadline</th><th>Progress</th><th>Terakhir Update</th><th></th></tr></thead>
                         <tbody>
                         @forelse($designRequests as $dr)
                             <tr class="{{ $selected && $selected->id === $dr->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($dr->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview design request">
@@ -47,6 +49,7 @@
                                 <td><a class="fw-bold" href="{{ route('sales.design-requests.show',$dr) }}">{{ $dr->customer_name }}</a><div class="small text-muted-2">{{ $dr->project_name }}</div></td>
                                 <td class="text-truncate-cell">{{ implode(', ', $dr->scope_checklist ?? []) ?: $dr->detail_need }}</td>
                                 <td><span class="status-soft {{ $statusClass($dr->status) }}">{{ \App\Models\DesignRequest::statuses()[$dr->status] ?? $dr->status }}</span></td>
+                                <td><span class="status-soft {{ $urgencyClass($dr->priority) }}">{{ \App\Models\DesignRequest::urgencyLabel($dr->priority) }}</span></td>
                                 <td><div class="d-flex align-items-center gap-2">@if($dr->productionPic)<div class="mini-avatar">{{ strtoupper(substr($dr->productionPic->name,0,1)) }}</div><div>{{ $dr->productionPic->name }}<div class="small text-muted-2">Drafter</div></div>@else<span class="text-muted-2">Belum ditugaskan</span>@endif</div></td>
                                 <td>{{ $dr->deadline?->translatedFormat('d M Y') ?: '-' }}</td>
                                 <td><strong>{{ $dr->progress }}%</strong><div class="sales-progress mt-1"><span style="width:{{ $dr->progress }}%"></span></div></td>
@@ -54,7 +57,7 @@
                                 <td><a href="{{ route('sales.design-requests.show',$dr) }}" class="btn btn-sm btn-soft" aria-label="Buka detail"><i class="bi bi-chevron-right"></i></a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="9"><x-empty text="Belum ada design request." /></td></tr>
+                            <tr><td colspan="10"><x-empty text="Belum ada design request." /></td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -66,7 +69,7 @@
             @if($selected)
                 <div class="sales-detail-head"><div><h4 class="fw-black mb-0">{{ $selected->code }}</h4><div class="small text-muted-2">{{ $selected->customer_name }}</div></div><a href="{{ route('sales.design-requests.show',$selected) }}" class="btn btn-sm btn-soft" aria-label="Buka detail"><i class="bi bi-chevron-right"></i></a></div>
                 <div class="sales-detail-body design-request-detail-body">
-                    <span class="status-soft {{ $statusClass($selected->status) }}">{{ \App\Models\DesignRequest::statuses()[$selected->status] ?? $selected->status }}</span>
+                    <div class="d-flex flex-wrap gap-2"><span class="status-soft {{ $statusClass($selected->status) }}">{{ \App\Models\DesignRequest::statuses()[$selected->status] ?? $selected->status }}</span><span class="status-soft {{ $urgencyClass($selected->priority) }}">{{ \App\Models\DesignRequest::urgencyLabel($selected->priority) }}</span></div>
                     <div class="design-request-detail-sections">
                         <div class="info-card"><h6>Informasi Customer</h6><div class="kv"><div class="k">Customer</div><div class="v">{{ $selected->customer_name }}</div></div><div class="kv"><div class="k">PIC</div><div class="v">{{ $selected->pic_name ?: '-' }}</div></div><div class="kv"><div class="k">Sales</div><div class="v">{{ $selected->sales?->name ?? '-' }}</div></div></div>
                         <div class="info-card"><h6>Kebutuhan Customer</h6><div class="fw-bold mb-2">{{ $selected->project_name }}</div>@foreach(($selected->scope_checklist ?? []) as $item)<div class="small mb-1"><i class="bi bi-check text-success me-1"></i>{{ $item }}</div>@endforeach<div class="small mt-2">{{ $selected->detail_need }}</div></div>

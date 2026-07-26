@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Activity;
 use App\Models\Customer;
+use App\Models\DesignRequest;
 use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\User;
@@ -110,5 +111,82 @@ class LeadActivityNotificationRegressionTest extends TestCase
             'Request Masuk',
             'side-badge',
         ], false);
+    }
+
+    public function test_design_request_can_load_customer_pic_and_project_from_master_data(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $customer = Customer::create([
+            'code' => 'CUST-MASTER-DR',
+            'name' => 'Customer Master Design',
+            'pipeline_stage' => 'identify',
+            'sales_id' => $sales->id,
+        ]);
+        $customer->pics()->create([
+            'name' => 'PIC Master Design',
+            'is_primary' => true,
+        ]);
+        Lead::create([
+            'code' => 'LD-MASTER-DR',
+            'customer_id' => $customer->id,
+            'instansi' => $customer->name,
+            'pic_name' => 'PIC Master Design',
+            'phone' => '081200000002',
+            'lab_name' => 'Proyek Master Laboratorium',
+            'scope_items' => ['Wall Bench'],
+            'priority' => 'high',
+            'status' => 'aktif',
+            'stage' => 'lead',
+            'sales_id' => $sales->id,
+        ]);
+
+        $response = $this->actingAs($sales)->get(route('sales.design-requests.create'));
+
+        $response->assertOk();
+        $response->assertSee('Ambil dari Master Lead / Customer');
+        $response->assertSee('data-customer="Customer Master Design"', false);
+        $response->assertSee('data-pic="PIC Master Design"', false);
+        $response->assertSee('data-project="Proyek Master Laboratorium"', false);
+    }
+
+    public function test_design_request_other_scope_requires_detail_and_saves_urgency(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $customer = Customer::create([
+            'name' => 'Customer Scope Lainnya',
+            'pipeline_stage' => 'identify',
+            'sales_id' => $sales->id,
+        ]);
+        $payload = [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'pic_name' => 'PIC Scope',
+            'project_name' => 'Proyek Scope Khusus',
+            'request_date' => now()->format('Y-m-d'),
+            'deadline' => now()->addDays(7)->format('Y-m-d'),
+            'priority' => 'urgent',
+            'short_description' => 'Desain kebutuhan khusus.',
+            'detail_need' => 'Detail kebutuhan khusus customer.',
+            'scope_checklist' => ['Lainnya'],
+            'production_pic_id' => $drafter->id,
+            'action' => 'send',
+        ];
+
+        $this->actingAs($sales)
+            ->from(route('sales.design-requests.create'))
+            ->post(route('sales.design-requests.store'), $payload)
+            ->assertRedirect(route('sales.design-requests.create'))
+            ->assertSessionHasErrors('scope_other');
+
+        $this->actingAs($sales)
+            ->post(route('sales.design-requests.store'), $payload + [
+                'scope_other' => 'Pass Box Custom',
+            ])
+            ->assertRedirect(route('sales.design-requests.index'));
+
+        $designRequest = DesignRequest::where('project_name', 'Proyek Scope Khusus')->firstOrFail();
+        $this->assertSame('urgent', $designRequest->priority);
+        $this->assertSame(['Lainnya: Pass Box Custom'], $designRequest->scope_checklist);
     }
 }

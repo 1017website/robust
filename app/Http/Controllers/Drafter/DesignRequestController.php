@@ -29,7 +29,7 @@ class DesignRequestController extends Controller
             $query->where('sales_id', $sales);
         }
         if ($priority = $request->get('priority')) {
-            $query->where('priority', $priority);
+            $query->whereIn('priority', $priority === 'urgent' ? ['urgent', 'high'] : ['normal', 'medium', 'low']);
         }
         if ($date = $request->get('date')) {
             $query->whereDate('request_date', $date);

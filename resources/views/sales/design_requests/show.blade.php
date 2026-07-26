@@ -11,12 +11,7 @@
         'rejected' => 'st-red',
         default => 'st-gray',
     };
-    $priorityClass = match($designRequest->priority) {
-        'high' => 'st-red',
-        'medium' => 'st-yellow',
-        'low' => 'st-green',
-        default => 'st-gray',
-    };
+    $priorityClass = in_array($designRequest->priority, ['urgent', 'high'], true) ? 'st-red' : 'st-blue';
 @endphp
 
 <div class="sales-ui">
@@ -116,7 +111,7 @@
                 <div class="kv"><div class="k">Drafter</div><div class="v">{{ $designRequest->productionPic?->name ?? '—' }}</div></div>
                 <div class="kv"><div class="k">Tanggal Request</div><div class="v">{{ $designRequest->request_date?->translatedFormat('d M Y') ?? $designRequest->created_at?->translatedFormat('d M Y') }}</div></div>
                 <div class="kv"><div class="k">Deadline</div><div class="v">{{ $designRequest->deadline?->translatedFormat('d M Y') ?? '—' }}</div></div>
-                <div class="kv"><div class="k">Prioritas</div><div class="v"><span class="status-soft {{ $priorityClass }}">{{ ucfirst($designRequest->priority ?: 'medium') }}</span></div></div>
+                <div class="kv"><div class="k">Status Urgensi</div><div class="v"><span class="status-soft {{ $priorityClass }}">{{ \App\Models\DesignRequest::urgencyLabel($designRequest->priority) }}</span></div></div>
                 @if($designRequest->production_note)
                     <hr>
                     <div class="small text-muted-2 mb-1">Catatan untuk Drafter</div>

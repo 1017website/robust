@@ -38,7 +38,7 @@
                 </form>
                 <div class="table-wrap">
                     <table class="sales-table">
-                        <thead><tr><th>No</th><th>Instansi / PIC</th><th>Divisi</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Stage</th><th>Prioritas</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+                        <thead><tr><th>No</th><th>Instansi / PIC</th><th>Divisi</th><th>Nama Proyek</th><th>Lokasi</th><th>Stage</th><th>Prioritas</th><th>Tanggal</th><th>Aksi</th></tr></thead>
                         <tbody>
                         @forelse($leads as $lead)
                             <tr class="{{ $selected && $selected->id === $lead->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($lead->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview lead">
@@ -102,7 +102,7 @@
                             <div class="kv"><div class="k">Alamat</div><div class="v lead-detail-break">{{ $selected->location ?: '-' }}</div></div>
                         </section>
                         <section class="info-card">
-                            <h6>Kebutuhan Awal</h6>
+                            <h6>Nama Proyek</h6>
                             <div class="fw-bold mb-2">{{ $selected->lab_name ?: '-' }}</div>
                             <div class="small text-muted-2 lead-detail-description">{{ $selected->need_description ?: '-' }}</div>
                             @if(count($selected->scope_items ?? []))

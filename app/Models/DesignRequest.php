@@ -54,4 +54,17 @@ class DesignRequest extends Model
             'rejected' => 'Rejected',
         ];
     }
+
+    public static function urgencyOptions(): array
+    {
+        return [
+            'normal' => 'Normal',
+            'urgent' => 'Urgent',
+        ];
+    }
+
+    public static function urgencyLabel(?string $priority): string
+    {
+        return in_array($priority, ['urgent', 'high'], true) ? 'Urgent' : 'Normal';
+    }
 }
