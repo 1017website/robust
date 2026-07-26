@@ -934,6 +934,11 @@ class CrmFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Project siap ditagihkan');
 
+        $this->actingAs($admin)->get(route('admin.invoices.create', ['request_po' => $poRequest->id]))
+            ->assertOk()
+            ->assertSee('Terbitkan Invoice')
+            ->assertSee('Pelunasan 100%');
+
         $this->actingAs($admin)->post(route('admin.invoices.store'), [
             'purchase_order_request_id' => $poRequest->id,
             'invoice_date' => now()->format('Y-m-d'),

@@ -1,6 +1,17 @@
 @extends('layouts.app')
 @section('title','Terbitkan Invoice')
 @section('content')
+@php
+    $initialTerms = old('terms');
+    if (! is_array($initialTerms) || $initialTerms === []) {
+        $initialTerms = [[
+            'description' => 'Pelunasan 100%',
+            'percentage' => 100,
+            'amount' => (float) $requestPo->quotation->grand_total,
+            'due_date' => null,
+        ]];
+    }
+@endphp
 <x-page-header title="Terbitkan Invoice" :subtitle="$requestPo->code.' · '.$requestPo->quotation->customer_name"><a href="{{ route('admin.purchase-order-requests.show',$requestPo) }}" class="btn btn-soft">Kembali</a></x-page-header>
 <form method="POST" action="{{ route('admin.invoices.store') }}">@csrf<input type="hidden" name="purchase_order_request_id" value="{{ $requestPo->id }}">
 <div class="row g-3"><div class="col-lg-8">
@@ -9,7 +20,7 @@
 </div><div class="col-lg-4"><div class="card-r"><div class="card-head"><h2>Ringkasan</h2></div><div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong>{{ \App\Support\Format::rupiah($requestPo->quotation->subtotal) }}</strong></div><div class="d-flex justify-content-between mb-2"><span>PPN</span><strong>{{ \App\Support\Format::rupiah($requestPo->quotation->tax_amount) }}</strong></div><hr><div class="d-flex justify-content-between"><span>Grand Total</span><strong id="grandLabel">{{ \App\Support\Format::rupiah($requestPo->quotation->grand_total) }}</strong></div><div class="d-flex justify-content-between mt-2"><span>Total Termin</span><strong id="termTotal">Rp 0</strong></div></div><button class="btn btn-primary w-100">Terbitkan Invoice</button></div></div>
 </form>
 @push('scripts')<script>
-let termIndex=0; const grand={{ (float)$requestPo->quotation->grand_total }}; const initialTerms=@json(old('terms', [['description' => 'Pelunasan 100%', 'percentage' => 100, 'amount' => (float) $requestPo->quotation->grand_total, 'due_date' => null]])); const rupiah=n=>'Rp '+new Intl.NumberFormat('id-ID').format(n||0);
+let termIndex=0; const grand={{ (float) $requestPo->quotation->grand_total }}; const initialTerms={{ Illuminate\Support\Js::from($initialTerms) }}; const rupiah=n=>'Rp '+new Intl.NumberFormat('id-ID').format(n||0);
 function recalcTerms(){let total=0;document.querySelectorAll('.term-amount').forEach(el=>total+=Number(el.value||0));document.getElementById('termTotal').textContent=rupiah(total);}
 function addTerm(data={}){const i=termIndex++;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${i+1}</strong></td><td><input name="terms[${i}][description]" class="form-control form-control-sm" value="${data.description||''}" placeholder="DP / Progress / Pelunasan"></td><td><input name="terms[${i}][percentage]" type="number" min="0" max="100" step="0.01" class="form-control form-control-sm term-percent" value="${data.percentage||0}"></td><td><input name="terms[${i}][amount]" type="number" min="0.01" step="0.01" class="form-control form-control-sm term-amount" value="${data.amount||0}" required></td><td><input name="terms[${i}][due_date]" type="date" value="${data.due_date||''}" class="form-control form-control-sm"></td><td><button type="button" class="btn btn-sm btn-soft text-danger"><i class="bi bi-x"></i></button></td>`;document.querySelector('#termTable tbody').appendChild(tr);tr.querySelector('.term-percent').oninput=e=>{tr.querySelector('.term-amount').value=(grand*Number(e.target.value||0)/100).toFixed(2);recalcTerms()};tr.querySelector('.term-amount').oninput=recalcTerms;tr.querySelector('button').onclick=()=>{tr.remove();recalcTerms()};recalcTerms();}
 document.getElementById('addTerm').onclick=()=>addTerm();initialTerms.forEach(addTerm);
