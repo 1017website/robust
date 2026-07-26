@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
         Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
         Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
+        Route::get('/request-po/{purchaseOrderRequest}/pdf', [PurchaseOrderRequestController::class, 'downloadPdf'])->name('purchase-order-requests.pdf');
         Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');
     });
 
@@ -143,6 +144,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
         Route::put('/invoices/{invoice}/terms/{term}', [InvoiceController::class, 'updateTerm'])->name('invoices.terms.update');
     });
 

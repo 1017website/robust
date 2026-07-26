@@ -14,7 +14,7 @@ class SimpleQuotationPdf
     private const LEFT = 40.0;
     private const RIGHT = 555.28;
 
-    private ?array $logo = null;
+    protected ?array $logo = null;
 
     public function make(Quotation $quotation): string
     {

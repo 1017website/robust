@@ -8,6 +8,7 @@ use App\Models\InvoiceTerm;
 use App\Models\PurchaseOrderRequest;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
+use App\Services\OperationalDocumentPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +72,20 @@ class InvoiceController extends Controller
     {
         $invoice->load('terms', 'purchaseOrderRequest.quotation.sales', 'creator');
         return view('admin.invoices.show', compact('invoice'));
+    }
+
+    public function downloadPdf(Invoice $invoice, OperationalDocumentPdf $pdf)
+    {
+        $filename = str($invoice->code ?: 'invoice')
+            ->replace(['/', '\\'], '-')
+            ->slug('-')
+            ->append('.pdf')
+            ->toString();
+
+        return response($pdf->makeInvoice($invoice), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function updateTerm(Request $request, Invoice $invoice, InvoiceTerm $term)

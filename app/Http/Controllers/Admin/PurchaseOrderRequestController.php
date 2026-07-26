@@ -7,6 +7,7 @@ use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
+use App\Services\OperationalDocumentPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +107,22 @@ class PurchaseOrderRequestController extends Controller
         abort_if(Auth::user()->isSales() && (int) $purchaseOrderRequest->quotation?->sales_id !== (int) Auth::id(), 403);
         $purchaseOrderRequest->load('quotation.items', 'quotation.sales', 'requester', 'invoice');
         return view('admin.purchase_order_requests.show', ['requestPo' => $purchaseOrderRequest]);
+    }
+
+    public function downloadPdf(PurchaseOrderRequest $purchaseOrderRequest, OperationalDocumentPdf $pdf)
+    {
+        abort_if(Auth::user()->isSales() && (int) $purchaseOrderRequest->quotation?->sales_id !== (int) Auth::id(), 403);
+
+        $filename = str($purchaseOrderRequest->code ?: 'request-po')
+            ->replace(['/', '\\'], '-')
+            ->slug('-')
+            ->append('.pdf')
+            ->toString();
+
+        return response($pdf->makeRequestPo($purchaseOrderRequest), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
