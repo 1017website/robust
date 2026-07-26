@@ -19,8 +19,9 @@ class QuotationCalculator
      */
     public static function recalculate(Quotation $quotation): Quotation
     {
-        $subtotal = $quotation->items->sum('total');
-        $totalCost = $quotation->items->sum(
+        $mainItems = $quotation->items->where('is_optional', false);
+        $subtotal = $mainItems->sum('total');
+        $totalCost = $mainItems->sum(
             fn ($item) => (float) $item->qty * (float) $item->cost_price
         );
 

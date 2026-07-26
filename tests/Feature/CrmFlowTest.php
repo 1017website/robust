@@ -21,6 +21,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use ZipArchive;
 
 class CrmFlowTest extends TestCase
 {
@@ -780,6 +781,124 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
         $this->assertSame('paid', $invoice->fresh()->status);
         $this->assertSame('paid', $poRequest->fresh()->status);
+    }
+
+    public function test_drafter_image_and_structured_spec_are_snapshotted_into_excel_quotation(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $production = User::factory()->create(['role' => 'production']);
+        $spv = User::factory()->create(['role' => 'sales_spv']);
+        $customer = Customer::create([
+            'name' => 'Customer Excel Detail',
+            'pipeline_stage' => 'follow_up',
+            'sales_id' => $sales->id,
+        ]);
+        $designRequest = DesignRequest::create([
+            'code' => 'DR-EXCEL-001',
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'project_name' => 'Lab Export Excel',
+            'request_date' => today(),
+            'deadline' => today()->addWeek(),
+            'priority' => 'high',
+            'short_description' => 'Penawaran detail bergambar.',
+            'detail_need' => 'Fume hood lengkap.',
+            'sales_id' => $sales->id,
+            'production_pic_id' => $drafter->id,
+            'status' => 'assigned',
+        ]);
+        $specification = "[General]\nType: FH-150 ECO\nManufacturer: PT. Robust Multilab Solusindo\n[Dimensions (W x D x H, mm)]\nOverall Dimension: 1500 x 890 x 2350";
+
+        $this->actingAs($drafter)->post(route('drafter.design-requests.feedback', $designRequest), [
+            'technical_note' => 'Render final untuk penawaran.',
+            'items' => [[
+                'category' => 'Fume Hood',
+                'name' => 'FUME HOOD ECO',
+                'variant' => 'FUME HOOD FH-150 ECO',
+                'specification' => $specification,
+                'qty' => 1,
+                'unit' => 'Unit',
+                'unit_price' => 9000000,
+                'quotation_image' => UploadedFile::fake()->image('fh-150.png', 800, 600),
+            ]],
+            'action' => 'review',
+        ])->assertRedirect(route('drafter.design-requests.index'));
+
+        $designItem = $designRequest->items()->firstOrFail();
+        $this->assertSame('review', $designRequest->fresh()->status);
+        $this->assertSame(0.0, (float) $designItem->unit_price, 'Drafter tidak boleh menetapkan HPP.');
+        Storage::disk('public')->assertExists($designItem->quotation_image_path);
+
+        $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
+            'cost_material' => 5000000,
+            'cost_production' => 2000000,
+            'cost_installation' => 500000,
+            'technical_note' => 'HPP sudah ditetapkan Produksi.',
+            'items' => [[
+                'id' => $designItem->id,
+                'category' => 'Fume Hood',
+                'name' => 'FUME HOOD ECO',
+                'variant' => 'FUME HOOD FH-150 ECO',
+                'specification' => $specification,
+                'qty' => 1,
+                'unit' => 'Unit',
+                'unit_price' => 9000000,
+            ]],
+            'action' => 'submit',
+        ])->assertRedirect(route('drafter.design-requests.index'));
+
+        $this->assertSame('completed', $designRequest->fresh()->status);
+        $this->assertSame(9000000.0, (float) $designItem->fresh()->unit_price);
+
+        $this->actingAs($sales)->post(route('sales.quotations.store'), [
+            'design_request_id' => $designRequest->id,
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'project_name' => $designRequest->project_name,
+            'delivery_method' => 'email',
+            'quote_date' => today()->format('Y-m-d'),
+            'valid_until' => today()->addMonth()->format('Y-m-d'),
+            'priority' => 'high',
+            'currency' => 'IDR',
+            'discount_type' => 'percent',
+            'discount_value' => 0,
+            'tax_percent' => 11,
+            'items' => [[
+                'source_design_request_item_id' => $designItem->id,
+                'category' => $designItem->category,
+                'name' => $designItem->name,
+                'variant' => $designItem->variant,
+                'specification' => $specification,
+                'qty' => 1,
+                'unit' => 'Unit',
+                'cost_price' => 9000000,
+                'margin' => 20,
+            ]],
+            'action' => 'draft',
+        ])->assertRedirect();
+
+        $quotation = Quotation::where('project_name', 'Lab Export Excel')->latest()->firstOrFail();
+        $quotationItem = $quotation->items()->firstOrFail();
+        $this->assertNotSame($designItem->quotation_image_path, $quotationItem->quotation_image_path);
+        Storage::disk('public')->assertExists($quotationItem->quotation_image_path);
+
+        $response = $this->actingAs($sales)->get(route('sales.quotations.excel', $quotation));
+        $response->assertOk()->assertDownload();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()) === true);
+        $this->assertNotFalse($zip->locateName('xl/drawings/drawing1.xml'));
+        $this->assertNotFalse($zip->locateName('xl/media/image1.png'));
+        $worksheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        $this->assertStringContainsString('Dimensions (W x D x H, mm)', $worksheet);
+        $this->assertMatchesRegularExpression('/<f>H\\d+\\*J\\d+<\\/f>/', $worksheet);
+
+        $this->actingAs($sales)->post(route('sales.quotations.submit-approval', $quotation))->assertRedirect();
+        $this->actingAs($spv)->get(route('spv.quotation-approvals.excel', $quotation->fresh()))
+            ->assertOk()
+            ->assertDownload();
     }
 
     public function test_pra_lead_assignment_and_acceptance_does_not_duplicate_lead(): void

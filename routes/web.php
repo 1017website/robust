@@ -167,6 +167,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/quotations/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
         Route::post('/quotations/{quotation}/submit-approval', [QuotationController::class, 'submitApproval'])->name('quotations.submit-approval');
         Route::get('/quotations/{quotation}/pdf', [QuotationController::class, 'downloadPdf'])->name('quotations.pdf');
+        Route::get('/quotations/{quotation}/excel', [QuotationController::class, 'downloadExcel'])->name('quotations.excel');
         Route::post('/quotations/{quotation}/sent-to-customer', [QuotationController::class, 'markSentToCustomer'])->name('quotations.sent-to-customer');
         Route::post('/quotations/{quotation}/won', [QuotationController::class, 'markWon'])->name('quotations.won');
         Route::post('/quotations/{quotation}/lost', [QuotationController::class, 'markLost'])->name('quotations.lost');
@@ -194,6 +195,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrator,sales_spv')->prefix('spv')->name('spv.')->group(function () {
         Route::get('/quotation-approvals', [QuotationApprovalController::class, 'index'])->name('quotation-approvals.index');
         Route::get('/quotation-approvals/{quotation}', [QuotationApprovalController::class, 'show'])->name('quotation-approvals.show');
+        Route::get('/quotation-approvals/{quotation}/excel', [QuotationApprovalController::class, 'downloadExcel'])->name('quotation-approvals.excel');
         Route::post('/quotation-approvals/{quotation}/approve', [QuotationApprovalController::class, 'approve'])->name('quotation-approvals.approve');
         Route::post('/quotation-approvals/{quotation}/revision', [QuotationApprovalController::class, 'revision'])->name('quotation-approvals.revision');
         Route::post('/quotation-approvals/{quotation}/reject', [QuotationApprovalController::class, 'reject'])->name('quotation-approvals.reject');

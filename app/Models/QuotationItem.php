@@ -14,6 +14,7 @@ class QuotationItem extends Model
         'unit_price' => 'decimal:2',
         'margin' => 'decimal:2',
         'total' => 'decimal:2',
+        'is_optional' => 'boolean',
     ];
 
     public function quotation(): BelongsTo { return $this->belongsTo(Quotation::class); }

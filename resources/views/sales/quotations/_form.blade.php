@@ -4,11 +4,14 @@
     if (! is_array($itemsSource)) {
         if ($isEdit) {
             $itemsSource = $quotation->items->map(fn ($i) => [
+                'id' => $i->id,
+                'source_design_request_item_id' => $i->source_design_request_item_id,
                 'category' => $i->category,
                 'item_master_id' => $i->item_master_id,
                 'name' => $i->name,
                 'variant' => $i->variant,
                 'specification' => $i->specification,
+                'quotation_image_path' => $i->quotation_image_path,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
                 'cost_price' => (float) $i->cost_price > 0
@@ -16,19 +19,23 @@
                     : (float) $i->unit_price * (1 - ((float) $i->margin / 100)),
                 'unit_price' => $i->unit_price,
                 'margin' => $i->margin,
+                'is_optional' => $i->is_optional,
             ])->values()->all();
         } elseif ($designRequest) {
             $itemsSource = $designRequest->items->map(fn ($i) => [
+                'source_design_request_item_id' => $i->id,
                 'category' => $i->category,
                 'item_master_id' => $i->item_master_id,
                 'name' => $i->name,
                 'variant' => $i->variant,
                 'specification' => $i->specification,
+                'quotation_image_path' => $i->quotation_image_path,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
                 'cost_price' => $i->unit_price,
                 'unit_price' => 0,
                 'margin' => $i->margin,
+                'is_optional' => $i->is_optional,
             ])->values()->all();
         } else {
             $itemsSource = [];
@@ -117,7 +124,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th>Spesifikasi</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:120px">Gambar / Jenis</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -185,6 +192,7 @@
 const itemsData = @json($itemsSource);
 const itemMasters = @json($itemMasters ?? []);
 const costsData = @json(array_values($costsSource ?? []));
+const storageBase = @json(asset('storage'));
 let step = 1, itemIdx = 0, costIdx = 0;
 const rupiah = n => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n||0));
 const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -217,10 +225,11 @@ function addItem(data={}){
     const tr = document.createElement('tr');
     const masterOptions = itemMasters.map(m => `<option value="${m.id}" ${String(data.item_master_id||'')===String(m.id)?'selected':''}>${esc(m.category ? m.category+' · '+m.name : m.name)}${m.variant ? ' · '+esc(m.variant) : ''}</option>`).join('');
     tr.innerHTML = `
-        <td><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
+        <td><input type="hidden" name="items[${i}][id]" value="${esc(data.id)}"><input type="hidden" name="items[${i}][source_design_request_item_id]" value="${esc(data.source_design_request_item_id)}"><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
         <td><input name="items[${i}][name]" class="form-control form-control-sm mb-1 it-name" value="${esc(data.name)}" required placeholder="Nama item"><input name="items[${i}][variant]" class="form-control form-control-sm it-variant" value="${esc(data.variant)}" placeholder="Detail: Laci 3 / Layout L / Layout U"></td>
-        <td><input name="items[${i}][specification]" class="form-control form-control-sm" value="${esc(data.specification)}"></td>
+        <td><textarea name="items[${i}][specification]" rows="5" class="form-control form-control-sm" placeholder="[General]\\nType: ...\\n[Dimensions]\\nOverall Dimension: ...">${esc(data.specification)}</textarea></td>
+        <td>${data.quotation_image_path ? `<img src="${storageBase}/${esc(data.quotation_image_path)}" alt="" class="d-block mb-1" style="width:100%;height:70px;object-fit:contain">` : '<span class="small text-muted-2 d-block mb-2">Tanpa gambar</span>'}<label class="form-check small"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input" ${data.is_optional ? 'checked' : ''}><span class="form-check-label">Opsional</span></label></td>
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
         <td><input name="items[${i}][cost_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-cost" value="${data.cost_price ?? data.unit_price ?? 0}"></td>
@@ -243,6 +252,7 @@ function addItem(data={}){
         bindNumberInputs(tr); rowTotal(tr); recalc();
     });
     tr.querySelectorAll('.it-qty,.it-cost,.it-margin').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
+    tr.querySelector('[name$="[is_optional]"]').addEventListener('change', recalc);
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);
 }
@@ -253,7 +263,7 @@ function rowTotal(tr){
     tr.querySelector('.it-price').value=Number.isFinite(p)?p.toFixed(2):0;
     tr.querySelector('.it-price-display').textContent=rupiah(p);
     tr.querySelector('.it-total').textContent = rupiah(q*p);
-    return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost};
+    return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost,optional:tr.querySelector('[name$="[is_optional]"]').checked};
 }
 document.getElementById('addItem').onclick=()=>addItem();
 if(itemsData.length){ itemsData.forEach(addItem); } else { addItem(); }
@@ -298,8 +308,10 @@ function recalc(){
     let sub=0, totalCost=0;
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
         const row=rowTotal(tr);
-        sub += row.total;
-        totalCost += row.totalCost;
+        if(!row.optional){
+            sub += row.total;
+            totalCost += row.totalCost;
+        }
     });
     const marginAmount=Math.max(0,sub-totalCost);
     const marginPercent=sub>0?(marginAmount/sub*100):0;
@@ -326,7 +338,8 @@ function buildReview(){
     let rows='';
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
         const n=tr.querySelector('[name$="[name]"]').value, q=numberValue(tr.querySelector('.it-qty')), p=numberValue(tr.querySelector('.it-price'));
-        rows+=`<tr><td>${esc(n)}</td><td>${q}</td><td class="fw-num">${rupiah(p)}</td><td class="fw-num">${rupiah(q*p)}</td></tr>`;
+        const optional=tr.querySelector('[name$="[is_optional]"]').checked;
+        rows+=`<tr><td>${esc(n)}${optional?' <span class="badge text-bg-secondary">Opsional</span>':''}</td><td>${q}</td><td class="fw-num">${rupiah(p)}</td><td class="fw-num">${rupiah(q*p)}</td></tr>`;
     });
     document.getElementById('reviewBox').innerHTML=`
         <div class="row g-2 mb-3">

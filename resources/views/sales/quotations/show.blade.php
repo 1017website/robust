@@ -8,6 +8,7 @@
     @if($quotation->canBeSubmittedForApproval())
         <form method="POST" action="{{ route('sales.quotations.submit-approval',$quotation) }}" class="d-inline">@csrf<button class="btn btn-primary btn-sm"><i class="bi bi-send-check me-1"></i>Ajukan Approval SPV</button></form>
     @endif
+    <a href="{{ route('sales.quotations.excel',$quotation) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>{{ $quotation->canDownloadPdf() ? 'Export Excel' : 'Preview Excel' }}</a>
     @if($quotation->canDownloadPdf())
         <a href="{{ route('sales.quotations.pdf',$quotation) }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Download PDF</a>
     @else
@@ -42,8 +43,8 @@
                     <tbody>
                     @foreach($quotation->items as $it)
                         <tr>
-                            <td class="fw-semibold">{{ $it->name }}@if($it->variant)<small class="d-block text-primary">{{ $it->variant }}</small>@endif @if($it->itemMaster)<small class="d-block text-muted-2">{{ $it->itemMaster->code }}</small>@endif</td>
-                            <td class="small">{{ $it->specification ?: '—' }}</td>
+                            <td class="fw-semibold">{{ $it->name }}@if($it->is_optional)<span class="badge text-bg-secondary ms-1">Opsional</span>@endif @if($it->variant)<small class="d-block text-primary">{{ $it->variant }}</small>@endif @if($it->itemMaster)<small class="d-block text-muted-2">{{ $it->itemMaster->code }}</small>@endif @if($it->quotation_image_path)<img src="{{ asset('storage/'.$it->quotation_image_path) }}" alt="{{ $it->name }}" class="d-block mt-2" style="width:120px;height:90px;object-fit:contain">@endif</td>
+                            <td class="small" style="white-space:pre-line">{{ $it->specification ?: '—' }}</td>
                             <td>{{ rtrim(rtrim(number_format($it->qty,2),'0'),'.') }} {{ $it->unit }}</td>
                             <td class="fw-num">{{ \App\Support\Format::rupiah($it->cost_price) }}</td>
                             <td>{{ rtrim(rtrim(number_format($it->margin,2),'0'),'.') }}%</td>

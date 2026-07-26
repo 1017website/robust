@@ -116,7 +116,7 @@ class Quotation extends Model
 
     public function estimatedCostTotal(): float
     {
-        $itemCost = $this->items->sum(
+        $itemCost = $this->items->where('is_optional', false)->sum(
             fn (QuotationItem $item) => (float) $item->qty * (float) $item->cost_price
         );
 

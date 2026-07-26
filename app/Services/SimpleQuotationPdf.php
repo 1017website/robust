@@ -37,7 +37,7 @@ class SimpleQuotationPdf
         $rowIndex = 0;
 
         foreach ($quotation->items as $index => $item) {
-            $nameLines = $this->wrap((string) $item->name, 30);
+            $nameLines = $this->wrap(($item->is_optional ? '[OPSIONAL] ' : '').(string) $item->name, 30);
             $specLines = $this->wrap((string) $item->specification, 44);
             $rowHeight = max(42, 16 + count($nameLines) * 10 + count($specLines) * 8);
 

@@ -39,7 +39,7 @@ class ItemMasterController extends Controller
         return $request->validate([
             'code' => ['nullable', 'string', 'max:50', 'unique:item_masters,code,'.($itemMaster?->id ?: 'NULL')],
             'category' => ['required', 'string', 'max:100'], 'name' => ['required', 'string', 'max:255'],
-            'variant' => ['nullable', 'string', 'max:255'], 'specification' => ['nullable', 'string', 'max:2000'],
+            'variant' => ['nullable', 'string', 'max:255'], 'specification' => ['nullable', 'string', 'max:12000'],
             'unit' => ['required', 'string', 'max:50'], 'default_cost_price' => ['nullable', 'numeric', 'min:0'],
             'default_margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'], 'is_active' => ['nullable', 'boolean'],
         ]) + ['is_active' => $request->boolean('is_active')];

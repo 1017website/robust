@@ -2,6 +2,7 @@
 @section('title', 'Review Penawaran')
 @section('content')
 <x-page-header :title="'Review '.$quotation->code" :subtitle="$quotation->customer_name.' · '.$quotation->project_name">
+    <a href="{{ route('spv.quotation-approvals.excel',$quotation) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Preview Excel</a>
     <a href="{{ route('spv.quotation-approvals.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
 </x-page-header>
 
@@ -15,8 +16,8 @@
                     <tbody>
                     @foreach($quotation->items as $it)
                         <tr>
-                            <td class="fw-semibold">{{ $it->name }}</td>
-                            <td class="small">{{ $it->specification ?: '—' }}</td>
+                            <td class="fw-semibold">{{ $it->name }}@if($it->is_optional)<span class="badge text-bg-secondary ms-1">Opsional</span>@endif @if($it->quotation_image_path)<img src="{{ asset('storage/'.$it->quotation_image_path) }}" alt="{{ $it->name }}" class="d-block mt-2" style="width:120px;height:90px;object-fit:contain">@endif</td>
+                            <td class="small" style="white-space:pre-line">{{ $it->specification ?: '—' }}</td>
                             <td>{{ rtrim(rtrim(number_format($it->qty,2),'0'),'.') }} {{ $it->unit }}</td>
                             <td class="fw-num">{{ \App\Support\Format::rupiah($it->cost_price) }}</td>
                             <td>{{ rtrim(rtrim(number_format($it->margin,2),'0'),'.') }}%</td>

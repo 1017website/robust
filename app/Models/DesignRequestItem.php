@@ -13,6 +13,7 @@ class DesignRequestItem extends Model
         'unit_price' => 'decimal:2',
         'margin' => 'decimal:2',
         'total' => 'decimal:2',
+        'is_optional' => 'boolean',
     ];
 
     public function designRequest(): BelongsTo { return $this->belongsTo(DesignRequest::class); }

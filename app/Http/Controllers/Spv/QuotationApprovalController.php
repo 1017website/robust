@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Quotation;
 use App\Models\QuotationApprovalHistory;
 use App\Services\Logger;
+use App\Services\QuotationExcelExporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -42,6 +43,13 @@ class QuotationApprovalController extends Controller
     {
         $quotation->load('items', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'approvalHistories.user');
         return view('spv.quotation_approvals.show', compact('quotation'));
+    }
+
+    public function downloadExcel(Quotation $quotation, QuotationExcelExporter $excel)
+    {
+        abort_unless(in_array($quotation->status, ['waiting_approval', 'revision', 'approved', 'rejected'], true), 404);
+
+        return $excel->download($quotation);
     }
 
     public function approve(Request $request, Quotation $quotation)
@@ -143,4 +151,3 @@ class QuotationApprovalController extends Controller
         ]);
     }
 }
-

@@ -5,16 +5,19 @@ namespace App\Http\Controllers\Sales;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\DesignRequestItem;
 use App\Models\ItemMaster;
 use App\Models\Quotation;
 use App\Models\QuotationApprovalHistory;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Services\QuotationCalculator;
+use App\Services\QuotationExcelExporter;
 use App\Services\SimpleQuotationPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class QuotationController extends Controller
 {
@@ -259,6 +262,13 @@ class QuotationController extends Controller
         ]);
     }
 
+    public function downloadExcel(Quotation $quotation, QuotationExcelExporter $excel)
+    {
+        $this->ensureOwner($quotation);
+
+        return $excel->download($quotation);
+    }
+
     public function markSentToCustomer(Quotation $quotation)
     {
         $this->ensureOwner($quotation);
@@ -346,16 +356,19 @@ class QuotationController extends Controller
             'additional_costs.*.label' => ['nullable', 'string', 'max:100'],
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['nullable', 'integer', 'exists:quotation_items,id'],
+            'items.*.source_design_request_item_id' => ['nullable', 'integer', 'exists:design_request_items,id'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
             'items.*.item_master_id' => ['nullable', 'exists:item_masters,id'],
             'items.*.name' => ['required', 'string', 'max:255'],
             'items.*.variant' => ['nullable', 'string', 'max:255'],
-            'items.*.specification' => ['nullable', 'string', 'max:1000'],
+            'items.*.specification' => ['nullable', 'string', 'max:12000'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
+            'items.*.is_optional' => ['nullable', 'boolean'],
         ]);
     }
 
@@ -383,28 +396,63 @@ class QuotationController extends Controller
 
     protected function syncItems(Quotation $quotation, array $items): void
     {
+        $existingItems = $quotation->items()->get()->keyBy('id');
         $quotation->items()->delete();
 
         foreach ($items as $i => $item) {
+            $existing = ! empty($item['id']) ? $existingItems->get((int) $item['id']) : null;
+            abort_if(! empty($item['id']) && ! $existing, 422, 'Item penawaran tidak sesuai.');
+
+            $sourceItem = null;
+            if (! empty($item['source_design_request_item_id'])) {
+                $sourceItem = DesignRequestItem::query()
+                    ->where('id', $item['source_design_request_item_id'])
+                    ->when($quotation->design_request_id, fn ($query) => $query->where('design_request_id', $quotation->design_request_id))
+                    ->firstOrFail();
+            }
+
             $qty = (float) $item['qty'];
             $costPrice = (float) ($item['cost_price'] ?? $item['unit_price'] ?? 0);
             $margin = min(max((float) ($item['margin'] ?? 0), 0), 99.99);
             $unitPrice = QuotationCalculator::sellingPrice($costPrice, $margin);
+            [$imagePath, $imageName] = $this->snapshotQuotationImage($quotation, $sourceItem, $existing);
+
             $quotation->items()->create([
+                'source_design_request_item_id' => $sourceItem?->id,
                 'category' => $item['category'] ?? null,
                 'item_master_id' => $item['item_master_id'] ?? null,
                 'name' => $item['name'],
                 'variant' => $item['variant'] ?? null,
                 'specification' => $item['specification'] ?? null,
+                'quotation_image_path' => $imagePath,
+                'quotation_image_name' => $imageName,
                 'qty' => $qty,
                 'unit' => $item['unit'] ?? 'Unit',
                 'cost_price' => $costPrice,
                 'unit_price' => $unitPrice,
                 'margin' => $margin,
+                'is_optional' => ! empty($item['is_optional']),
                 'total' => round($qty * $unitPrice, 2),
                 'sort_order' => $i,
             ]);
         }
+    }
+
+    protected function snapshotQuotationImage(Quotation $quotation, ?DesignRequestItem $sourceItem, $existing): array
+    {
+        if ($sourceItem?->quotation_image_path && Storage::disk('public')->exists($sourceItem->quotation_image_path)) {
+            $extension = strtolower(pathinfo($sourceItem->quotation_image_path, PATHINFO_EXTENSION)) ?: 'png';
+            $target = "quotation-snapshots/{$quotation->id}/item-{$sourceItem->id}-".str()->random(8).".{$extension}";
+            Storage::disk('public')->put($target, Storage::disk('public')->get($sourceItem->quotation_image_path));
+
+            return [$target, $sourceItem->quotation_image_name ?: basename($sourceItem->quotation_image_path)];
+        }
+
+        if ($existing?->quotation_image_path && Storage::disk('public')->exists($existing->quotation_image_path)) {
+            return [$existing->quotation_image_path, $existing->quotation_image_name];
+        }
+
+        return [null, null];
     }
 
     protected function recordHistory(Quotation $quotation, string $action, ?string $from, ?string $to, ?string $note = null): void

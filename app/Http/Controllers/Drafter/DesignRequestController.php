@@ -10,6 +10,8 @@ use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class DesignRequestController extends Controller
 {
@@ -81,8 +83,16 @@ class DesignRequestController extends Controller
 
     public function submitFeedback(Request $request, DesignRequest $designRequest)
     {
-        abort_unless(Auth::user()->isProduction() || Auth::user()->isAdministrator(), 403, 'Spesifikasi dan costing hanya dapat diisi oleh Produksi.');
         $this->ensureAssigned($designRequest);
+        $isCostEditor = Auth::user()->isProduction() || Auth::user()->isAdministrator();
+        $isImageEditor = Auth::user()->isDrafter() || Auth::user()->isAdministrator();
+
+        if ($request->input('action') === 'submit' && ! $isCostEditor) {
+            throw ValidationException::withMessages([
+                'action' => 'Submit final dan penetapan HPP hanya dapat dilakukan oleh Produksi.',
+            ]);
+        }
+
         $data = $request->validate([
             'action' => ['required', 'in:save,review,submit'],
             'dimensions' => ['nullable', 'array'],
@@ -100,34 +110,34 @@ class DesignRequestController extends Controller
             'cost_material' => ['nullable', 'numeric'],
             'cost_production' => ['nullable', 'numeric'],
             'cost_installation' => ['nullable', 'numeric'],
-            'technical_note' => ['nullable', 'string'],
+            'technical_note' => ['nullable', 'string', 'max:5000'],
             'items' => ['nullable', 'array'],
+            'items.*.id' => ['nullable', 'integer', 'exists:design_request_items,id'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
             'items.*.item_master_id' => ['nullable', 'exists:item_masters,id'],
             'items.*.name' => ['nullable', 'string', 'max:255'],
             'items.*.variant' => ['nullable', 'string', 'max:255'],
-            'items.*.specification' => ['nullable', 'string', 'max:1000'],
+            'items.*.specification' => ['nullable', 'string', 'max:12000'],
             'items.*.qty' => ['nullable', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.margin' => ['nullable', 'numeric', 'min:0'],
+            'items.*.is_optional' => ['nullable', 'boolean'],
+            'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'items.*.remove_image' => ['nullable', 'boolean'],
         ]);
 
-        DB::transaction(function () use ($designRequest, $data, $request) {
-            $designRequest->update([
+        DB::transaction(function () use ($designRequest, $data, $request, $isCostEditor, $isImageEditor) {
+            $update = [
                 'dimensions' => $data['dimensions'] ?? null,
                 'materials' => $data['materials'] ?? null,
                 'accessories' => $data['accessories'] ?? null,
                 'material_estimation' => $data['material_estimation'] ?? null,
-                'cost_material' => $data['cost_material'] ?? 0,
-                'cost_production' => $data['cost_production'] ?? 0,
-                'cost_installation' => $data['cost_installation'] ?? 0,
-                'cost_total' => ($data['cost_material'] ?? 0) + ($data['cost_production'] ?? 0) + ($data['cost_installation'] ?? 0),
                 'technical_note' => $data['technical_note'] ?? null,
                 'status' => match ($request->input('action')) {
                     'submit' => 'completed',
                     'review' => 'review',
-                    'save' => $designRequest->status === 'assigned' ? 'drafting' : $designRequest->status,
+                    'save' => in_array($designRequest->status, ['draft', 'assigned'], true) ? 'drafting' : $designRequest->status,
                 },
                 'progress' => match ($request->input('action')) {
                     'submit' => 100,
@@ -135,35 +145,86 @@ class DesignRequestController extends Controller
                     'save' => max((int) $designRequest->progress, 25),
                 },
                 'submitted_at' => $request->input('action') === 'submit' ? now() : $designRequest->submitted_at,
-            ]);
+            ];
 
-            if ($request->input('action') === 'submit' && ! empty($data['items'])) {
-                $designRequest->items()->delete();
-                foreach ($data['items'] as $item) {
-                    if (empty($item['name'])) continue;
-                    $designRequest->items()->create([
-                        'category' => $item['category'] ?? null,
-                        'item_master_id' => $item['item_master_id'] ?? null,
-                        'name' => $item['name'],
-                        'variant' => $item['variant'] ?? null,
-                        'specification' => $item['specification'] ?? null,
-                        'qty' => $item['qty'] ?? 1,
-                        'unit' => $item['unit'] ?? 'Unit',
-                        'unit_price' => $item['unit_price'] ?? 0,
-                        'margin' => $item['margin'] ?? 0,
-                        'total' => ($item['qty'] ?? 1) * ($item['unit_price'] ?? 0),
-                    ]);
-                }
+            if ($isCostEditor) {
+                $update += [
+                    'cost_material' => $data['cost_material'] ?? 0,
+                    'cost_production' => $data['cost_production'] ?? 0,
+                    'cost_installation' => $data['cost_installation'] ?? 0,
+                    'cost_total' => ($data['cost_material'] ?? 0)
+                        + ($data['cost_production'] ?? 0)
+                        + ($data['cost_installation'] ?? 0),
+                ];
             }
+
+            $designRequest->update($update);
+            $this->syncQuotationItems($request, $designRequest, $data['items'] ?? [], $isCostEditor, $isImageEditor);
         });
 
-        Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh Produksi", $designRequest);
+        Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh ".Auth::user()->roleLabel(), $designRequest);
 
         $message = $request->input('action') === 'submit'
             ? 'Berhasil submit final ke sales.'
             : 'Feedback design request berhasil disimpan.';
 
         return redirect()->route('drafter.design-requests.index')->with('success', $message);
+    }
+
+    protected function syncQuotationItems(Request $request, DesignRequest $designRequest, array $items, bool $isCostEditor, bool $isImageEditor): void
+    {
+        $existing = $designRequest->items()->get()->keyBy('id');
+        $keptIds = [];
+
+        foreach (array_values($items) as $index => $itemData) {
+            if (blank($itemData['name'] ?? null)) {
+                continue;
+            }
+
+            $item = ! empty($itemData['id']) ? $existing->get((int) $itemData['id']) : null;
+            abort_if(! empty($itemData['id']) && ! $item, 422, 'Item Design Request tidak sesuai.');
+
+            $item ??= $designRequest->items()->make();
+            $qty = (float) ($itemData['qty'] ?? 1);
+            $hpp = $isCostEditor ? (float) ($itemData['unit_price'] ?? 0) : (float) ($item->unit_price ?? 0);
+
+            $item->fill([
+                'category' => $itemData['category'] ?? null,
+                'item_master_id' => $itemData['item_master_id'] ?? null,
+                'name' => $itemData['name'],
+                'variant' => $itemData['variant'] ?? null,
+                'specification' => $itemData['specification'] ?? null,
+                'qty' => $qty,
+                'unit' => $itemData['unit'] ?? 'Unit',
+                'unit_price' => $hpp,
+                'margin' => $item->margin ?? 0,
+                'is_optional' => ! empty($itemData['is_optional']),
+                'sort_order' => $index,
+                'total' => round($qty * $hpp, 2),
+            ]);
+
+            $image = $request->file("items.{$index}.quotation_image");
+            if ($image && $isImageEditor) {
+                if ($item->quotation_image_path) {
+                    Storage::disk('public')->delete($item->quotation_image_path);
+                }
+                $item->quotation_image_path = $image->store("design-request-items/{$designRequest->id}", 'public');
+                $item->quotation_image_name = $image->getClientOriginalName();
+            } elseif ($isImageEditor && ! empty($itemData['remove_image']) && $item->quotation_image_path) {
+                Storage::disk('public')->delete($item->quotation_image_path);
+                $item->quotation_image_path = null;
+                $item->quotation_image_name = null;
+            }
+
+            $item->save();
+            $keptIds[] = $item->id;
+        }
+
+        if ($keptIds) {
+            $designRequest->items()->whereNotIn('id', $keptIds)->delete();
+        } elseif ($designRequest->items()->exists()) {
+            $designRequest->items()->delete();
+        }
     }
 
     protected function ensureAssigned(DesignRequest $designRequest): void
