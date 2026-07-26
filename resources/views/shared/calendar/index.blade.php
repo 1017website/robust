@@ -10,7 +10,7 @@
     $typeClass = fn($t) => match($t) {'meeting'=>'sorange','call'=>'sblue','survey_lokasi'=>'sgreen','presentasi'=>'spurple','follow_up'=>'sorange','whatsapp'=>'sgreen','email'=>'sred','penawaran'=>'steal', default=>'sblue'};
 @endphp
 <div class="sales-ui">
-    <div class="sales-page-head"><div class="sales-title-wrap"><div class="sales-title-icon"><i class="bi bi-calendar3"></i></div><div><h1 class="page-title mb-1">Calendar</h1><div class="page-subtitle">Kelola jadwal dan aktivitas harian untuk mendukung penjualan dan menjaga hubungan dengan customer.</div></div></div><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div>
+    <div class="sales-page-head"><div class="sales-title-wrap"><div class="sales-title-icon"><i class="bi bi-calendar3"></i></div><div><h1 class="page-title mb-1">Calendar</h1><div class="page-subtitle">Kelola jadwal dan aktivitas harian untuk mendukung penjualan dan menjaga hubungan dengan customer.</div></div></div>@if(auth()->user()->isSales())<a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a>@endif</div>
     <div class="calendar-page-grid">
         <div>
             <div class="sales-toolbar">

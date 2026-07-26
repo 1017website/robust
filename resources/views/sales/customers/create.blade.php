@@ -40,7 +40,12 @@
             <div class="col-xl-5">
                 <div class="sales-form-card">
                     <h2 class="sales-form-title">Pipeline & Kepemilikan</h2>
-                    <div class="mb-3"><label class="form-label small fw-bold">Pipeline Stage *</label><select name="pipeline_stage" class="form-select" required>@foreach(\App\Models\Customer::stages() as $key => $label)<option value="{{ $key }}" @selected(old('pipeline_stage', 'identify') === $key)>{{ $label }}</option>@endforeach</select></div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pipeline Stage</label>
+                        <input type="hidden" name="pipeline_stage" value="maintaining">
+                        <input class="form-control" value="Maintaining" readonly>
+                        <div class="form-text">Customer existing otomatis masuk ke pipeline Maintaining.</div>
+                    </div>
                     <div class="mb-3"><label class="form-label small fw-bold">Probability (%)</label><input name="probability" type="number" min="0" max="100" value="{{ old('probability', 0) }}" class="form-control"></div>
                     @if(! auth()->user()->isSales())
                         <div class="mb-3"><label class="form-label small fw-bold">Sales Owner *</label><select name="sales_id" class="form-select" required><option value="">Pilih sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string) old('sales_id') === (string) $sales->id)>{{ $sales->name }}</option>@endforeach</select></div>

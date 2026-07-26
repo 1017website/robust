@@ -25,6 +25,9 @@ class ProjectWorkflow extends Model
         'qc_completed' => 'boolean',
         'qc_checklist' => 'array',
         'qc_updated_at' => 'datetime',
+        'payment_confirmation_completed' => 'boolean',
+        'withholding_tax_receipt_completed' => 'boolean',
+        'administration_updated_at' => 'datetime',
         'delivery_scheduled_at' => 'datetime',
         'customer_received_at' => 'datetime',
         'delivery_out_completed' => 'boolean',
@@ -35,6 +38,7 @@ class ProjectWorkflow extends Model
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }
     public function productionUpdater(): BelongsTo { return $this->belongsTo(User::class, 'production_updated_by'); }
     public function qcUpdater(): BelongsTo { return $this->belongsTo(User::class, 'qc_updated_by'); }
+    public function administrationUpdater(): BelongsTo { return $this->belongsTo(User::class, 'administration_updated_by'); }
     public function deliveryUpdater(): BelongsTo { return $this->belongsTo(User::class, 'delivery_updated_by'); }
 
     public static function productionStatuses(): array

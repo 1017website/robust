@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Administration;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Project;
+use App\Services\Logger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProjectMonitoringController extends Controller
 {
@@ -39,5 +41,27 @@ class ProjectMonitoringController extends Controller
         ];
 
         return view('administration.project-monitoring.index', compact('projects', 'stats'));
+    }
+
+    public function update(Request $request, Project $project)
+    {
+        $data = $request->validate([
+            'administration_comment' => ['nullable', 'string', 'max:2000'],
+            'payment_confirmation_completed' => ['nullable', 'boolean'],
+            'withholding_tax_receipt_completed' => ['nullable', 'boolean'],
+        ]);
+
+        $workflow = $project->workflow()->firstOrCreate();
+        $workflow->update([
+            'administration_comment' => $data['administration_comment'] ?? null,
+            'payment_confirmation_completed' => $request->boolean('payment_confirmation_completed'),
+            'withholding_tax_receipt_completed' => $request->boolean('withholding_tax_receipt_completed'),
+            'administration_updated_by' => Auth::id(),
+            'administration_updated_at' => now(),
+        ]);
+
+        Logger::record('administration_updated', "Monitoring administrasi project {$project->code} diperbarui", $project);
+
+        return back()->with('success', 'Data administrasi project berhasil disimpan.');
     }
 }

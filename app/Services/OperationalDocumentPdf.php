@@ -271,51 +271,53 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         string $status,
         bool $continued = false,
     ): array {
-        $bandHeight = $continued ? 72 : 108;
-        $bottom = self::HEIGHT - $bandHeight;
-        $content = $this->rect(0, $bottom, self::WIDTH, $bandHeight, [0.035, 0.086, 0.165]);
-        $content .= $this->rect(0, $bottom, 9, $bandHeight, [0.055, 0.45, 0.92]);
-        $content .= $this->rect(self::WIDTH - 120, $bottom, 120, $bandHeight, [0.045, 0.12, 0.23]);
+        $content = $this->rect(0, self::HEIGHT - 6, self::WIDTH, 6, [0.035, 0.086, 0.165]);
+        $content .= $this->rect(self::LEFT, self::HEIGHT - 6, 92, 6, [0.055, 0.45, 0.92]);
 
         if ($this->logo) {
             $ratio = $this->logo['width'] / max(1, $this->logo['height']);
-            $logoHeight = $continued ? 28 : 36;
+            $logoHeight = $continued ? 25 : 31;
             $logoWidth = min(135, $logoHeight * $ratio);
             $content .= sprintf(
                 "q %.2F 0 0 %.2F %.2F %.2F cm /Logo Do Q\n",
                 $logoWidth,
                 $logoHeight,
                 self::LEFT,
-                self::HEIGHT - ($continued ? 49 : 67),
+                self::HEIGHT - ($continued ? 55 : 59),
             );
         } else {
-            $content .= $this->text(self::LEFT, self::HEIGHT - ($continued ? 40 : 48), 'ROBUST', $continued ? 19 : 24, true, [1, 1, 1]);
-            $content .= $this->rect(self::LEFT + ($continued ? 79 : 99), self::HEIGHT - ($continued ? 29 : 34), 5, 5, [0.08, 0.50, 1]);
+            $content .= $this->text(self::LEFT, self::HEIGHT - 40, 'ROBUST', $continued ? 18 : 22, true, [0.035, 0.086, 0.165]);
+            $content .= $this->rect(self::LEFT + ($continued ? 78 : 95), self::HEIGHT - 30, 5, 5, [0.055, 0.45, 0.92]);
             if (! $continued) {
-                $content .= $this->text(self::LEFT, self::HEIGHT - 70, 'Laboratory Furniture & Equipment', 8, false, [0.70, 0.79, 0.90]);
+                $content .= $this->text(self::LEFT, self::HEIGHT - 61, 'Laboratory Furniture & Equipment', 7.5, false, [0.42, 0.48, 0.57]);
             }
         }
 
-        $titleY = self::HEIGHT - ($continued ? 34 : 43);
-        $headerRight = self::RIGHT - 20;
-        $content .= $this->text($headerRight, $titleY, $continued ? $title.' - LANJUTAN' : $title, $continued ? 10 : 15, true, [1, 1, 1], 'right');
-        $content .= $this->text($headerRight, $titleY - 20, $code ?: '-', 10, true, [0.38, 0.69, 1], 'right');
+        $titleY = self::HEIGHT - 39;
+        $headerRight = self::RIGHT - 38;
+        $titleSize = $continued ? 9.2 : (mb_strlen($title) > 18 ? 13 : 17);
+        $content .= $this->text($headerRight, $titleY, $continued ? $title.' - LANJUTAN' : $title, $titleSize, true, [0.035, 0.086, 0.165], 'right');
+        $content .= $this->text($headerRight, $titleY - 20, $code ?: '-', 9, true, [0.055, 0.45, 0.92], 'right');
         if (! $continued) {
-            $content .= $this->text($headerRight, $titleY - 38, $subtitle, 7.2, false, [0.70, 0.79, 0.90], 'right');
+            $content .= $this->text(self::LEFT, self::HEIGHT - 76, $subtitle, 7, false, [0.42, 0.48, 0.57]);
         }
 
-        $y = $bottom - 18;
         $statusWidth = min(150, max(70, mb_strlen($status) * 5.4 + 24));
-        $content .= $this->rect(self::RIGHT - $statusWidth, $y - 19, $statusWidth, 19, [0.90, 0.97, 0.93], [0.67, 0.87, 0.74]);
-        $content .= $this->text(self::RIGHT - 10, $y - 13, strtoupper($status), 6.8, true, [0.05, 0.47, 0.28], 'right');
+        $content .= $this->rect(self::RIGHT - $statusWidth, self::HEIGHT - 82, $statusWidth, 18, [0.92, 0.97, 0.94]);
+        $content .= $this->text(self::RIGHT - 10, self::HEIGHT - 76, strtoupper($status), 6.6, true, [0.05, 0.47, 0.28], 'right');
+        $dividerY = self::HEIGHT - 92;
+        $content .= $this->line(self::LEFT, $dividerY, self::RIGHT, $dividerY, [0.78, 0.83, 0.89], 0.8);
+        $content .= $this->rect(self::LEFT, $dividerY - 1, 62, 2, [0.055, 0.45, 0.92]);
 
-        return [$content, $y - 32];
+        return [$content, $dividerY - 18];
     }
 
     private function metaGrid(float $top, array $fields): string
     {
         $height = 86;
-        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.965, 0.978, 0.997], [0.84, 0.89, 0.95]);
+        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.982, 0.986, 0.992]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.84, 0.88, 0.92], 0.6);
+        $content .= $this->line(self::LEFT, $top - $height, self::RIGHT, $top - $height, [0.84, 0.88, 0.92], 0.6);
         $columnWidth = self::CONTENT_WIDTH / 3;
 
         foreach (array_values($fields) as $index => [$label, $value]) {
@@ -338,15 +340,17 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
     private function sectionTitle(float $y, string $label, string $number): string
     {
-        return $this->rect(self::LEFT, $y - 15, 18, 18, [0.055, 0.45, 0.92])
-            .$this->text(self::LEFT + 9, $y - 10, $number, 6.8, true, [1, 1, 1], 'center')
-            .$this->text(self::LEFT + 27, $y - 10, $label, 8.2, true, [0.055, 0.18, 0.34])
-            .$this->line(self::LEFT + 180, $y - 8, self::RIGHT, $y - 8, [0.84, 0.88, 0.93], 0.6);
+        return $this->rect(self::LEFT, $y - 14, 3, 17, [0.055, 0.45, 0.92])
+            .$this->text(self::LEFT + 11, $y - 9, $number, 6.6, true, [0.055, 0.45, 0.92])
+            .$this->text(self::LEFT + 33, $y - 9, $label, 8.2, true, [0.035, 0.086, 0.165])
+            .$this->line(self::LEFT + 180, $y - 7, self::RIGHT, $y - 7, [0.84, 0.88, 0.93], 0.6);
     }
 
     private function detailPanel(float $top, float $height, array $fields, int $columns): string
     {
-        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [1, 1, 1], [0.85, 0.89, 0.94]);
+        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [1, 1, 1]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
+        $content .= $this->line(self::LEFT, $top - $height, self::RIGHT, $top - $height, [0.82, 0.86, 0.91], 0.7);
         $columnWidth = self::CONTENT_WIDTH / $columns;
         $rows = (int) ceil(count($fields) / $columns);
         $rowHeight = $height / max(1, $rows);
@@ -375,7 +379,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $height = 92;
         $mid = self::LEFT + self::CONTENT_WIDTH * 0.56;
-        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.985, 0.99, 1], [0.85, 0.89, 0.94]);
+        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
+        $content .= $this->line(self::LEFT, $top - $height, self::RIGHT, $top - $height, [0.82, 0.86, 0.91], 0.7);
         $content .= $this->line($mid, $top - $height + 10, $mid, $top - 10, [0.87, 0.91, 0.95], 0.5);
 
         $content .= $this->text(self::LEFT + 14, $top - 17, 'ALAMAT PENGIRIMAN / LOKASI PROJECT', 6.3, true, [0.42, 0.49, 0.60]);
@@ -401,7 +407,8 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $items = PurchaseOrderRequest::checklistItems();
         $height = 28 + count($items) * 18;
-        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.98, 0.99, 1], [0.85, 0.89, 0.94]);
+        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
         $progress = $requestPo->checklistProgress();
         $content .= $this->text(self::LEFT + 14, $top - 18, $progress['done'].' / '.$progress['total'].' DOKUMEN LENGKAP', 7.5, true, [0.055, 0.45, 0.92]);
         $content .= $this->rect(self::LEFT + 170, $top - 20, self::CONTENT_WIDTH - 184, 6, [0.89, 0.92, 0.96]);
@@ -425,6 +432,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $bottom = $top - 24;
         $content = $this->rect(self::LEFT, $bottom, self::CONTENT_WIDTH, 24, [0.055, 0.18, 0.34]);
+        $content .= $this->rect(self::LEFT, $bottom, 4, 24, [0.055, 0.45, 0.92]);
         foreach ([
             [54, 'NO', 'center'],
             [78, 'ITEM & SPESIFIKASI', 'left'],
@@ -453,9 +461,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             $bottom,
             self::CONTENT_WIDTH,
             $height,
-            $alternate ? [0.972, 0.982, 0.997] : [1, 1, 1],
-            [0.86, 0.90, 0.95],
+            $alternate ? [0.985, 0.988, 0.993] : [1, 1, 1],
         );
+        $content .= $this->line(self::LEFT, $bottom, self::RIGHT, $bottom, [0.84, 0.88, 0.92], 0.55);
         foreach ([68, 335, 382, 454] as $x) {
             $content .= $this->line($x, $bottom, $x, $top, [0.89, 0.92, 0.96], 0.45);
         }
@@ -467,7 +475,16 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         }
         $lineY = $top - ($continued || ! $item->variant ? 29 : 39);
         foreach ($specLines as $line) {
-            $content .= $this->text(76, $lineY, $line, 6.8, false, [0.35, 0.42, 0.52]);
+            $isSection = str_starts_with($line, '[') && str_ends_with($line, ']');
+            $displayLine = $isSection ? trim($line, '[]') : $line;
+            $content .= $this->text(
+                $isSection ? 76 : 84,
+                $lineY,
+                $displayLine,
+                $isSection ? 6.9 : 6.8,
+                $isSection,
+                $isSection ? [0.055, 0.35, 0.70] : [0.31, 0.37, 0.46],
+            );
             $lineY -= 8;
         }
 
@@ -483,8 +500,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     private function requestPoSummary(float $top, PurchaseOrderRequest $requestPo): string
     {
         $quotation = $requestPo->quotation;
-        $content = $this->rect(self::LEFT, $top - 116, 300, 116, [0.975, 0.983, 0.997], [0.84, 0.89, 0.95]);
-        $content .= $this->text(self::LEFT + 14, $top - 20, 'CATATAN ADMINISTRASI', 7.5, true, [0.055, 0.45, 0.92]);
+        $content = $this->rect(self::LEFT, $top - 116, 300, 116, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::LEFT + 300, $top, [0.055, 0.45, 0.92], 1.2);
+        $content .= $this->text(self::LEFT + 14, $top - 20, 'CATATAN ADMINISTRASI', 7.5, true, [0.035, 0.086, 0.165]);
         $noteLines = array_slice($this->wrap((string) ($requestPo->admin_note ?: 'Tidak ada catatan tambahan.'), 62), 0, 6);
         $lineY = $top - 38;
         foreach ($noteLines as $line) {
@@ -497,9 +515,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
         $x = self::LEFT + 316;
         $width = self::RIGHT - $x;
-        $content .= $this->rect($x, $top - 116, $width, 116, [1, 1, 1], [0.80, 0.86, 0.93]);
-        $content .= $this->rect($x, $top - 28, $width, 28, [0.035, 0.086, 0.165]);
-        $content .= $this->text($x + 14, $top - 18, 'RINGKASAN NILAI', 8, true, [1, 1, 1]);
+        $content .= $this->rect($x, $top - 116, $width, 116, [1, 1, 1]);
+        $content .= $this->line($x, $top, self::RIGHT, $top, [0.035, 0.086, 0.165], 1.4);
+        $content .= $this->text($x, $top - 18, 'RINGKASAN NILAI', 8, true, [0.035, 0.086, 0.165]);
         $rows = [
             ['Subtotal', (float) ($quotation?->subtotal ?? 0)],
             ['PPN', (float) ($quotation?->tax_amount ?? 0)],
@@ -507,12 +525,12 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         ];
         $rowY = $top - 47;
         foreach ($rows as [$label, $amount]) {
-            $content .= $this->text($x + 14, $rowY, $label, 7, false, [0.39, 0.45, 0.55]);
+            $content .= $this->text($x, $rowY, $label, 7, false, [0.39, 0.45, 0.55]);
             $content .= $this->text(self::RIGHT - 14, $rowY, $this->money($amount), 7.5, true, [0.10, 0.18, 0.30], 'right');
             $rowY -= 16;
         }
         $content .= $this->line($x + 14, $rowY + 5, self::RIGHT - 14, $rowY + 5, [0.80, 0.85, 0.92], 0.7);
-        $content .= $this->text($x + 14, $rowY - 5, 'GRAND TOTAL', 8.2, true, [0.035, 0.086, 0.165]);
+        $content .= $this->text($x, $rowY - 5, 'GRAND TOTAL', 8.2, true, [0.035, 0.086, 0.165]);
         $content .= $this->text(self::RIGHT - 14, $rowY - 5, $this->money((float) ($quotation?->grand_total ?? 0)), 9.5, true, [0.055, 0.45, 0.92], 'right');
 
         return $content;
@@ -520,21 +538,23 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
     private function invoiceMetricCards(float $top, Invoice $invoice): string
     {
-        $gap = 10;
-        $width = (self::CONTENT_WIDTH - $gap * 2) / 3;
+        $width = self::CONTENT_WIDTH / 3;
         $metrics = [
             ['TOTAL TAGIHAN', (float) $invoice->grand_total, [0.055, 0.45, 0.92]],
             ['SUDAH DIBAYAR', (float) $invoice->paid_total, [0.05, 0.55, 0.31]],
             ['SISA TAGIHAN', $invoice->balance(), $invoice->balance() > 0 ? [0.88, 0.31, 0.18] : [0.05, 0.55, 0.31]],
         ];
 
-        $content = '';
+        $content = $this->rect(self::LEFT, $top - 58, self::CONTENT_WIDTH, 58, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
+        $content .= $this->line(self::LEFT, $top - 58, self::RIGHT, $top - 58, [0.82, 0.86, 0.91], 0.7);
         foreach ($metrics as $index => [$label, $amount, $accent]) {
-            $x = self::LEFT + $index * ($width + $gap);
-            $content .= $this->rect($x, $top - 62, $width, 62, [0.98, 0.99, 1], [0.84, 0.89, 0.95]);
-            $content .= $this->rect($x, $top - 62, 5, 62, $accent);
-            $content .= $this->text($x + 16, $top - 19, $label, 6.6, true, [0.42, 0.49, 0.59]);
-            $content .= $this->text($x + 16, $top - 42, $this->money($amount), 11, true, $accent);
+            $x = self::LEFT + $index * $width;
+            if ($index > 0) {
+                $content .= $this->line($x, $top - 47, $x, $top - 11, [0.86, 0.89, 0.93], 0.55);
+            }
+            $content .= $this->text($x + 14, $top - 18, $label, 6.4, true, [0.42, 0.49, 0.59]);
+            $content .= $this->text($x + 14, $top - 40, $this->money($amount), 10.5, true, $accent);
         }
 
         return $content;
@@ -544,6 +564,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $bottom = $top - 24;
         $content = $this->rect(self::LEFT, $bottom, self::CONTENT_WIDTH, 24, [0.055, 0.18, 0.34]);
+        $content .= $this->rect(self::LEFT, $bottom, 4, 24, [0.055, 0.45, 0.92]);
         foreach ([
             [54, 'NO', 'center'],
             [78, 'DESKRIPSI ITEM', 'left'],
@@ -560,7 +581,8 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     private function invoiceItemRow(float $top, float $height, int $number, object $item, array $nameLines, bool $alternate): string
     {
         $bottom = $top - $height;
-        $content = $this->rect(self::LEFT, $bottom, self::CONTENT_WIDTH, $height, $alternate ? [0.972, 0.982, 0.997] : [1, 1, 1], [0.86, 0.90, 0.95]);
+        $content = $this->rect(self::LEFT, $bottom, self::CONTENT_WIDTH, $height, $alternate ? [0.985, 0.988, 0.993] : [1, 1, 1]);
+        $content .= $this->line(self::LEFT, $bottom, self::RIGHT, $bottom, [0.84, 0.88, 0.92], 0.55);
         foreach ([68, 305, 356, 452] as $x) {
             $content .= $this->line($x, $bottom, $x, $top, [0.89, 0.92, 0.96], 0.45);
         }
@@ -583,8 +605,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     private function invoiceSummary(float $top, Invoice $invoice): string
     {
         $leftWidth = 280;
-        $content = $this->rect(self::LEFT, $top - 138, $leftWidth, 138, [0.975, 0.983, 0.997], [0.84, 0.89, 0.95]);
-        $content .= $this->text(self::LEFT + 14, $top - 20, 'INFORMASI PEMBAYARAN', 7.6, true, [0.055, 0.45, 0.92]);
+        $content = $this->rect(self::LEFT, $top - 138, $leftWidth, 138, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::LEFT + $leftWidth, $top, [0.055, 0.45, 0.92], 1.2);
+        $content .= $this->text(self::LEFT + 14, $top - 20, 'INFORMASI PEMBAYARAN', 7.6, true, [0.035, 0.086, 0.165]);
         $requestPo = $invoice->purchaseOrderRequest;
         $info = [
             ['No. PO Customer', $requestPo?->customer_po_number],
@@ -604,9 +627,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
         $x = self::LEFT + $leftWidth + 16;
         $width = self::RIGHT - $x;
-        $content .= $this->rect($x, $top - 138, $width, 138, [1, 1, 1], [0.80, 0.86, 0.93]);
-        $content .= $this->rect($x, $top - 28, $width, 28, [0.035, 0.086, 0.165]);
-        $content .= $this->text($x + 14, $top - 18, 'RINGKASAN TAGIHAN', 8, true, [1, 1, 1]);
+        $content .= $this->rect($x, $top - 138, $width, 138, [1, 1, 1]);
+        $content .= $this->line($x, $top, self::RIGHT, $top, [0.035, 0.086, 0.165], 1.4);
+        $content .= $this->text($x, $top - 18, 'RINGKASAN TAGIHAN', 8, true, [0.035, 0.086, 0.165]);
         $rows = [
             ['Subtotal', (float) $invoice->subtotal, false],
             ['PPN', (float) $invoice->tax_amount, false],
@@ -619,7 +642,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             if ($bold) {
                 $content .= $this->line($x + 14, $rowY + 6, self::RIGHT - 14, $rowY + 6, [0.80, 0.85, 0.92], 0.65);
             }
-            $content .= $this->text($x + 14, $rowY, $label, $bold ? 7.7 : 7, $bold, $bold ? [0.035, 0.086, 0.165] : [0.39, 0.45, 0.55]);
+            $content .= $this->text($x, $rowY, $label, $bold ? 7.7 : 7, $bold, $bold ? [0.035, 0.086, 0.165] : [0.39, 0.45, 0.55]);
             $content .= $this->text(self::RIGHT - 14, $rowY, $this->money($amount), $bold ? 8.8 : 7.5, true, $bold ? [0.055, 0.45, 0.92] : [0.10, 0.18, 0.30], 'right');
             $rowY -= $bold ? 21 : 17;
         }
@@ -631,8 +654,10 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $terms = $invoice->terms;
         $height = 28 + max(1, $terms->count()) * 28;
-        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [1, 1, 1], [0.84, 0.89, 0.95]);
-        $content .= $this->rect(self::LEFT, $top - 24, self::CONTENT_WIDTH, 24, [0.94, 0.97, 1]);
+        $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [1, 1, 1]);
+        $content .= $this->rect(self::LEFT, $top - 24, self::CONTENT_WIDTH, 24, [0.965, 0.974, 0.986]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
+        $content .= $this->line(self::LEFT, $top - $height, self::RIGHT, $top - $height, [0.82, 0.86, 0.91], 0.7);
         foreach ([
             [54, 'NO', 'center'],
             [79, 'DESKRIPSI', 'left'],
@@ -664,10 +689,11 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
     private function invoiceNote(float $top, Invoice $invoice): string
     {
-        $content = $this->rect(self::LEFT, $top - 62, self::CONTENT_WIDTH, 62, [0.94, 0.98, 0.96], [0.73, 0.88, 0.79]);
+        $content = $this->rect(self::LEFT, $top - 52, self::CONTENT_WIDTH, 52, [0.965, 0.985, 0.975]);
+        $content .= $this->rect(self::LEFT, $top - 52, 4, 52, [0.05, 0.48, 0.28]);
         $content .= $this->text(self::LEFT + 14, $top - 19, $invoice->status === 'paid' ? 'INVOICE TELAH LUNAS' : 'INFORMASI TAGIHAN', 8.5, true, [0.05, 0.48, 0.28]);
-        $content .= $this->text(self::LEFT + 14, $top - 37, 'Dokumen diterbitkan melalui ROBUST CRM dan dapat diverifikasi melalui nomor invoice di atas.', 7.2, false, [0.25, 0.40, 0.33]);
-        $content .= $this->text(self::RIGHT - 14, $top - 28, strtoupper(Invoice::statuses()[$invoice->status] ?? $invoice->status), 10, true, [0.05, 0.48, 0.28], 'right');
+        $content .= $this->text(self::LEFT + 14, $top - 36, 'Dokumen resmi ROBUST CRM. Verifikasi menggunakan nomor invoice di bagian atas.', 7.2, false, [0.25, 0.40, 0.33]);
+        $content .= $this->text(self::RIGHT - 14, $top - 27, strtoupper(Invoice::statuses()[$invoice->status] ?? $invoice->status), 9, true, [0.05, 0.48, 0.28], 'right');
 
         return $content;
     }

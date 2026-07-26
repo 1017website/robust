@@ -91,9 +91,13 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ], false);
 
         $this->actingAs($production)
+            ->get(route('drafter.design-requests.show', $designRequest))
+            ->assertOk()
+            ->assertDontSeeText('Dimensi Utama')
+            ->assertDontSee('name="dimensions', false);
+
+        $this->actingAs($production)
             ->post(route('drafter.design-requests.feedback', $designRequest), [
-                'dimensions' => [['item' => 'Meja', 'size' => '1200 x 600 x 850']],
-                'materials' => [['item' => 'Meja', 'material' => 'Stainless', 'finish' => 'Hairline']],
                 'cost_material' => 1000000,
                 'cost_production' => 500000,
                 'cost_installation' => 250000,
@@ -132,6 +136,7 @@ class DesignRequestRevisionWorkflowTest extends TestCase
         $this->actingAs($sales)
             ->get(route('sales.design-requests.show', $designRequest))
             ->assertOk()
+            ->assertDontSeeText('Dimensi Utama')
             ->assertSee('Request & Riwayat Revisi', false)
             ->assertSee('Ajukan Request Revisi')
             ->assertSee('href="#history"', false)
@@ -192,8 +197,6 @@ class DesignRequestRevisionWorkflowTest extends TestCase
 
         $this->actingAs($production)
             ->post(route('drafter.design-requests.feedback', $designRequest), [
-                'dimensions' => [['item' => 'Meja', 'size' => '1500 x 750 x 850']],
-                'materials' => [['item' => 'Meja', 'material' => 'Stainless 304', 'finish' => 'Hairline']],
                 'cost_material' => 1400000,
                 'cost_production' => 700000,
                 'cost_installation' => 300000,

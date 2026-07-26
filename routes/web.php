@@ -85,6 +85,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrator,sales_admin,administration')->prefix('administration')->name('administration.')->group(function () {
         Route::get('/project-monitoring', [ProjectMonitoringController::class, 'index'])->name('project-monitoring.index');
     });
+    Route::middleware('role:administrator,sales_admin')->prefix('administration')->name('administration.')->group(function () {
+        Route::put('/project-monitoring/{project}', [ProjectMonitoringController::class, 'update'])->name('project-monitoring.update');
+    });
 
     Route::middleware('role:administrator,production')->group(function () {
         Route::put('/project-workspace/{project}/production', [ProjectWorkflowController::class, 'updateProduction'])->name('project-workflow.production');
@@ -124,6 +127,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
+    });
+
+    // Master Item dikelola oleh Produksi. Administrator tetap memiliki akses
+    // sebagai superadmin, tetapi Sales Admin tidak mengelola data teknis/HPP.
+    Route::middleware('role:administrator,production')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/item-masters', [ItemMasterController::class, 'index'])->name('item-masters.index');
         Route::post('/item-masters', [ItemMasterController::class, 'store'])->name('item-masters.store');
         Route::put('/item-masters/{itemMaster}', [ItemMasterController::class, 'update'])->name('item-masters.update');

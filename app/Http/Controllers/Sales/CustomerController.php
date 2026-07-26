@@ -22,7 +22,11 @@ class CustomerController extends Controller
             $query->where('sales_id', Auth::id());
         }
         if ($s = $request->get('q')) {
-            $query->where(fn ($w) => $w->where('name', 'like', "%$s%")->orWhere('email', 'like', "%$s%"));
+            $query->where(fn ($w) => $w
+                ->where('name', 'like', "%$s%")
+                ->orWhere('email', 'like', "%$s%")
+                ->orWhere('area', 'like', "%$s%")
+                ->orWhere('division', 'like', "%$s%"));
         }
         if ($status = $request->get('status')) {
             $query->where('pipeline_stage', $status);
@@ -76,6 +80,7 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateData($request);
+        $data['pipeline_stage'] = 'maintaining';
         $data['code'] = CodeGenerator::next(Customer::class, 'CUST', 4);
         $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : $data['sales_id'];
         $customer = DB::transaction(function () use ($data) {

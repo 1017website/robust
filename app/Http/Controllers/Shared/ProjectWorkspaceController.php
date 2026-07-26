@@ -14,7 +14,11 @@ class ProjectWorkspaceController extends Controller
         abort_unless(ProjectAccess::canView($request->user(), $project), 403, 'Project ini tidak tersedia untuk akun Anda.');
 
         $project->load([
-            'customer', 'projectManager', 'quotation.items', 'quotation.purchaseOrderRequest', 'terms', 'activities', 'documents.uploader',
+            'customer', 'projectManager', 'quotation.items', 'quotation.purchaseOrderRequest',
+            'quotation.designRequest.items.itemMaster', 'quotation.designRequest.documents.uploader',
+            'quotation.designRequest.revisionRequests.requester', 'quotation.designRequest.sales',
+            'quotation.designRequest.productionPic', 'quotation.designRequest.customer.primaryPic',
+            'quotation.designRequest.lead', 'terms', 'activities', 'documents.uploader',
             'workflow.productionUpdater', 'workflow.qcUpdater', 'workflow.deliveryUpdater',
             'designRevisions.creator', 'designRevisions.statusUpdater',
         ]);

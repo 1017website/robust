@@ -28,7 +28,7 @@
                     <h1 class="page-title mb-1">Activities</h1>
                     <div class="page-subtitle">Daftar semua aktivitas sales dan follow up dengan customer.</div>
                 </div>
-                <div class="page-actions"><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div>
+                @if(auth()->user()->isSales())<div class="page-actions"><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div>@endif
             </div>
 
             <div class="sa-stats four mb-3">
@@ -171,7 +171,7 @@
 <div class="sales-ui">
     <div class="sales-main-grid">
         <div>
-            <div class="sales-page-head"><div><div class="small fw-bold text-primary mb-1">Activities</div><h1 class="page-title mb-1">Activities</h1><div class="page-subtitle">Kelola pipeline dan aktivitas harian untuk mendorong penjualan dan menjaga hubungan dengan customer.</div></div><div class="page-actions"><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div></div>
+            <div class="sales-page-head"><div><div class="small fw-bold text-primary mb-1">Activities</div><h1 class="page-title mb-1">Activities</h1><div class="page-subtitle">Kelola pipeline dan aktivitas harian untuk mendorong penjualan dan menjaga hubungan dengan customer.</div></div>@if(auth()->user()->isSales())<div class="page-actions"><a href="{{ route('activities.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tambah Activity</a></div>@endif</div>
             <div class="sales-chip-row mb-3"><span class="sales-chip active">Pipeline</span><span class="sales-chip">Activity List</span><a class="sales-chip" href="{{ route('calendar.index') }}">Calendar</a><span class="sales-chip">Tracking Harian</span></div>
             <div class="sales-kanban mb-3">
                 @foreach($pipeline as $stage => $data)

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\DesignRequestRevisionRequest;
 use App\Models\DesignRevision;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -60,6 +61,9 @@ class CrmFlowTest extends TestCase
                 'dashboard', 'drafter.design-requests.index', 'drafter.projects.index',
                 'drafter.tasks.index', 'documents.index', 'drafter.calendar.index',
                 'drafter.reports.index', 'profile.edit',
+            ],
+            'production' => [
+                'admin.item-masters.index',
             ],
         ];
 
@@ -515,6 +519,201 @@ class CrmFlowTest extends TestCase
         $this->assertSoftDeleted('leads', ['id' => $lead->id]);
     }
 
+    public function test_existing_customer_is_maintaining_and_area_division_are_visible_in_customer_and_activity_views(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $this->actingAs($sales)->post(route('sales.customers.store'), [
+            'name' => 'Customer Nama Sama',
+            'category' => 'Industri',
+            'area' => 'Jakarta',
+            'division' => 'Laboratorium',
+            'pipeline_stage' => 'identify',
+        ])->assertRedirect();
+
+        $customer = Customer::where('name', 'Customer Nama Sama')->firstOrFail();
+
+        $this->assertSame('maintaining', $customer->pipeline_stage);
+
+        $this->actingAs($sales)->get(route('sales.customers.index'))
+            ->assertSuccessful()
+            ->assertSeeText('Area')
+            ->assertSeeText('Divisi')
+            ->assertSeeText('Jakarta')
+            ->assertSeeText('Laboratorium');
+
+        $this->actingAs($sales)->get(route('activities.create'))
+            ->assertSuccessful()
+            ->assertSeeText('Customer Nama Sama | Area: Jakarta | Divisi: Laboratorium');
+    }
+
+    public function test_project_workspace_displays_complete_linked_design_request_information(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $customer = Customer::create([
+            'name' => 'Customer Project DR',
+            'pipeline_stage' => 'maintaining',
+            'sales_id' => $sales->id,
+        ]);
+        $designRequest = DesignRequest::create([
+            'code' => 'DR-PROJECT-INFO',
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'pic_name' => 'PIC Project',
+            'project_name' => 'Laboratorium Project DR',
+            'sales_id' => $sales->id,
+            'production_pic_id' => $drafter->id,
+            'request_date' => now()->subDays(3),
+            'deadline' => now()->addDays(4),
+            'priority' => 'urgent',
+            'short_description' => 'Ringkasan kebutuhan proyek',
+            'lab_type' => 'Kimia',
+            'capacity' => '20 orang',
+            'detail_need' => 'Detail kebutuhan proyek lengkap.',
+            'scope_checklist' => ['Renovasi Laboratorium'],
+            'outputs' => ['layout_2d', 'shop_drawing'],
+            'cost_material' => 10000000,
+            'cost_production' => 3000000,
+            'cost_installation' => 1000000,
+            'technical_note' => 'Catatan teknis produksi.',
+            'status' => 'completed',
+            'progress' => 100,
+            'submitted_at' => now(),
+        ]);
+        $designRequest->items()->create([
+            'category' => 'Furniture',
+            'name' => 'Wall Bench',
+            'variant' => 'WB-01',
+            'specification' => "Dimensi: 2000 x 700 x 850 mm\nMaterial: Stainless Steel\nFinishing: Powder Coating",
+            'qty' => 2,
+            'unit' => 'Unit',
+            'unit_price' => 7000000,
+            'total' => 14000000,
+        ]);
+        $designRequest->documents()->create([
+            'name' => 'Gambar Kerja',
+            'category' => 'request_drawing',
+            'file_path' => 'documents/gambar-kerja.pdf',
+            'file_type' => 'pdf',
+            'file_size' => 1024,
+            'version' => 'v1.0',
+            'revision_number' => 1,
+            'is_current' => true,
+            'uploaded_by' => $drafter->id,
+        ]);
+        DesignRequestRevisionRequest::create([
+            'design_request_id' => $designRequest->id,
+            'revision_number' => 1,
+            'notes' => 'Mohon revisi dimensi.',
+            'status' => 'completed',
+            'requested_by' => $sales->id,
+            'requested_at' => now()->subDay(),
+            'completed_at' => now(),
+        ]);
+        $quotation = Quotation::create([
+            'code' => 'Q-PROJECT-DR',
+            'design_request_id' => $designRequest->id,
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'project_name' => $designRequest->project_name,
+            'status' => 'approved',
+            'sales_id' => $sales->id,
+            'grand_total' => 14000000,
+        ]);
+        $project = Project::create([
+            'code' => 'PRJ-PROJECT-DR',
+            'quotation_id' => $quotation->id,
+            'customer_id' => $customer->id,
+            'project_manager_id' => $sales->id,
+            'name' => $designRequest->project_name,
+            'status' => 'ongoing',
+            'total_value' => $quotation->grand_total,
+        ]);
+
+        $this->actingAs($sales)->get(route('project-workspace.show', $project))
+            ->assertSuccessful()
+            ->assertSeeText('DR-PROJECT-INFO')
+            ->assertDontSeeText('Dimensi Utama')
+            ->assertSeeText('Detail kebutuhan proyek lengkap.')
+            ->assertSeeText('LAYOUT 2D')
+            ->assertSeeText('2000 x 700 x 850 mm')
+            ->assertSeeText('Wall Bench')
+            ->assertSeeText('Gambar Kerja')
+            ->assertSeeText('Mohon revisi dimensi.')
+            ->assertSeeText('Catatan teknis produksi.');
+    }
+
+    public function test_add_activity_buttons_are_only_visible_to_sales(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $salesSpv = User::factory()->create(['role' => 'sales_spv']);
+
+        $this->actingAs($sales)->get(route('activities.index'))
+            ->assertSuccessful()
+            ->assertSeeText('Tambah Activity');
+        $this->actingAs($sales)->get(route('calendar.index'))
+            ->assertSuccessful()
+            ->assertSeeText('Tambah Activity');
+
+        foreach ([$salesAdmin, $salesSpv] as $nonSalesUser) {
+            $this->actingAs($nonSalesUser)->get(route('activities.index'))
+                ->assertSuccessful()
+                ->assertDontSeeText('Tambah Activity');
+            $this->actingAs($nonSalesUser)->get(route('calendar.index'))
+                ->assertSuccessful()
+                ->assertDontSeeText('Tambah Activity');
+        }
+    }
+
+    public function test_sales_admin_can_update_project_monitoring_administration_fields(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $administration = User::factory()->create(['role' => 'administration']);
+        $project = Project::create([
+            'code' => 'PRJ-MONITORING-ADMIN',
+            'name' => 'Project Monitoring Administrasi',
+            'project_manager_id' => $sales->id,
+            'status' => 'ongoing',
+            'total_value' => 25000000,
+        ]);
+
+        $this->actingAs($salesAdmin)->put(route('administration.project-monitoring.update', $project), [
+            'administration_comment' => 'Tunggu pembayaran sebelum kirim.',
+            'payment_confirmation_completed' => 1,
+            'withholding_tax_receipt_completed' => 1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('project_workflows', [
+            'project_id' => $project->id,
+            'administration_comment' => 'Tunggu pembayaran sebelum kirim.',
+            'payment_confirmation_completed' => 1,
+            'withholding_tax_receipt_completed' => 1,
+            'administration_updated_by' => $salesAdmin->id,
+        ]);
+
+        $this->actingAs($salesAdmin)->get(route('administration.project-monitoring.index'))
+            ->assertSuccessful()
+            ->assertSeeInOrder(['>Comment</th>', '>Kirim</th>'], false)
+            ->assertSeeText('KP')
+            ->assertSeeText('Bukti Potong PPh')
+            ->assertSee('name="administration_comment"', false)
+            ->assertSee('name="payment_confirmation_completed"', false)
+            ->assertSee('name="withholding_tax_receipt_completed"', false);
+
+        $this->actingAs($administration)->get(route('administration.project-monitoring.index'))
+            ->assertSuccessful()
+            ->assertSeeText('Tunggu pembayaran sebelum kirim.')
+            ->assertDontSee('name="administration_comment"', false)
+            ->assertDontSeeText('Simpan');
+
+        $this->actingAs($administration)->put(route('administration.project-monitoring.update', $project), [
+            'administration_comment' => 'Tidak boleh diperbarui.',
+        ])->assertForbidden();
+    }
+
     public function test_user_and_document_deletes_are_recoverable(): void
     {
         Storage::fake('public');
@@ -717,6 +916,47 @@ class CrmFlowTest extends TestCase
             'password_confirmation' => 'password',
             'is_active' => 1,
         ])->assertSessionHasErrors('role');
+    }
+
+    public function test_master_item_is_managed_by_production_not_sales_admin(): void
+    {
+        $production = User::factory()->create(['role' => 'production']);
+        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $administrator = User::factory()->create(['role' => 'administrator']);
+
+        $this->actingAs($production)->get(route('admin.item-masters.index'))
+            ->assertOk()
+            ->assertSee('Master Item Penawaran')
+            ->assertSee('Tambah Master Item');
+
+        $this->actingAs($production)->get(route('drafter.projects.index'))
+            ->assertOk()
+            ->assertSee('Master Item');
+
+        $this->actingAs($production)->post(route('admin.item-masters.store'), [
+            'code' => 'ITM-PRODUCTION-ACCESS',
+            'category' => 'Furniture',
+            'name' => 'Wall Bench Produksi',
+            'variant' => 'WB-PROD-01',
+            'unit' => 'Unit',
+            'default_cost_price' => 1500000,
+            'default_margin' => 25,
+            'specification' => "[General]\nMaterial: Stainless steel",
+            'is_active' => 1,
+        ])->assertRedirect();
+        $this->assertDatabaseHas('item_masters', [
+            'code' => 'ITM-PRODUCTION-ACCESS',
+            'name' => 'Wall Bench Produksi',
+        ]);
+
+        $this->actingAs($salesAdmin)->get(route('admin.item-masters.index'))
+            ->assertForbidden();
+        $this->actingAs($salesAdmin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Master Item');
+
+        $this->actingAs($administrator)->get(route('admin.item-masters.index'))
+            ->assertOk();
     }
 
     public function test_design_quotation_project_and_purchase_order_flow(): void

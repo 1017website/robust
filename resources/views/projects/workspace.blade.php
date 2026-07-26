@@ -8,6 +8,7 @@
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
     $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
+    $designRequest = $project->quotation?->designRequest;
     $statusLabel = \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? $workflow->production_status;
     $deliveryStatusLabel = \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? $workflow->delivery_status;
 @endphp
@@ -36,6 +37,7 @@
 <div class="card-r p-0 overflow-hidden">
     <ul class="nav workspace-tabs px-3" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#project-info" type="button">Informasi Project</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">Design Request <span class="badge text-bg-light ms-1">{{ $designRequest ? 1 : 0 }}</span></button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#operations" type="button">Production, QC & Delivery</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-revisions" type="button">Design Revision <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></button></li>
     </ul>
@@ -73,6 +75,10 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="tab-pane fade" id="design-request">
+            @include('projects._design-request', ['designRequest' => $designRequest])
         </div>
 
         <div class="tab-pane fade" id="operations">

@@ -3,12 +3,13 @@
 
 @push('styles')
 <style>
-    .monitoring-table { min-width: 2500px; font-size: .76rem; }
+    .monitoring-table { min-width: 3050px; font-size: .76rem; }
     .monitoring-table th { white-space: nowrap; vertical-align: middle; text-align: center; }
     .monitoring-table td { vertical-align: middle; }
     .monitoring-table .sticky-project { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 190px; }
     .monitoring-table thead .sticky-project { z-index: 3; background: #eef3f9; }
     .monitor-check { font-size: 1.05rem; }
+    .monitor-comment { min-width: 230px; resize: vertical; }
     .monitor-kpi { border: 1px solid #e7ebf1; border-radius: 12px; background: #fff; padding: 1rem; height: 100%; }
     .monitor-kpi small { color: #667085; font-weight: 600; }
     .monitor-kpi strong { display: block; margin-top: .2rem; font-size: 1.35rem; }
@@ -16,6 +17,9 @@
 @endpush
 
 @section('content')
+@php
+    $canEditAdministration = auth()->user()->isAdminLevel();
+@endphp
 <x-page-header title="Project Monitoring Dashboard" subtitle="Monitoring administrasi, invoice, produksi, QC, dan delivery dalam satu tampilan." />
 
 <div class="row g-3 mb-3">
@@ -40,7 +44,7 @@
             <thead><tr>
                 <th class="sticky-project">Project</th><th>Customer</th><th>Lokasi</th><th>Target / Kontrak</th><th>Nilai Subtotal</th><th>PPN</th><th>Install</th>
                 @for($i = 1; $i <= 3; $i++)<th>INV {{ $i }}</th><th>Jatuh Tempo {{ $i }}</th>@endfor
-                <th>Total Bayar</th><th>Saldo</th><th>Production</th><th>QC</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>Comment / Follow-up</th><th>PIC</th><th>Detail</th>
+                <th>Total Bayar</th><th>Saldo</th><th>Production</th><th>QC</th><th>Comment</th><th>Kirim</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>KP</th><th>Bukti Potong PPh</th><th>Comment / Follow-up</th><th>PIC</th><th>Aksi</th>
             </tr></thead>
             <tbody>
             @forelse($projects as $project)
@@ -60,13 +64,42 @@
                     <td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->paid_total ?? 0, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->balance() ?? $project->total_value, false) }}</td>
                     <td><x-status-badge :status="$workflow?->production_status ?? 'stock'" :label="\App\Models\ProjectWorkflow::productionStatuses()[$workflow?->production_status ?? 'stock']" /></td>
                     <td class="text-center monitor-check"><i class="bi {{ $workflow?->qc_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
+                    <td>
+                        @if($canEditAdministration)
+                            <textarea name="administration_comment" form="project-monitoring-{{ $project->id }}" class="form-control form-control-sm monitor-comment" rows="2" placeholder="Comment sebelum kirim...">{{ $workflow?->administration_comment }}</textarea>
+                        @else
+                            <div class="monitor-comment" style="white-space:normal">{{ $workflow?->administration_comment ?: '-' }}</div>
+                        @endif
+                    </td>
+                    <td class="text-center monitor-check"><i class="bi {{ in_array($workflow?->delivery_status, ['in_transit', 'delivered', 'customer_received', 'completed'], true) ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
                     <td class="text-center monitor-check"><i class="bi {{ $workflow?->delivery_out_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
                     <td class="text-center monitor-check"><i class="bi {{ $workflow?->delivery_returned_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
+                    <td class="text-center monitor-check">
+                        @if($canEditAdministration)
+                            <input type="hidden" name="payment_confirmation_completed" value="0" form="project-monitoring-{{ $project->id }}">
+                            <input type="checkbox" name="payment_confirmation_completed" value="1" form="project-monitoring-{{ $project->id }}" class="form-check-input" aria-label="KP {{ $project->code }}" @checked($workflow?->payment_confirmation_completed)>
+                        @else
+                            <i class="bi {{ $workflow?->payment_confirmation_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i>
+                        @endif
+                    </td>
+                    <td class="text-center monitor-check">
+                        @if($canEditAdministration)
+                            <input type="hidden" name="withholding_tax_receipt_completed" value="0" form="project-monitoring-{{ $project->id }}">
+                            <input type="checkbox" name="withholding_tax_receipt_completed" value="1" form="project-monitoring-{{ $project->id }}" class="form-check-input" aria-label="Bukti Potong PPh {{ $project->code }}" @checked($workflow?->withholding_tax_receipt_completed)>
+                        @else
+                            <i class="bi {{ $workflow?->withholding_tax_receipt_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i>
+                        @endif
+                    </td>
                     <td style="max-width:240px;white-space:normal">{{ $project->note ?: '-' }}</td><td>{{ $project->projectManager?->name ?? '-' }}</td>
-                    <td><a class="btn btn-sm btn-soft" href="{{ route('project-workspace.show', $project) }}">Buka</a></td>
+                    <td>
+                        @if($canEditAdministration)
+                            <form id="project-monitoring-{{ $project->id }}" method="POST" action="{{ route('administration.project-monitoring.update', $project) }}" class="d-inline">@csrf @method('PUT')<button class="btn btn-sm btn-primary">Simpan</button></form>
+                        @endif
+                        <a class="btn btn-sm btn-soft" href="{{ route('project-workspace.show', $project) }}">Buka</a>
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="20"><x-empty text="Belum ada project untuk dimonitor." /></td></tr>
+                <tr><td colspan="26"><x-empty text="Belum ada project untuk dimonitor." /></td></tr>
             @endforelse
             </tbody>
         </table>

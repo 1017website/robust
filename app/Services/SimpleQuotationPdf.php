@@ -73,34 +73,35 @@ class SimpleQuotationPdf
     protected function startPage(Quotation $quotation, bool $continued, bool $withTable): array
     {
         $content = '';
-        $bandHeight = $continued ? 64 : 94;
-        $bandBottom = self::PAGE_HEIGHT - $bandHeight;
-        $content .= $this->rect(0, $bandBottom, self::PAGE_WIDTH, $bandHeight, [0.055, 0.12, 0.23]);
-        $content .= $this->rect(0, $bandBottom, 8, $bandHeight, [0.11, 0.43, 0.88]);
+        $content .= $this->rect(0, self::PAGE_HEIGHT - 6, self::PAGE_WIDTH, 6, [0.035, 0.086, 0.165]);
+        $content .= $this->rect(self::LEFT, self::PAGE_HEIGHT - 6, 92, 6, [0.055, 0.45, 0.92]);
 
         if ($this->logo) {
             $ratio = $this->logo['width'] / max(1, $this->logo['height']);
-            $height = $continued ? 28 : 36;
+            $height = $continued ? 25 : 31;
             $width = min(120, $height * $ratio);
-            $content .= sprintf("q %.2F 0 0 %.2F %.2F %.2F cm /Logo Do Q\n", $width, $height, self::LEFT, self::PAGE_HEIGHT - ($continued ? 47 : 62));
+            $content .= sprintf("q %.2F 0 0 %.2F %.2F %.2F cm /Logo Do Q\n", $width, $height, self::LEFT, self::PAGE_HEIGHT - ($continued ? 55 : 59));
         } else {
-            $content .= $this->text(self::LEFT, self::PAGE_HEIGHT - ($continued ? 37 : 45), 'ROBUST', $continued ? 18 : 22, true, [1, 1, 1]);
-            $content .= $this->text(self::LEFT + ($continued ? 78 : 95), self::PAGE_HEIGHT - ($continued ? 33 : 40), 'CRM', 8, true, [0.38, 0.64, 1]);
+            $content .= $this->text(self::LEFT, self::PAGE_HEIGHT - 40, 'ROBUST', $continued ? 18 : 22, true, [0.035, 0.086, 0.165]);
+            $content .= $this->rect(self::LEFT + ($continued ? 78 : 95), self::PAGE_HEIGHT - 30, 5, 5, [0.055, 0.45, 0.92]);
         }
 
         if (! $continued) {
             $tagline = SystemSetting::value('company_tagline', 'Laboratory Furniture & Equipment');
-            $content .= $this->text(self::LEFT, self::PAGE_HEIGHT - 68, (string) $tagline, 8.5, false, [0.72, 0.79, 0.88]);
+            $content .= $this->text(self::LEFT, self::PAGE_HEIGHT - 61, (string) $tagline, 7.5, false, [0.42, 0.48, 0.57]);
         }
 
-        $headerRight = self::RIGHT - 40;
-        $content .= $this->text($headerRight, self::PAGE_HEIGHT - ($continued ? 31 : 38), $continued ? 'LANJUTAN PENAWARAN' : 'PENAWARAN HARGA', $continued ? 10 : 15, true, [1, 1, 1], 'right');
-        $content .= $this->text($headerRight, self::PAGE_HEIGHT - ($continued ? 47 : 59), $quotation->code ?: '-', 9, false, [0.72, 0.79, 0.88], 'right');
+        $headerRight = self::RIGHT - 38;
+        $content .= $this->text($headerRight, self::PAGE_HEIGHT - 39, $continued ? 'PENAWARAN HARGA - LANJUTAN' : 'PENAWARAN HARGA', $continued ? 9.5 : 14, true, [0.035, 0.086, 0.165], 'right');
+        $content .= $this->text($headerRight, self::PAGE_HEIGHT - 59, $quotation->code ?: '-', 9, true, [0.055, 0.45, 0.92], 'right');
+        $dividerY = $continued ? self::PAGE_HEIGHT - 76 : self::PAGE_HEIGHT - 82;
+        $content .= $this->line(self::LEFT, $dividerY, self::RIGHT, $dividerY, [0.78, 0.83, 0.89], 0.8);
+        $content .= $this->rect(self::LEFT, $dividerY - 1, 62, 2, [0.055, 0.45, 0.92]);
 
         if ($continued) {
-            $y = $bandBottom - 18;
+            $y = $dividerY - 18;
         } else {
-            $y = $bandBottom - 18;
+            $y = $dividerY - 18;
             $content .= $this->metaCard($quotation, $y);
             $y -= 100;
         }
@@ -116,7 +117,11 @@ class SimpleQuotationPdf
     protected function metaCard(Quotation $quotation, float $top): string
     {
         $bottom = $top - 82;
-        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 82, [0.965, 0.978, 1], [0.86, 0.90, 0.96]);
+        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 82, [0.982, 0.986, 0.992]);
+        $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.84, 0.88, 0.92], 0.6);
+        $content .= $this->line(self::LEFT, $bottom, self::RIGHT, $bottom, [0.84, 0.88, 0.92], 0.6);
+        $content .= $this->line(self::LEFT + 176, $bottom + 12, self::LEFT + 176, $top - 12, [0.88, 0.91, 0.94], 0.45);
+        $content .= $this->line(self::LEFT + 352, $bottom + 12, self::LEFT + 352, $top - 12, [0.88, 0.91, 0.94], 0.45);
         $columns = [self::LEFT + 14, self::LEFT + 190, self::LEFT + 366];
         $content .= $this->labelValue($columns[0], $top - 16, 'CUSTOMER', $quotation->customer_name ?: '-', 30);
         $content .= $this->labelValue($columns[1], $top - 16, 'PROJECT', $quotation->project_name ?: '-', 30);
@@ -141,7 +146,8 @@ class SimpleQuotationPdf
     protected function tableHeader(float $top): string
     {
         $bottom = $top - 24;
-        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 24, [0.11, 0.43, 0.88]);
+        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 24, [0.035, 0.086, 0.165]);
+        $content .= $this->rect(self::LEFT, $bottom, 4, 24, [0.055, 0.45, 0.92]);
         $headers = [
             [54, 'NO', 'center'], [76, 'ITEM', 'left'], [330, 'QTY', 'center'],
             [371, 'UNIT', 'center'], [456, 'HARGA SATUAN', 'right'], [548, 'TOTAL', 'right'],
@@ -156,8 +162,9 @@ class SimpleQuotationPdf
     protected function itemRow(float $top, float $height, int $number, object $item, array $nameLines, array $specLines, bool $alternate): string
     {
         $bottom = $top - $height;
-        $fill = $alternate ? [0.975, 0.983, 0.996] : [1, 1, 1];
-        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, $height, $fill, [0.88, 0.91, 0.95]);
+        $fill = $alternate ? [0.985, 0.988, 0.993] : [1, 1, 1];
+        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, $height, $fill);
+        $content .= $this->line(self::LEFT, $bottom, self::RIGHT, $bottom, [0.84, 0.88, 0.92], 0.55);
         $headerHeight = max(34, 14 + count($nameLines) * 10);
         $headerBottom = $top - $headerHeight;
         $content .= $this->line(68, $bottom, 68, $top, [0.90, 0.93, 0.97], 0.45);
@@ -188,7 +195,7 @@ class SimpleQuotationPdf
                     $line['text'],
                     $line['section'] ? 7.2 : 7.1,
                     $line['section'],
-                    $line['section'] ? [0.11, 0.43, 0.88] : [0.35, 0.42, 0.53]
+                    $line['section'] ? [0.055, 0.35, 0.70] : [0.31, 0.37, 0.46]
                 );
                 $specY -= 9;
             }
@@ -238,12 +245,13 @@ class SimpleQuotationPdf
         $rightX = 322;
         $rightWidth = self::RIGHT - $rightX;
 
-        $content .= $this->text(self::LEFT, $top, 'CATATAN & KETENTUAN', 8, true, [0.11, 0.43, 0.88]);
+        $content .= $this->text(self::LEFT, $top, 'CATATAN & KETENTUAN', 8, true, [0.035, 0.086, 0.165]);
         $noteTop = $top - 12;
         $note = $quotation->customer_note ?: 'Harga berlaku sesuai periode penawaran. Perubahan spesifikasi dapat memengaruhi harga dan waktu pengerjaan.';
         $noteLines = array_slice($this->wrap($note, 54), 0, 7);
         $noteHeight = max(72, 26 + count($noteLines) * 10);
-        $content .= $this->rect(self::LEFT, $noteTop - $noteHeight, $leftWidth, $noteHeight, [0.975, 0.983, 0.996], [0.88, 0.91, 0.95]);
+        $content .= $this->rect(self::LEFT, $noteTop - $noteHeight, $leftWidth, $noteHeight, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $noteTop, self::LEFT + $leftWidth, $noteTop, [0.055, 0.45, 0.92], 1.2);
         $lineY = $noteTop - 17;
         foreach ($noteLines as $line) {
             $content .= $this->text(self::LEFT + 12, $lineY, $line, 7.6, false, [0.30, 0.38, 0.50]);
@@ -251,9 +259,9 @@ class SimpleQuotationPdf
         }
 
         $summaryHeight = 126;
-        $content .= $this->rect($rightX, $top - $summaryHeight, $rightWidth, $summaryHeight, [1, 1, 1], [0.82, 0.87, 0.94]);
-        $content .= $this->rect($rightX, $top - 27, $rightWidth, 27, [0.055, 0.12, 0.23]);
-        $content .= $this->text($rightX + 12, $top - 18, 'RINGKASAN HARGA', 8, true, [1, 1, 1]);
+        $content .= $this->rect($rightX, $top - $summaryHeight, $rightWidth, $summaryHeight, [1, 1, 1]);
+        $content .= $this->line($rightX, $top, self::RIGHT, $top, [0.035, 0.086, 0.165], 1.4);
+        $content .= $this->text($rightX, $top - 18, 'RINGKASAN HARGA', 8, true, [0.035, 0.086, 0.165]);
         $rows = [
             ['Subtotal', (float) $quotation->subtotal, false],
             ['Diskon', -((float) $quotation->discount_amount), false],
@@ -266,19 +274,19 @@ class SimpleQuotationPdf
             if ($bold) {
                 $content .= $this->line($rightX + 12, $rowY + 6, self::RIGHT - 12, $rowY + 6, [0.80, 0.85, 0.92], 0.8);
             }
-            $content .= $this->text($rightX + 12, $rowY, $label, $bold ? 8.5 : 7.5, $bold, $bold ? [0.055, 0.12, 0.23] : [0.38, 0.45, 0.56]);
+            $content .= $this->text($rightX, $rowY, $label, $bold ? 8.5 : 7.5, $bold, $bold ? [0.055, 0.12, 0.23] : [0.38, 0.45, 0.56]);
             $display = $amount < 0 ? '- '.$this->money(abs($amount)) : $this->money($amount);
             $content .= $this->text(self::RIGHT - 12, $rowY, $display, $bold ? 9.5 : 8, $bold, $bold ? [0.11, 0.43, 0.88] : [0.10, 0.18, 0.31], 'right');
             $rowY -= $bold ? 20 : 16;
         }
 
         $approvalTop = min($noteTop - $noteHeight, $top - $summaryHeight) - 18;
-        $content .= $this->rect(self::LEFT, $approvalTop - 62, self::RIGHT - self::LEFT, 62, [0.94, 0.98, 0.96], [0.75, 0.90, 0.82]);
+        $content .= $this->rect(self::LEFT, $approvalTop - 54, self::RIGHT - self::LEFT, 54, [0.965, 0.985, 0.975]);
+        $content .= $this->rect(self::LEFT, $approvalTop - 54, 4, 54, [0.05, 0.48, 0.28]);
         $content .= $this->text(self::LEFT + 14, $approvalTop - 19, 'DOKUMEN TELAH DISETUJUI', 8.5, true, [0.05, 0.48, 0.28]);
-        $content .= $this->text(self::LEFT + 14, $approvalTop - 36, 'Approved by: '.($quotation->approvedBy?->name ?: '-'), 7.5, false, [0.25, 0.40, 0.33]);
-        $content .= $this->text(self::LEFT + 14, $approvalTop - 49, 'Tanggal approval: '.(optional($quotation->approved_at)->format('d/m/Y H:i') ?: '-'), 7.5, false, [0.25, 0.40, 0.33]);
-        $content .= $this->text(self::RIGHT - 14, $approvalTop - 28, 'APPROVED SPV', 10, true, [0.05, 0.48, 0.28], 'right');
-        $content .= $this->text(self::RIGHT - 14, $approvalTop - 44, 'Dokumen diterbitkan oleh ROBUST CRM', 7, false, [0.35, 0.50, 0.42], 'right');
+        $content .= $this->text(self::LEFT + 14, $approvalTop - 36, 'Approved by: '.($quotation->approvedBy?->name ?: '-').' pada '.(optional($quotation->approved_at)->format('d/m/Y H:i') ?: '-'), 7.5, false, [0.25, 0.40, 0.33]);
+        $content .= $this->text(self::RIGHT - 14, $approvalTop - 26, 'APPROVED SPV', 9, true, [0.05, 0.48, 0.28], 'right');
+        $content .= $this->text(self::RIGHT - 14, $approvalTop - 40, 'Dokumen resmi ROBUST CRM', 6.8, false, [0.35, 0.50, 0.42], 'right');
 
         return $content;
     }

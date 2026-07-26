@@ -120,7 +120,7 @@
                     <div class="lead-detail-actions">
                         <a href="{{ route('sales.design-requests.create',['lead'=>$selected->id]) }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i><span>Buat Design Request</span></a>
                         <a href="{{ route('sales.leads.edit',$selected) }}" class="btn btn-soft"><i class="bi bi-pencil"></i><span>Edit Lead</span></a>
-                        <a href="{{ route('activities.create') }}" class="btn btn-soft"><i class="bi bi-calendar-plus"></i><span>Buat Aktivitas</span></a>
+                        @if(auth()->user()->isSales())<a href="{{ route('activities.create') }}" class="btn btn-soft"><i class="bi bi-calendar-plus"></i><span>Buat Aktivitas</span></a>@endif
                     </div>
                 </div>
             @else

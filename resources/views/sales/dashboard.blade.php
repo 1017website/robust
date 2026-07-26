@@ -12,7 +12,7 @@
             <div class="page-subtitle">Berikut ringkasan performa dan aktivitas hari ini.</div>
         </div>
         <div class="page-actions">
-            <a href="{{ route('activities.create') }}" class="btn btn-soft btn-sm"><i class="bi bi-calendar-plus me-1"></i>Tambah Activity</a>
+            @if(auth()->user()->isSales())<a href="{{ route('activities.create') }}" class="btn btn-soft btn-sm"><i class="bi bi-calendar-plus me-1"></i>Tambah Activity</a>@endif
             <a href="{{ route('sales.leads.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Lead Baru</a>
         </div>
     </div>
