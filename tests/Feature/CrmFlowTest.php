@@ -140,6 +140,71 @@ class CrmFlowTest extends TestCase
             ->assertSee('QC Selesai');
     }
 
+    public function test_administrator_can_submit_every_workspace_form_exposed_by_the_ui(): void
+    {
+        Storage::fake('public');
+
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $project = Project::create([
+            'code' => 'PRJ-ADMIN-WORKSPACE-001',
+            'name' => 'Project Administrator Workspace',
+            'status' => 'ongoing',
+        ]);
+
+        $this->actingAs($administrator)->put(route('project-workflow.production', $project), [
+            'production_status' => 'production_finished',
+            'production_report_completed' => 1,
+            'production_report' => UploadedFile::fake()->create('checklist-produksi-admin.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($administrator)->put(route('project-workflow.qc', $project), [
+            'qc_completed' => 1,
+            'qc_document' => UploadedFile::fake()->create('checklist-qc-admin.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($administrator)->put(route('project-workflow.delivery', $project), [
+            'delivery_out_completed' => 1,
+            'delivery_out_photo' => UploadedFile::fake()->image('do-keluar-admin.jpg'),
+            'delivery_returned_completed' => 1,
+            'delivery_returned_photo' => UploadedFile::fake()->image('ba-kembali-admin.jpg'),
+        ])->assertRedirect();
+
+        $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
+            'revision_date' => now()->format('Y-m-d'),
+            'notes' => 'Revisi yang dibuat oleh administrator.',
+            'revision_file' => UploadedFile::fake()->create('revision-admin.pdf', 50, 'application/pdf'),
+        ])->assertRedirect();
+
+        $workflow = ProjectWorkflow::where('project_id', $project->id)->firstOrFail();
+        $revision = DesignRevision::where('project_id', $project->id)->firstOrFail();
+
+        $this->assertSame('production_finished', $workflow->production_status);
+        $this->assertTrue($workflow->production_report_completed);
+        $this->assertTrue($workflow->qc_completed);
+        $this->assertTrue($workflow->delivery_out_completed);
+        $this->assertTrue($workflow->delivery_returned_completed);
+        $this->assertSame($administrator->id, $workflow->production_updated_by);
+        $this->assertSame($administrator->id, $workflow->qc_updated_by);
+        $this->assertSame($administrator->id, $workflow->delivery_updated_by);
+        $this->assertSame($administrator->id, $revision->created_by);
+
+        $this->actingAs($administrator)->put(route('design-revisions.status', [$project, $revision]), [
+            'status' => 'approved',
+        ])->assertRedirect();
+
+        $revision->refresh();
+        $this->assertSame('approved', $revision->status);
+        $this->assertSame($administrator->id, $revision->status_updated_by);
+
+        $sales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($sales)->put(route('project-workflow.production', $project), [
+            'production_status' => 'stock',
+        ])->assertForbidden();
+        $this->actingAs($sales)->put(route('project-workflow.qc', $project))->assertForbidden();
+        $this->actingAs($sales)->put(route('project-workflow.delivery', $project))->assertForbidden();
+        $this->actingAs($sales)->post(route('design-revisions.store', $project))->assertForbidden();
+    }
+
     public function test_breadcrumb_and_back_button_render_on_list_create_and_detail_pages(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);

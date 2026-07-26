@@ -86,16 +86,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/project-monitoring', [ProjectMonitoringController::class, 'index'])->name('project-monitoring.index');
     });
 
-    Route::middleware('role:production')->group(function () {
+    Route::middleware('role:administrator,production')->group(function () {
         Route::put('/project-workspace/{project}/production', [ProjectWorkflowController::class, 'updateProduction'])->name('project-workflow.production');
     });
-    Route::middleware('role:qc')->group(function () {
+    Route::middleware('role:administrator,qc')->group(function () {
         Route::put('/project-workspace/{project}/qc', [ProjectWorkflowController::class, 'updateQc'])->name('project-workflow.qc');
     });
-    Route::middleware('role:delivery')->group(function () {
+    Route::middleware('role:administrator,delivery')->group(function () {
         Route::put('/project-workspace/{project}/delivery', [ProjectWorkflowController::class, 'updateDelivery'])->name('project-workflow.delivery');
     });
-    Route::middleware('role:drafter,administration')->group(function () {
+    Route::middleware('role:administrator,drafter,administration')->group(function () {
         Route::post('/project-workspace/{project}/design-revisions', [DesignRevisionController::class, 'store'])->name('design-revisions.store');
         Route::put('/project-workspace/{project}/design-revisions/{designRevision}/status', [DesignRevisionController::class, 'updateStatus'])->name('design-revisions.status');
     });
