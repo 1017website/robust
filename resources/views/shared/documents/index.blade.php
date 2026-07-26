@@ -13,7 +13,8 @@
 <div class="card-r">
     <form class="filter-bar" method="GET">
         <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari dokumen...">
-        <select name="category" class="form-select"><option value="">Semua Kategori</option>@foreach(['drawing'=>'Drawing','boq'=>'BOQ','laporan'=>'Laporan','gambar'=>'Gambar','lainnya'=>'Lainnya'] as $k=>$v)<option value="{{ $k }}" @selected(request('category')==$k)>{{ $v }}</option>@endforeach</select>
+        @if(($projectOptions ?? collect())->isNotEmpty())<select name="project" class="form-select"><option value="">Semua Project</option>@foreach($projectOptions as $project)<option value="{{ $project->id }}" @selected((int) request('project') === $project->id)>{{ $project->code }} - {{ $project->name }}</option>@endforeach</select>@endif
+        <select name="category" class="form-select"><option value="">Semua Kategori</option>@foreach(['fabrication_drawing'=>'Gambar Fabrikasi','drawing'=>'Drawing','boq'=>'BOQ','laporan'=>'Laporan','gambar'=>'Gambar','lainnya'=>'Lainnya'] as $k=>$v)<option value="{{ $k }}" @selected(request('category')==$k)>{{ $v }}</option>@endforeach</select>
         <button class="btn btn-soft btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
     </form>
     <div class="table-wrap">

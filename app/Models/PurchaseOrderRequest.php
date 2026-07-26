@@ -31,7 +31,14 @@ class PurchaseOrderRequest extends Model
 
     public function canCreateInvoice(): bool
     {
-        return $this->status !== 'cancelled' && ! $this->invoice()->exists();
+        if ($this->status === 'cancelled' || $this->invoice()->exists()) {
+            return false;
+        }
+
+        $project = $this->quotation?->project;
+
+        // Data lama yang belum memiliki Project tetap dapat ditagihkan.
+        return ! $project || $project->workflow?->delivery_status === 'completed';
     }
 
     public function requester(): BelongsTo

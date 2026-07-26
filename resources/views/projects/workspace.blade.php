@@ -6,8 +6,10 @@
     $canProduction = in_array($role, ['administrator', 'production'], true);
     $canQc = in_array($role, ['administrator', 'qc'], true);
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
+    $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
     $statusLabel = \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? $workflow->production_status;
+    $deliveryStatusLabel = \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? $workflow->delivery_status;
 @endphp
 
 @push('styles')
@@ -19,6 +21,8 @@
     .workflow-card { border: 1px solid #e7ebf1; border-radius: 14px; padding: 1rem; background: #fff; }
     .workflow-card h3 { font-size: 1rem; font-weight: 800; margin: 0; }
     .attachment-box { border: 1px dashed #cfd7e3; border-radius: 10px; padding: .8rem; background: #f8fafc; }
+    .qc-checklist { max-height: 420px; overflow: auto; border: 1px solid #e7ebf1; border-radius: 10px; padding: .75rem; background: #fbfcfe; }
+    .qc-item + .qc-item { border-top: 1px solid #e7ebf1; margin-top: .75rem; padding-top: .75rem; }
     .revision-note { max-width: 430px; white-space: normal; }
     @media (max-width: 991px) { .workflow-grid { grid-template-columns: 1fr; } }
 </style>
@@ -72,6 +76,31 @@
         </div>
 
         <div class="tab-pane fade" id="operations">
+            <section class="workflow-card mb-3">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div><h3>Gambar Fabrikasi</h3><small class="text-muted-2">Drafter mengunggah gambar final setelah PO Accurate terbit. Produksi dapat mengunduh file aktif dari sini.</small></div>
+                    <x-status-badge :status="$fabricationDocuments->isNotEmpty() ? 'completed' : 'pending'" :label="$fabricationDocuments->isNotEmpty() ? 'Siap Produksi' : 'Menunggu Drafter'" />
+                </div>
+                @if($canFabrication)
+                    <form method="POST" action="{{ route('documents.store') }}" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
+                        @csrf
+                        <input type="hidden" name="documentable_type" value="{{ \App\Models\Project::class }}">
+                        <input type="hidden" name="documentable_id" value="{{ $project->id }}">
+                        <input type="hidden" name="category" value="fabrication_drawing">
+                        <div class="col-md-4"><label class="form-label">Nama Gambar</label><input name="name" class="form-control" value="{{ old('name', 'Gambar Fabrikasi '.$project->code) }}" required></div>
+                        <div class="col-md-5"><label class="form-label">File Gambar Fabrikasi</label><input type="file" name="file" class="form-control" accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png,.zip" required></div>
+                        <div class="col-md-3"><button class="btn btn-primary w-100"><i class="bi bi-cloud-arrow-up me-1"></i>Upload Gambar</button></div>
+                    </form>
+                @endif
+                <div class="row g-2">
+                    @forelse($fabricationDocuments as $document)
+                        <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ asset('storage/'.$document->file_path) }}"><i class="bi bi-download me-1"></i>Download</a></div></div>
+                    @empty
+                        <div class="col-12"><x-empty text="Gambar fabrikasi belum diunggah." /></div>
+                    @endforelse
+                </div>
+            </section>
+
             <div class="workflow-grid">
                 <section class="workflow-card">
                     <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Laporan Produksi</h3><small class="text-muted-2">Status dan Checklist Produksi</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
@@ -92,11 +121,24 @@
                 </section>
 
                 <section class="workflow-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>QC Attachment</h3><small class="text-muted-2">Checklist dan dokumen QC</small></div><x-status-badge :status="$workflow->qc_completed ? 'approved' : 'pending'" :label="$workflow->qc_completed ? 'QC Selesai' : 'QC Pending'" /></div>
+                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Quality Control</h3><small class="text-muted-2">Checklist otomatis dari spesifikasi penawaran</small></div><x-status-badge :status="$workflow->qc_completed ? 'approved' : 'pending'" :label="$workflow->qc_completed ? 'QC Selesai' : 'QC Pending'" /></div>
                     @if($canQc)
                     <form method="POST" action="{{ route('project-workflow.qc', $project) }}" enctype="multipart/form-data">@csrf @method('PUT')
-                        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="qc_completed" value="1" id="qcComplete" @checked($workflow->qc_completed)><label class="form-check-label fw-semibold" for="qcComplete">Checklist QC selesai</label></div>
-                        <label class="form-label">Checklist QC (PDF)</label><input class="form-control mb-3" type="file" name="qc_document" accept="application/pdf,.pdf">
+                        <div class="qc-checklist mb-3">
+                            @forelse($qcChecklistDefinition as $qcItem)
+                                <div class="qc-item">
+                                    <div class="fw-bold mb-1">{{ $qcItem['item_name'] }} @if($qcItem['variant'])<small class="text-muted-2">- {{ $qcItem['variant'] }}</small>@endif</div>
+                                    @foreach($qcItem['checks'] as $check)
+                                        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="qc_checklist[{{ $check['key'] }}]" value="1" id="qc_{{ $check['key'] }}" @checked(old('qc_checklist.'.$check['key'], $workflow->qc_checklist[$check['key']] ?? false))><label class="form-check-label small" for="qc_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <div class="small text-muted-2">Belum ada item penawaran untuk diperiksa.</div>
+                            @endforelse
+                        </div>
+                        <label class="form-label">Catatan QC</label><textarea name="qc_note" class="form-control mb-3" rows="2">{{ old('qc_note', $workflow->qc_note) }}</textarea>
+                        <label class="form-label">Lampiran QC (opsional, PDF)</label><input class="form-control mb-3" type="file" name="qc_document" accept="application/pdf,.pdf">
+                        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="qc_completed" value="1" id="qcComplete" @checked($workflow->qc_completed)><label class="form-check-label fw-semibold" for="qcComplete">Semua pemeriksaan selesai dan lolos QC</label></div>
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan QC</button>
                     </form>
                     @else
@@ -108,21 +150,24 @@
                 </section>
 
                 <section class="workflow-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Delivery</h3><small class="text-muted-2">Monitoring DO/BA dan bukti foto</small></div><span class="badge text-bg-{{ $workflow->delivery_returned_completed ? 'success' : 'warning' }}">{{ $workflow->delivery_returned_completed ? 'Selesai' : 'Proses' }}</span></div>
+                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Delivery</h3><small class="text-muted-2">Jadwal, POD, dan penerimaan customer</small></div><x-status-badge :status="$workflow->delivery_status === 'completed' ? 'completed' : 'pending'" :label="$deliveryStatusLabel" /></div>
                     @if($canDelivery)
                     <form method="POST" action="{{ route('project-workflow.delivery', $project) }}" enctype="multipart/form-data">@csrf @method('PUT')
-                        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="delivery_out_completed" value="1" id="deliveryOut" @checked($workflow->delivery_out_completed)><label class="form-check-label fw-semibold" for="deliveryOut">DO/BA Keluar selesai</label></div>
-                        <input class="form-control mb-3" type="file" name="delivery_out_photo" accept="image/jpeg,image/png,image/webp">
-                        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="delivery_returned_completed" value="1" id="deliveryReturned" @checked($workflow->delivery_returned_completed)><label class="form-check-label fw-semibold" for="deliveryReturned">DO/BA Kembali selesai</label></div>
-                        <input class="form-control mb-3" type="file" name="delivery_returned_photo" accept="image/jpeg,image/png,image/webp">
+                        <label class="form-label">Status Delivery</label><select name="delivery_status" class="form-select mb-3" required>@foreach(\App\Models\ProjectWorkflow::deliveryStatuses() as $value=>$label)<option value="{{ $value }}" @selected(old('delivery_status', $workflow->delivery_status) === $value)>{{ $label }}</option>@endforeach</select>
+                        <label class="form-label">Jadwal Pengiriman</label><input type="datetime-local" name="delivery_scheduled_at" value="{{ old('delivery_scheduled_at', $workflow->delivery_scheduled_at?->format('Y-m-d\TH:i')) }}" class="form-control mb-3">
+                        <label class="form-label">POD / Bukti Terkirim</label><input class="form-control mb-3" type="file" name="pod" accept=".pdf,image/jpeg,image/png,image/webp">
+                        <label class="form-label">Nama Penerima Customer</label><input name="customer_receiver_name" value="{{ old('customer_receiver_name', $workflow->customer_receiver_name) }}" class="form-control mb-3">
+                        <label class="form-label">Tanggal Diterima Customer</label><input type="datetime-local" name="customer_received_at" value="{{ old('customer_received_at', $workflow->customer_received_at?->format('Y-m-d\TH:i')) }}" class="form-control mb-3">
+                        <label class="form-label">Catatan Delivery</label><textarea name="delivery_note" class="form-control mb-3" rows="2">{{ old('delivery_note', $workflow->delivery_note) }}</textarea>
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Delivery</button>
                     </form>
                     @else
-                        <div class="mb-2"><i class="bi {{ $workflow->delivery_out_completed ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }} me-2"></i>DO/BA Keluar</div>
-                        <div><i class="bi {{ $workflow->delivery_returned_completed ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }} me-2"></i>DO/BA Kembali</div>
+                        <div class="mb-2"><span class="text-muted-2">Jadwal:</span> {{ $workflow->delivery_scheduled_at?->format('d/m/Y H:i') ?? '-' }}</div>
+                        <div class="mb-2"><span class="text-muted-2">Penerima:</span> {{ $workflow->customer_receiver_name ?: '-' }}</div>
                     @endif
-                    @if($workflow->delivery_out_photo_path || $workflow->delivery_returned_photo_path)
+                    @if($workflow->pod_path || $workflow->delivery_out_photo_path || $workflow->delivery_returned_photo_path)
                         <div class="attachment-box mt-3">
+                            @if($workflow->pod_path)<div class="mb-2"><span class="small fw-semibold">POD: {{ $workflow->pod_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-pod']) }}">Lihat POD</a> - <a href="{{ route('project-workflow.attachment', [$project, 'delivery-pod', 'download' => 1]) }}">Download</a></div>@endif
                             @if($workflow->delivery_out_photo_path)<div class="mb-2"><span class="small fw-semibold">Keluar: {{ $workflow->delivery_out_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-out']) }}">Lihat foto</a></div>@endif
                             @if($workflow->delivery_returned_photo_path)<div><span class="small fw-semibold">Kembali: {{ $workflow->delivery_returned_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-returned']) }}">Lihat foto</a></div>@endif
                         </div>

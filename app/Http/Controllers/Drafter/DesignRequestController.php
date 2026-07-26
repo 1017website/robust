@@ -104,15 +104,6 @@ class DesignRequestController extends Controller
             'dimensions' => ['nullable', 'array'],
             'dimensions.*.item' => ['nullable', 'string', 'max:255'],
             'dimensions.*.size' => ['nullable', 'string', 'max:255'],
-            'materials' => ['nullable', 'array'],
-            'materials.*.item' => ['nullable', 'string', 'max:255'],
-            'materials.*.material' => ['nullable', 'string', 'max:255'],
-            'materials.*.finish' => ['nullable', 'string', 'max:255'],
-            'accessories' => ['nullable', 'array'],
-            'accessories.*' => ['nullable', 'string', 'max:255'],
-            'material_estimation' => ['nullable', 'array'],
-            'material_estimation.*.material' => ['nullable', 'string', 'max:255'],
-            'material_estimation.*.qty' => ['nullable', 'string', 'max:100'],
             'cost_material' => ['nullable', 'numeric'],
             'cost_production' => ['nullable', 'numeric'],
             'cost_installation' => ['nullable', 'numeric'],
@@ -135,9 +126,6 @@ class DesignRequestController extends Controller
         DB::transaction(function () use ($designRequest, $data, $request, $isCostEditor, $isImageEditor) {
             $update = [
                 'dimensions' => $data['dimensions'] ?? null,
-                'materials' => $data['materials'] ?? null,
-                'accessories' => $data['accessories'] ?? null,
-                'material_estimation' => $data['material_estimation'] ?? null,
                 'technical_note' => $data['technical_note'] ?? null,
                 'status' => match ($request->input('action')) {
                     'submit' => 'completed',

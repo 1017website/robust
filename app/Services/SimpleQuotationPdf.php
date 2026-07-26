@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Quotation;
 use App\Models\SystemSetting;
+use App\Support\StructuredSpecification;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -37,9 +38,13 @@ class SimpleQuotationPdf
         $rowIndex = 0;
 
         foreach ($quotation->items as $index => $item) {
-            $nameLines = $this->wrap(($item->is_optional ? '[OPSIONAL] ' : '').(string) $item->name, 30);
-            $specLines = $this->wrap((string) $item->specification, 44);
-            $rowHeight = max(42, 16 + count($nameLines) * 10 + count($specLines) * 8);
+            $nameLines = $this->wrap(($item->is_optional ? '[OPSIONAL] ' : '').(string) $item->name, 38);
+            if (filled($item->variant)) {
+                array_push($nameLines, ...$this->wrap('Model: '.$item->variant, 42));
+            }
+            $specLines = $this->quotationSpecificationLines((string) $item->specification, 86);
+            $headerHeight = max(34, 14 + count($nameLines) * 10);
+            $rowHeight = $headerHeight + ($specLines ? 14 + count($specLines) * 9 : 0) + 8;
 
             if ($y - $rowHeight < 145) {
                 $pages[] = $page;
@@ -97,7 +102,7 @@ class SimpleQuotationPdf
         } else {
             $y = $bandBottom - 18;
             $content .= $this->metaCard($quotation, $y);
-            $y -= 92;
+            $y -= 100;
         }
 
         if ($withTable) {
@@ -110,23 +115,27 @@ class SimpleQuotationPdf
 
     protected function metaCard(Quotation $quotation, float $top): string
     {
-        $bottom = $top - 74;
-        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 74, [0.965, 0.978, 1], [0.86, 0.90, 0.96]);
+        $bottom = $top - 82;
+        $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 82, [0.965, 0.978, 1], [0.86, 0.90, 0.96]);
         $columns = [self::LEFT + 14, self::LEFT + 190, self::LEFT + 366];
-        $content .= $this->labelValue($columns[0], $top - 17, 'CUSTOMER', $quotation->customer_name ?: '-');
-        $content .= $this->labelValue($columns[1], $top - 17, 'PROJECT', $quotation->project_name ?: '-');
-        $content .= $this->labelValue($columns[2], $top - 17, 'TANGGAL', optional($quotation->quote_date)->format('d/m/Y') ?: '-');
-        $content .= $this->labelValue($columns[0], $top - 50, 'PIC / CONTACT PERSON', $quotation->pic_name ?: '-');
-        $content .= $this->labelValue($columns[1], $top - 50, 'SALES', $quotation->sales?->name ?: '-');
-        $content .= $this->labelValue($columns[2], $top - 50, 'BERLAKU SAMPAI', optional($quotation->valid_until)->format('d/m/Y') ?: '-');
+        $content .= $this->labelValue($columns[0], $top - 16, 'CUSTOMER', $quotation->customer_name ?: '-', 30);
+        $content .= $this->labelValue($columns[1], $top - 16, 'PROJECT', $quotation->project_name ?: '-', 30);
+        $content .= $this->labelValue($columns[2], $top - 16, 'TANGGAL', optional($quotation->quote_date)->format('d/m/Y') ?: '-', 22);
+        $content .= $this->labelValue($columns[0], $top - 52, 'PIC / CONTACT PERSON', $quotation->pic_name ?: '-', 30);
+        $content .= $this->labelValue($columns[1], $top - 52, 'SALES', $quotation->sales?->name ?: '-', 30);
+        $content .= $this->labelValue($columns[2], $top - 52, 'BERLAKU SAMPAI', optional($quotation->valid_until)->format('d/m/Y') ?: '-', 22);
 
         return $content;
     }
 
-    protected function labelValue(float $x, float $y, string $label, string $value): string
+    protected function labelValue(float $x, float $y, string $label, string $value, int $width = 28): string
     {
-        return $this->text($x, $y, $label, 6.5, true, [0.38, 0.45, 0.58])
-            .$this->text($x, $y - 13, $this->truncate($value, 28), 8.5, true, [0.07, 0.15, 0.29]);
+        $content = $this->text($x, $y, $label, 6.5, true, [0.38, 0.45, 0.58]);
+        foreach (array_slice($this->wrap($value, $width), 0, 2) as $index => $line) {
+            $content .= $this->text($x, $y - 13 - $index * 9, $line, 8.2, true, [0.07, 0.15, 0.29]);
+        }
+
+        return $content;
     }
 
     protected function tableHeader(float $top): string
@@ -134,8 +143,8 @@ class SimpleQuotationPdf
         $bottom = $top - 24;
         $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, 24, [0.11, 0.43, 0.88]);
         $headers = [
-            [54, 'NO', 'center'], [78, 'ITEM & SPESIFIKASI', 'left'], [281, 'QTY', 'center'],
-            [327, 'UNIT', 'center'], [430, 'HARGA SATUAN', 'right'], [548, 'TOTAL', 'right'],
+            [54, 'NO', 'center'], [76, 'ITEM', 'left'], [330, 'QTY', 'center'],
+            [371, 'UNIT', 'center'], [456, 'HARGA SATUAN', 'right'], [548, 'TOTAL', 'right'],
         ];
         foreach ($headers as [$x, $label, $align]) {
             $content .= $this->text($x, $bottom + 8, $label, 7, true, [1, 1, 1], $align);
@@ -149,27 +158,77 @@ class SimpleQuotationPdf
         $bottom = $top - $height;
         $fill = $alternate ? [0.975, 0.983, 0.996] : [1, 1, 1];
         $content = $this->rect(self::LEFT, $bottom, self::RIGHT - self::LEFT, $height, $fill, [0.88, 0.91, 0.95]);
-        foreach ([68, 258, 303, 351, 441] as $x) {
-            $content .= $this->line($x, $bottom, $x, $top, [0.90, 0.93, 0.97], 0.45);
+        $headerHeight = max(34, 14 + count($nameLines) * 10);
+        $headerBottom = $top - $headerHeight;
+        $content .= $this->line(68, $bottom, 68, $top, [0.90, 0.93, 0.97], 0.45);
+        foreach ([310, 350, 392, 465] as $x) {
+            $content .= $this->line($x, $headerBottom, $x, $top, [0.90, 0.93, 0.97], 0.45);
         }
 
         $content .= $this->text(54, $top - 18, (string) $number, 8, true, [0.20, 0.28, 0.40], 'center');
         $textY = $top - 15;
-        foreach ($nameLines as $line) {
-            $content .= $this->text(76, $textY, $line, 8.3, true, [0.06, 0.14, 0.27]);
+        foreach ($nameLines as $index => $line) {
+            $isVariant = str_starts_with($line, 'Model:');
+            $content .= $this->text(76, $textY, $line, $isVariant ? 7.3 : 8.3, ! $isVariant, $isVariant ? [0.36, 0.44, 0.55] : [0.06, 0.14, 0.27]);
             $textY -= 10;
         }
-        foreach ($specLines as $line) {
-            $content .= $this->text(76, $textY, $line, 7.2, false, [0.40, 0.47, 0.58]);
-            $textY -= 8;
-        }
 
-        $content .= $this->text(280.5, $top - 18, $this->quantity((float) $item->qty), 8, false, [0.12, 0.20, 0.34], 'center');
-        $content .= $this->text(327, $top - 18, $this->truncate($item->unit ?: 'Unit', 9), 8, false, [0.12, 0.20, 0.34], 'center');
-        $content .= $this->text(433, $top - 18, $this->money((float) $item->unit_price), 8, false, [0.12, 0.20, 0.34], 'right');
+        $content .= $this->text(330, $top - 18, $this->quantity((float) $item->qty), 8, false, [0.12, 0.20, 0.34], 'center');
+        $content .= $this->text(371, $top - 18, $this->truncate($item->unit ?: 'Unit', 9), 8, false, [0.12, 0.20, 0.34], 'center');
+        $content .= $this->text(456, $top - 18, $this->money((float) $item->unit_price), 8, false, [0.12, 0.20, 0.34], 'right');
         $content .= $this->text(548, $top - 18, $this->money((float) $item->total), 8, true, [0.06, 0.14, 0.27], 'right');
 
+        if ($specLines) {
+            $content .= $this->line(68, $headerBottom, self::RIGHT, $headerBottom, [0.86, 0.90, 0.95], 0.55);
+            $specY = $headerBottom - 13;
+            foreach ($specLines as $line) {
+                $content .= $this->text(
+                    $line['section'] ? 78 : 86,
+                    $specY,
+                    $line['text'],
+                    $line['section'] ? 7.2 : 7.1,
+                    $line['section'],
+                    $line['section'] ? [0.11, 0.43, 0.88] : [0.35, 0.42, 0.53]
+                );
+                $specY -= 9;
+            }
+        }
+
         return $content;
+    }
+
+    protected function quotationSpecificationLines(string $specification, int $width): array
+    {
+        $sections = StructuredSpecification::parse($specification);
+        if (! $sections) {
+            return [];
+        }
+
+        $lines = [];
+        foreach ($sections as $section) {
+            $lines[] = [
+                'text' => strtoupper($section['title'] ?: 'Spesifikasi'),
+                'section' => true,
+            ];
+            foreach ($section['rows'] as $row) {
+                if ($row['type'] === 'breakdown') {
+                    $value = trim(($row['label'] ?: 'Rincian').': '.$this->quantity((float) $row['qty']).' '.$row['unit']);
+                    if ($row['unit_price'] !== null) {
+                        $value .= ' x '.$this->money((float) $row['unit_price']);
+                    }
+                } else {
+                    $value = trim(($row['label'] ? $row['label'].': ' : '').($row['value'] ?: '-'));
+                }
+                foreach ($this->wrap($value, $width) as $wrappedLine) {
+                    $lines[] = [
+                        'text' => $wrappedLine,
+                        'section' => false,
+                    ];
+                }
+            }
+        }
+
+        return $lines;
     }
 
     protected function summarySection(Quotation $quotation, float $top): string

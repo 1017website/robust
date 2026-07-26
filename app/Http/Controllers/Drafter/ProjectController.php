@@ -12,17 +12,32 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-
-        $query = Project::with('customer', 'projectManager', 'quotation')
-            ->with('workflow')
-            ->when($user->isDrafter(), function ($q) use ($user) {
-                $q->where(function ($w) use ($user) {
-                    $w->where('project_manager_id', $user->id)
+        $applyRoleScope = function ($query) use ($user) {
+            if ($user->isDrafter()) {
+                $query->where(function ($scope) use ($user) {
+                    $scope->where('project_manager_id', $user->id)
                         ->orWhereJsonContains('internal_team', (string) $user->id)
                         ->orWhereJsonContains('internal_team', $user->id);
                 });
-            })
-            ->latest();
+            } elseif ($user->isProduction()) {
+                $query->whereHas('documents', fn ($documents) => $documents
+                    ->where('category', 'fabrication_drawing')
+                    ->where('is_current', true));
+            } elseif ($user->isQc()) {
+                $query->whereHas('workflow', fn ($workflow) => $workflow
+                    ->where('production_status', 'production_finished'));
+            } elseif ($user->isDelivery()) {
+                $query->whereHas('workflow', fn ($workflow) => $workflow
+                    ->where('qc_completed', true));
+            }
+
+            return $query;
+        };
+
+        $query = Project::with('customer', 'projectManager', 'quotation')
+            ->with('workflow');
+        $applyRoleScope($query);
+        $query->latest();
 
         if ($status = $request->get('status')) {
             $query->where('status', $status);
@@ -41,14 +56,8 @@ class ProjectController extends Controller
             : null;
         $selectedProject ??= $projects->first();
 
-        $base = Project::query()
-            ->when($user->isDrafter(), function ($q) use ($user) {
-                $q->where(function ($w) use ($user) {
-                    $w->where('project_manager_id', $user->id)
-                        ->orWhereJsonContains('internal_team', (string) $user->id)
-                        ->orWhereJsonContains('internal_team', $user->id);
-                });
-            });
+        $base = Project::query();
+        $applyRoleScope($base);
 
         $stats = [
             'aktif' => (clone $base)->whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),

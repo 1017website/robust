@@ -5,9 +5,6 @@
     $scope = $designRequest->scope_checklist ?? [];
     $outputs = $designRequest->outputs ?? [];
     $dimensions = $designRequest->dimensions ?: [['item'=>'','size'=>'']];
-    $materials = $designRequest->materials ?: [['item'=>'','material'=>'','finish'=>'']];
-    $accessories = $designRequest->accessories ?: [''];
-    $estimations = $designRequest->material_estimation ?: [['material'=>'','qty'=>'']];
     $costTotal = (float) $designRequest->cost_material + (float) $designRequest->cost_production + (float) $designRequest->cost_installation;
     $notes = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $designRequest->technical_note ?? '')));
     $currentDocs = $designRequest->documents->where('is_current', true);
@@ -49,14 +46,11 @@
             <div class="info-card"><div class="card-head"><h2>Spesifikasi & HPP Produksi</h2></div>
                 <div class="feedback-grid two">
                     <div class="spec-card"><div class="spec-head"><strong>1. Dimensi Utama</strong></div><div class="table-wrap"><table class="table-r compact"><thead><tr><th>Item</th><th>Ukuran (P x L x T)</th></tr></thead><tbody>@foreach($dimensions as $i=>$row)<tr><td><input name="dimensions[{{ $i }}][item]" value="{{ $row['item'] ?? '' }}" placeholder="Nama item" class="form-control form-control-sm border-0 bg-transparent fw-semibold"></td><td><input name="dimensions[{{ $i }}][size]" value="{{ $row['size'] ?? '' }}" placeholder="Contoh: 1200 x 600 x 850 mm" class="form-control form-control-sm border-0 bg-transparent"></td></tr>@endforeach</tbody></table></div></div>
-                    <div class="spec-card material-spec-card"><div class="spec-head"><strong>2. Material & Finishing</strong></div><div class="table-wrap"><table class="table-r compact"><thead><tr><th>Item</th><th>Material</th><th>Finishing / Warna</th></tr></thead><tbody>@foreach($materials as $i=>$row)<tr><td><input name="materials[{{ $i }}][item]" value="{{ $row['item'] ?? '' }}" placeholder="Nama item" class="form-control form-control-sm border-0 bg-transparent fw-semibold"></td><td><input name="materials[{{ $i }}][material]" value="{{ $row['material'] ?? '' }}" placeholder="Jenis material" class="form-control form-control-sm border-0 bg-transparent"></td><td><input name="materials[{{ $i }}][finish]" value="{{ $row['finish'] ?? '' }}" placeholder="Finishing / warna" class="form-control form-control-sm border-0 bg-transparent"></td></tr>@endforeach</tbody></table></div></div>
-                    <div class="spec-card"><div class="spec-head"><strong>3. Accessories / Perlengkapan</strong></div><div class="accessory-list">@foreach($accessories as $i=>$item)<label><i class="bi bi-check-circle text-success"></i><input name="accessories[{{ $i }}]" value="{{ is_array($item) ? ($item['name'] ?? '') : $item }}" placeholder="Nama aksesori / perlengkapan" class="form-control form-control-sm border-0 bg-transparent"></label>@endforeach</div></div>
-                    <div class="spec-card"><div class="spec-head"><strong>4. Estimasi Material</strong></div><div class="table-wrap"><table class="table-r compact"><thead><tr><th>Material</th><th>Qty / Estimasi</th></tr></thead><tbody>@foreach($estimations as $i=>$row)<tr><td><input name="material_estimation[{{ $i }}][material]" value="{{ $row['material'] ?? '' }}" placeholder="Nama material" class="form-control form-control-sm border-0 bg-transparent"></td><td><input name="material_estimation[{{ $i }}][qty]" value="{{ $row['qty'] ?? '' }}" placeholder="Jumlah / estimasi" class="form-control form-control-sm border-0 bg-transparent"></td></tr>@endforeach</tbody></table></div></div>
-                    <div class="spec-card"><div class="spec-head"><strong>5. Estimasi Costing Awal — Produksi</strong></div><div class="cost-list"><label>Material <input name="cost_material" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_material', (float) $designRequest->cost_material) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Produksi <input name="cost_production" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_production', (float) $designRequest->cost_production) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Instalasi <input name="cost_installation" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_installation', (float) $designRequest->cost_installation) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><div class="total">Total Estimasi <strong>{{ \App\Support\Format::rupiah($costTotal) }}</strong></div></div></div>
+                    <div class="spec-card"><div class="spec-head"><strong>2. Estimasi Costing Awal — Produksi</strong></div><div class="cost-list"><label>Material <input name="cost_material" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_material', (float) $designRequest->cost_material) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Produksi <input name="cost_production" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_production', (float) $designRequest->cost_production) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Instalasi <input name="cost_installation" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_installation', (float) $designRequest->cost_installation) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><div class="total">Total Estimasi <strong id="costEstimateTotal" aria-live="polite">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div></div></div>
                 </div>
             </div>
 
-            <div class="info-card mt-3" id="documents"><div class="card-head"><h2>6. Drawing & Dokumen</h2></div><div class="doc-chip-row">@forelse($currentDocs as $doc)<div class="doc-chip"><i class="bi bi-file-earmark-pdf"></i><span>{{ $doc->name }}<small>{{ $doc->revisionLabel() }} · {{ str($doc->category)->headline() }} · {{ $doc->humanSize() }}</small></span><a href="{{ asset('storage/'.$doc->file_path) }}" target="_blank" class="btn btn-sm btn-link"><i class="bi bi-download"></i></a></div>@empty<div class="small text-muted-2">Belum ada drawing atau dokumen.</div>@endforelse</div></div>
+            <div class="info-card mt-3" id="documents"><div class="card-head"><h2>3. Drawing & Dokumen</h2></div><div class="doc-chip-row">@forelse($currentDocs as $doc)<div class="doc-chip"><i class="bi bi-file-earmark-pdf"></i><span>{{ $doc->name }}<small>{{ $doc->revisionLabel() }} · {{ str($doc->category)->headline() }} · {{ $doc->humanSize() }}</small></span><a href="{{ asset('storage/'.$doc->file_path) }}" target="_blank" class="btn btn-sm btn-link"><i class="bi bi-download"></i></a></div>@empty<div class="small text-muted-2">Belum ada drawing atau dokumen.</div>@endforelse</div></div>
 
             <div class="info-card mt-3">
                 <div class="card-head">
@@ -107,7 +101,7 @@
         </main>
 
         <aside class="right-status">
-            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dimensi: {{ collect($dimensions)->filter(fn($row) => filled($row['item'] ?? null))->count() }} item</li><li>Material: {{ collect($materials)->filter(fn($row) => filled($row['material'] ?? null))->count() }} item</li><li>Dokumen: {{ $designRequest->documents->count() }} file</li><li>Costing: {{ \App\Support\Format::rupiah($costTotal) }}</li></ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi data yang diperlukan sebelum submit final ke sales.</small></div></div>
+            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dimensi: {{ collect($dimensions)->filter(fn($row) => filled($row['item'] ?? null))->count() }} item</li><li>Dokumen: {{ $designRequest->documents->count() }} file</li><li>Costing: <span id="feedbackCostTotal">{{ \App\Support\Format::rupiah($costTotal) }}</span></li></ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi data yang diperlukan sebelum submit final ke sales.</small></div></div>
             <div class="info-card"><h6>Catatan Teknis</h6><textarea name="technical_note" class="form-control" rows="7" placeholder="Catatan teknis untuk sales...">{{ $designRequest->technical_note }}</textarea></div>
             <div class="info-card" id="history"><h6>Log Aktivitas</h6><div class="d-timeline small">@foreach([$designRequest->updated_at,$designRequest->created_at] as $date)<div><time>{{ $date->format('d M H:i') }}</time><span></span><p><strong>{{ $designRequest->productionPic?->name ?? auth()->user()->name }}</strong><small>Update {{ $designRequest->status }}</small></p></div>@endforeach</div></div>
         </aside>
@@ -143,6 +137,31 @@
 <script>
 let rowIdx = {{ max(1, $designRequest->items->count()) }};
 const canEditQuotationImage = @json(auth()->user()->isProduction());
+
+document.addEventListener('DOMContentLoaded', function () {
+    const costInputs = Array.from(document.querySelectorAll(
+        '[name="cost_material"], [name="cost_production"], [name="cost_installation"]'
+    ));
+    const costOutputs = [
+        document.getElementById('costEstimateTotal'),
+        document.getElementById('feedbackCostTotal'),
+    ].filter(Boolean);
+
+    if (!costInputs.length || !costOutputs.length) return;
+
+    const updateCostEstimate = () => {
+        const total = costInputs.reduce((sum, input) => {
+            const raw = normalizeNumberValue(input.dataset.raw || input.value, 'currency');
+            return sum + (Number.parseInt(raw, 10) || 0);
+        }, 0);
+        const formatted = `Rp ${new Intl.NumberFormat('id-ID').format(total)}`;
+        costOutputs.forEach(output => output.textContent = formatted);
+    };
+
+    costInputs.forEach(input => input.addEventListener('input', updateCostEstimate));
+    updateCostEstimate();
+});
+
 document.getElementById('addRow')?.addEventListener('click', function(){
     const i=rowIdx++;
     const editor=document.createElement('div');

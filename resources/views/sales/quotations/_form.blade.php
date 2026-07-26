@@ -72,7 +72,9 @@
     @if(($formMethod ?? 'POST') !== 'POST')
         @method($formMethod)
     @endif
-    <input type="hidden" name="design_request_id" value="{{ old('design_request_id', $quotation?->design_request_id ?? $designRequest?->id) }}">
+    @if($isEdit)
+        <input type="hidden" name="design_request_id" value="{{ old('design_request_id', $quotation?->design_request_id ?? $designRequest?->id) }}">
+    @endif
 
     <div class="wizard-pane" data-pane="1">
         <div class="card-r">
@@ -83,6 +85,20 @@
                 </div>
             @endif
             <div class="row g-3">
+                @unless($isEdit)
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Pilih Design Request</label>
+                        <select name="design_request_id" class="form-select" id="designRequestSelect" data-create-url="{{ route('sales.quotations.create') }}">
+                            <option value="">Tanpa Design Request</option>
+                            @foreach($completedDR as $dr)
+                                <option value="{{ $dr->id }}" @selected((string) old('design_request_id', $designRequest?->id) === (string) $dr->id)>
+                                    {{ $dr->code }} — {{ $dr->customer_name }} — {{ $dr->project_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Pilih Design Request yang sudah diselesaikan Produksi untuk memuat customer, proyek, item, gambar, spesifikasi, dan HPP secara otomatis.</div>
+                    </div>
+                @endunless
                 <div class="col-md-6">
                     <label class="form-label small fw-semibold">Link Customer Master</label>
                     <select name="customer_id" class="form-select" id="customerSelect">
@@ -386,6 +402,12 @@ customerSelect?.addEventListener('change', function(){
     if(opt?.dataset?.name && !document.querySelector('[name="customer_name"]').value){
         document.querySelector('[name="customer_name"]').value = opt.dataset.name;
     }
+});
+const designRequestSelect = document.getElementById('designRequestSelect');
+designRequestSelect?.addEventListener('change', function(){
+    const url = new URL(this.dataset.createUrl, window.location.origin);
+    if(this.value) url.searchParams.set('dr', this.value);
+    window.location.assign(url.toString());
 });
 
 function recalc(){

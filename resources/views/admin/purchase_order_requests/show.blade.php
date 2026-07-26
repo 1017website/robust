@@ -5,8 +5,9 @@
 <x-page-header :title="$requestPo->code" :subtitle="($requestPo->quotation?->customer_name ?: 'Customer').' · '.($requestPo->quotation?->project_name ?: 'Project')">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
-    @if(!auth()->user()->isSales() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
-    @if(!auth()->user()->isSales() && $requestPo->invoice)<a href="{{ route('admin.invoices.show',$requestPo->invoice) }}" class="btn btn-soft btn-sm">Lihat Invoice</a>@endif
+    @if($requestPo->quotation?->project)<a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}" class="btn btn-soft btn-sm"><i class="bi bi-kanban me-1"></i>Project Operasional</a>@endif
+    @if(auth()->user()->isAdminLevel() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
+    @if(auth()->user()->isAdminLevel() && $requestPo->invoice)<a href="{{ route('admin.invoices.show',$requestPo->invoice) }}" class="btn btn-soft btn-sm">Lihat Invoice</a>@endif
 </x-page-header>
 
 <div class="row g-3">
@@ -75,6 +76,9 @@
         </div>
     </div>
     <div class="col-lg-4">
+        @if(auth()->user()->isAdminLevel() && !$requestPo->invoice && $requestPo->quotation?->project && !$requestPo->canCreateInvoice())
+        <div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>Invoice tersedia setelah Delivery mengunggah POD dan menandai penerimaan customer selesai.</div>
+        @endif
         <div class="card-r">
             <div class="card-head"><h2>Update Accurate</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">

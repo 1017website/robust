@@ -38,14 +38,25 @@ class Document extends Model
             return $query;
         }
 
-        if ($user->isDrafter() || $user->isProduction()) {
+        if ($user->isProduction()) {
+            return $query->where('documentable_type', Project::class);
+        }
+
+        if ($user->isDrafter()) {
             return $query->where(function (Builder $documentQuery) use ($user) {
                 $documentQuery->where('uploaded_by', $user->id)
                     ->orWhere(function (Builder $designQuery) use ($user) {
                         $designQuery->where('documentable_type', DesignRequest::class)
                             ->whereIn('documentable_id', DesignRequest::query()->select('id')
-                                ->when($user->isDrafter(), fn (Builder $query) => $query->where('production_pic_id', $user->id)));
-                    });
+                                ->where('production_pic_id', $user->id));
+                    })
+                    ->orWhere(fn (Builder $projectQuery) => $projectQuery
+                        ->where('documentable_type', Project::class)
+                        ->whereIn('documentable_id', Project::query()->select('id')->where(function (Builder $projects) use ($user) {
+                            $projects->where('project_manager_id', $user->id)
+                                ->orWhereJsonContains('internal_team', (string) $user->id)
+                                ->orWhereJsonContains('internal_team', $user->id);
+                        })));
             });
         }
 

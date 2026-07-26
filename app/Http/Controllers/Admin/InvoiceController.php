@@ -12,6 +12,7 @@ use App\Services\OperationalDocumentPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
 {
@@ -23,13 +24,23 @@ class InvoiceController extends Controller
                 ->orWhere('project_name', 'like', '%'.$request->q.'%')->orWhere('project_number', 'like', '%'.$request->q.'%')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
             ->latest()->paginate(12)->withQueryString();
-        return view('admin.invoices.index', compact('invoices'));
+        $readyRequests = PurchaseOrderRequest::with('quotation.project.workflow')
+            ->whereDoesntHave('invoice')
+            ->whereHas('quotation.project.workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
+            ->latest('processed_at')
+            ->get();
+
+        return view('admin.invoices.index', compact('invoices', 'readyRequests'));
     }
 
     public function create(Request $request)
     {
-        $requestPo = PurchaseOrderRequest::with('quotation.items', 'quotation.customer', 'invoice')->findOrFail($request->integer('request_po'));
-        abort_unless($requestPo->canCreateInvoice(), 422, 'Invoice untuk Request PO ini sudah ada atau Request PO dibatalkan.');
+        $requestPo = PurchaseOrderRequest::with('quotation.items', 'quotation.customer', 'quotation.project.workflow', 'invoice')->findOrFail($request->integer('request_po'));
+        if (! $requestPo->canCreateInvoice()) {
+            throw ValidationException::withMessages([
+                'request_po' => 'Invoice baru dapat diterbitkan setelah Delivery selesai dan penerimaan customer dikonfirmasi.',
+            ]);
+        }
         return view('admin.invoices.create', compact('requestPo'));
     }
 
@@ -42,11 +53,20 @@ class InvoiceController extends Controller
             'terms.*.percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'terms.*.amount' => ['required', 'numeric', 'min:0.01'], 'terms.*.due_date' => ['nullable', 'date'],
         ]);
-        $requestPo = PurchaseOrderRequest::with('quotation')->findOrFail($data['purchase_order_request_id']);
-        abort_unless($requestPo->canCreateInvoice(), 422, 'Request PO tidak dapat dibuatkan invoice.');
+        $requestPo = PurchaseOrderRequest::with('quotation.project.workflow')->findOrFail($data['purchase_order_request_id']);
+        if (! $requestPo->canCreateInvoice()) {
+            throw ValidationException::withMessages([
+                'purchase_order_request_id' => 'Invoice baru dapat diterbitkan setelah Delivery selesai dan penerimaan customer dikonfirmasi.',
+            ]);
+        }
         $quotation = $requestPo->quotation;
-        $termsTotal = collect($data['terms'])->sum(fn ($term) => (float) $term['amount']);
-        abort_if(round($termsTotal, 2) !== round((float) $quotation->grand_total, 2), 422, 'Total seluruh termin harus sama dengan grand total penawaran.');
+        $termsTotalInCents = collect($data['terms'])->sum(fn ($term) => (int) round((float) $term['amount'] * 100));
+        $grandTotalInCents = (int) round((float) $quotation->grand_total * 100);
+        if ($termsTotalInCents !== $grandTotalInCents) {
+            throw ValidationException::withMessages([
+                'terms' => 'Total seluruh termin harus sama dengan grand total penawaran. Selisih: '.\App\Support\Format::rupiah(abs($termsTotalInCents - $grandTotalInCents) / 100).'.',
+            ]);
+        }
 
         $invoice = DB::transaction(function () use ($data, $requestPo, $quotation) {
             $installation = collect($quotation->additional_costs ?? [])->filter(fn ($cost) => str_contains(strtolower($cost['label'] ?? ''), 'instal'))->sum('amount');

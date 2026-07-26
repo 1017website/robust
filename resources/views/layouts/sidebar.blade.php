@@ -41,7 +41,7 @@
 
     $pushItem($menuGroups, 'Dashboard', 'dashboard', 'dashboard', 'bi-house-door');
 
-    if (in_array($role, ['administrator', 'sales_admin', 'sales_spv'], true)) {
+    if (in_array($role, ['administrator', 'sales_admin'], true)) {
         $pushItem($menuGroups, 'Monitoring Pipeline', 'pipeline.index', 'pipeline.*', 'bi-kanban');
     }
 
@@ -80,9 +80,18 @@
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
     } elseif ($role === 'sales_spv') {
+        $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
+        $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
+        $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
+        $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
+        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'administration') {
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
         $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-folder2-open');
@@ -92,7 +101,7 @@
     } elseif ($role === 'production') {
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $designRequestBadgeCount);
         $pushItem($menuGroups, 'Laporan Produksi', 'drafter.projects.index', 'drafter.projects.*', 'bi-clipboard2-check');
-        $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');
+        $pushItem($menuGroups, 'Dokumen Project', 'documents.index', 'documents.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
@@ -126,7 +135,7 @@
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     }
 
-    $showLogoutButton = in_array($role, ['drafter', 'production', 'qc', 'delivery', 'administration', 'sales'], true);
+    $showLogoutButton = in_array($role, ['drafter', 'production', 'qc', 'delivery', 'administration', 'sales', 'sales_spv'], true);
 @endphp
 
 <aside class="sidebar" id="sidebar">

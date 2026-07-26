@@ -17,6 +17,8 @@ class QuotationExcelExporter
 
     private array $mainTotalCells = [];
 
+    private array $rowHeights = [];
+
     public function download(Quotation $quotation): BinaryFileResponse
     {
         $quotation->loadMissing('items', 'sales', 'approvedBy', 'customer');
@@ -59,25 +61,24 @@ class QuotationExcelExporter
         $this->merges = [];
         $this->images = [];
         $this->mainTotalCells = [];
+        $this->rowHeights = [];
         $rows = [];
         $row = 1;
 
         $this->merges[] = "A{$row}:K{$row}";
-        $rows[] = $this->row($row, [
-            $this->textCell("A{$row}", 'PENAWARAN HARGA', 8),
-        ], 30);
+        $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', 'PENAWARAN HARGA', 8), 30);
         $row++;
 
         $this->merges[] = "A{$row}:B{$row}";
         $this->merges[] = "C{$row}:F{$row}";
         $this->merges[] = "G{$row}:H{$row}";
         $this->merges[] = "I{$row}:K{$row}";
-        $rows[] = $this->row($row, [
-            $this->textCell("A{$row}", 'No. Penawaran', 9),
-            $this->textCell("C{$row}", $quotation->code ?: '-', 9),
-            $this->textCell("G{$row}", 'Tanggal', 9),
-            $this->textCell("I{$row}", optional($quotation->quote_date)->format('d/m/Y') ?: '-', 9),
-        ], 21);
+        $rows[] = $this->row($row, array_merge(
+            $this->mergedTextCells($row, 'A', 'B', 'No. Penawaran', 9),
+            $this->mergedTextCells($row, 'C', 'F', $quotation->code ?: '-', 9),
+            $this->mergedTextCells($row, 'G', 'H', 'Tanggal', 9),
+            $this->mergedTextCells($row, 'I', 'K', optional($quotation->quote_date)->format('d/m/Y') ?: '-', 9),
+        ), 21);
         $row++;
 
         foreach ([
@@ -89,26 +90,26 @@ class QuotationExcelExporter
             $this->merges[] = "C{$row}:F{$row}";
             $this->merges[] = "G{$row}:H{$row}";
             $this->merges[] = "I{$row}:K{$row}";
-            $rows[] = $this->row($row, [
-                $this->textCell("A{$row}", $leftLabel, 9),
-                $this->textCell("C{$row}", $leftValue, 9),
-                $this->textCell("G{$row}", $rightLabel, 9),
-                $this->textCell("I{$row}", $rightValue, 9),
-            ], 21);
+            $rows[] = $this->row($row, array_merge(
+                $this->mergedTextCells($row, 'A', 'B', $leftLabel, 9),
+                $this->mergedTextCells($row, 'C', 'F', $leftValue, 9),
+                $this->mergedTextCells($row, 'G', 'H', $rightLabel, 9),
+                $this->mergedTextCells($row, 'I', 'K', $rightValue, 9),
+            ), 21);
             $row++;
         }
 
         $row++;
         $headerRow = $row;
         $this->merges[] = "B{$row}:G{$row}";
-        $rows[] = $this->row($row, [
+        $rows[] = $this->row($row, array_merge([
             $this->textCell("A{$row}", 'NO', 1),
-            $this->textCell("B{$row}", 'DESCRIPTION', 1),
+        ], $this->mergedTextCells($row, 'B', 'G', 'DESCRIPTION', 1), [
             $this->textCell("H{$row}", 'QTY', 1),
             $this->textCell("I{$row}", 'UoM', 1),
             $this->textCell("J{$row}", 'PRICE ( Rp )', 1),
             $this->textCell("K{$row}", 'SUB TOTAL ( Rp )', 1),
-        ], 24);
+        ]), 24);
         $row++;
 
         $items = $quotation->items->sortBy(fn (QuotationItem $item) => [$item->is_optional ? 1 : 0, $item->sort_order]);
@@ -119,20 +120,26 @@ class QuotationExcelExporter
             if ($item->is_optional && ! $optionalStarted) {
                 $optionalStarted = true;
                 $this->merges[] = "A{$row}:K{$row}";
-                $rows[] = $this->row($row, [$this->textCell("A{$row}", 'OPTIONAL', 11)], 24);
+                $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', 'OPTIONAL', 11), 24);
                 $row++;
             }
 
             $startRow = $row;
             $this->merges[] = "B{$row}:G{$row}";
-            $rows[] = $this->row($row, [
+            $rows[] = $this->row($row, array_merge([
                 $this->textCell("A{$row}", (string) $number++, 2),
-                $this->textCell("B{$row}", strtoupper(trim(($item->category ? $item->category.' - ' : '').$item->name)), 2),
+            ], $this->mergedTextCells(
+                $row,
+                'B',
+                'G',
+                strtoupper(trim(($item->category ? $item->category.' - ' : '').$item->name)),
+                2
+            ), [
                 $this->numberCell("H{$row}", (float) $item->qty, 14),
                 $this->textCell("I{$row}", $item->unit ?: 'Unit', 2),
                 $this->numberCell("J{$row}", (float) $item->unit_price, 15),
                 $this->formulaCell("K{$row}", "H{$row}*J{$row}", (float) $item->total, 15),
-            ], 22);
+            ]), 22);
             if (! $item->is_optional) {
                 $this->mainTotalCells[] = "K{$row}";
             }
@@ -188,6 +195,7 @@ class QuotationExcelExporter
             if ($item->quotation_image_path) {
                 $imageEndRow = $row - 1;
                 $imageStartRow = max($startRow + 1, $imageEndRow - 22);
+                $this->merges[] = "H{$imageStartRow}:K{$imageEndRow}";
                 $this->addImage($item, $imageStartRow, $imageEndRow);
             }
         }
@@ -231,19 +239,19 @@ class QuotationExcelExporter
             $grandParts[] = "+{$cell}";
         }
         $this->merges[] = "A{$row}:J{$row}";
-        $rows[] = $this->row($row, [
-            $this->textCell("A{$row}", 'GRAND TOTAL', 10),
-            $this->formulaCell("K{$row}", implode('', $grandParts), (float) $quotation->grand_total, 10),
-        ], 26);
+        $rows[] = $this->row($row, array_merge(
+            $this->mergedTextCells($row, 'A', 'J', 'GRAND TOTAL', 10),
+            [$this->formulaCell("K{$row}", implode('', $grandParts), (float) $quotation->grand_total, 10)]
+        ), 26);
         $row++;
 
         if ($quotation->customer_note) {
             $row++;
             $this->merges[] = "A{$row}:K{$row}";
-            $rows[] = $this->row($row, [$this->textCell("A{$row}", 'CATATAN & KETENTUAN', 4)], 22);
+            $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', 'CATATAN & KETENTUAN', 4), 22);
             $row++;
             $this->merges[] = "A{$row}:K{$row}";
-            $rows[] = $this->row($row, [$this->textCell("A{$row}", $quotation->customer_note, 12)], 44);
+            $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', $quotation->customer_note, 12), 44);
             $row++;
         }
 
@@ -251,7 +259,7 @@ class QuotationExcelExporter
         $approval = $quotation->approvedBy
             ? 'Approved by '.$quotation->approvedBy->name.' pada '.optional($quotation->approved_at)->format('d/m/Y H:i')
             : 'Dokumen preview — belum disetujui SPV';
-        $rows[] = $this->row($row, [$this->textCell("A{$row}", $approval, 13)], 24);
+        $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', $approval, 13), 24);
 
         $mergeXml = $this->merges
             ? '<mergeCells count="'.count($this->merges).'">'.collect($this->merges)->map(fn ($range) => '<mergeCell ref="'.$range.'"/>')->implode('').'</mergeCells>'
@@ -297,19 +305,118 @@ class QuotationExcelExporter
         if (! $image) {
             return;
         }
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
+
+        $cropped = $this->cropTransparentMargins($image);
+        if ($cropped !== $image) {
+            imagedestroy($image);
+            $image = $cropped;
+        }
+
+        $sourceWidth = imagesx($image);
+        $sourceHeight = imagesy($image);
+        $flattened = imagecreatetruecolor($sourceWidth, $sourceHeight);
+        $white = imagecolorallocate($flattened, 255, 255, 255);
+        imagefill($flattened, 0, 0, $white);
+        imagealphablending($flattened, true);
+        imagecopy($flattened, $image, 0, 0, 0, 0, $sourceWidth, $sourceHeight);
+
         ob_start();
-        imagepng($image);
+        imagepng($flattened);
         $bytes = (string) ob_get_clean();
         imagedestroy($image);
+        imagedestroy($flattened);
+
+        $imageColumnWidths = [
+            7 => $this->excelColumnWidthToPixels(9),
+            8 => $this->excelColumnWidthToPixels(10),
+            9 => $this->excelColumnWidthToPixels(18),
+            10 => $this->excelColumnWidthToPixels(18),
+        ];
+        $areaWidthPx = array_sum($imageColumnWidths);
+        $areaHeightPt = 0;
+        foreach (range($fromRow, $toRow) as $imageRow) {
+            $areaHeightPt += $this->rowHeights[$imageRow] ?? 20;
+        }
+        $areaHeightPx = (int) round($areaHeightPt * 96 / 72);
+        $paddingPx = 10;
+        $scale = min(
+            max(1, $areaWidthPx - (2 * $paddingPx)) / max(1, $sourceWidth),
+            max(1, $areaHeightPx - (2 * $paddingPx)) / max(1, $sourceHeight)
+        );
+        $widthPx = max(1, (int) round($sourceWidth * $scale));
+        $heightPx = max(1, (int) round($sourceHeight * $scale));
+        $horizontalOffsetPx = max($paddingPx, (int) round(($areaWidthPx - $widthPx) / 2));
+        $anchorColumn = 7;
+        foreach ($imageColumnWidths as $column => $columnWidthPx) {
+            $anchorColumn = $column;
+            if ($horizontalOffsetPx < $columnWidthPx) {
+                break;
+            }
+            $horizontalOffsetPx -= $columnWidthPx;
+        }
+
+        $verticalOffsetPx = max($paddingPx, (int) round(($areaHeightPx - $heightPx) / 2));
+        $anchorRow = $fromRow;
+        foreach (range($fromRow, $toRow) as $imageRow) {
+            $anchorRow = $imageRow;
+            $rowHeightPx = (int) round(($this->rowHeights[$imageRow] ?? 20) * 96 / 72);
+            if ($verticalOffsetPx < $rowHeightPx) {
+                break;
+            }
+            $verticalOffsetPx -= $rowHeightPx;
+        }
 
         $this->images[] = [
             'bytes' => $bytes,
             'name' => $item->quotation_image_name ?: $item->name,
-            'fromRow' => max(0, $fromRow - 1),
-            'toRow' => max($fromRow, $toRow),
+            'fromColumn' => $anchorColumn,
+            'fromRow' => max(0, $anchorRow - 1),
+            'colOffsetPx' => $horizontalOffsetPx,
+            'rowOffsetPx' => $verticalOffsetPx,
+            'widthPx' => $widthPx,
+            'heightPx' => $heightPx,
         ];
+    }
+
+    private function cropTransparentMargins(\GdImage $image): \GdImage
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $step = max(1, (int) floor(max($width, $height) / 1000));
+        $minX = $width;
+        $minY = $height;
+        $maxX = -1;
+        $maxY = -1;
+
+        for ($y = 0; $y < $height; $y += $step) {
+            for ($x = 0; $x < $width; $x += $step) {
+                $alpha = (imagecolorat($image, $x, $y) >> 24) & 0x7F;
+                if ($alpha >= 120) {
+                    continue;
+                }
+                $minX = min($minX, $x);
+                $minY = min($minY, $y);
+                $maxX = max($maxX, $x);
+                $maxY = max($maxY, $y);
+            }
+        }
+
+        if ($maxX < 0 || ($minX === 0 && $minY === 0 && $maxX >= $width - $step && $maxY >= $height - $step)) {
+            return $image;
+        }
+
+        $padding = max(4, $step * 2);
+        $x = max(0, $minX - $padding);
+        $y = max(0, $minY - $padding);
+        $cropWidth = min($width - $x, ($maxX - $minX + 1) + (2 * $padding));
+        $cropHeight = min($height - $y, ($maxY - $minY + 1) + (2 * $padding));
+
+        return imagecrop($image, [
+            'x' => $x,
+            'y' => $y,
+            'width' => $cropWidth,
+            'height' => $cropHeight,
+        ]) ?: $image;
     }
 
     private function borderedRow(int $row, array $cells, int $height): string
@@ -331,15 +438,33 @@ class QuotationExcelExporter
     {
         $this->merges[] = "A{$row}:J{$row}";
 
-        return $this->row($row, [
-            $this->textCell("A{$row}", $label, 9),
-            $this->formulaCell("K{$row}", $formula, $cached, 6),
-        ], 22);
+        return $this->row($row, array_merge(
+            $this->mergedTextCells($row, 'A', 'J', $label, 9),
+            [$this->formulaCell("K{$row}", $formula, $cached, 6)]
+        ), 22);
     }
 
     private function row(int $number, array $cells, int $height): string
     {
+        $this->rowHeights[$number] = $height;
+
         return '<row r="'.$number.'" ht="'.$height.'" customHeight="1">'.implode('', $cells).'</row>';
+    }
+
+    private function mergedTextCells(int $row, string $from, string $to, string $value, int $style): array
+    {
+        return collect(range(ord($from), ord($to)))
+            ->map(fn (int $column, int $index) => $this->textCell(
+                chr($column).$row,
+                $index === 0 ? $value : '',
+                $style
+            ))
+            ->all();
+    }
+
+    private function excelColumnWidthToPixels(float $width): int
+    {
+        return (int) floor($width * 7 + 5);
     }
 
     private function textCell(string $reference, string $value, int $style = 0): string
@@ -362,13 +487,13 @@ class QuotationExcelExporter
         $anchors = [];
         foreach ($this->images as $index => $image) {
             $id = $index + 1;
-            $anchors[] = '<xdr:twoCellAnchor editAs="oneCell">'
-                .'<xdr:from><xdr:col>7</xdr:col><xdr:colOff>80000</xdr:colOff><xdr:row>'.$image['fromRow'].'</xdr:row><xdr:rowOff>80000</xdr:rowOff></xdr:from>'
-                .'<xdr:to><xdr:col>11</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'.$image['toRow'].'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+            $anchors[] = '<xdr:oneCellAnchor>'
+                .'<xdr:from><xdr:col>'.$image['fromColumn'].'</xdr:col><xdr:colOff>'.($image['colOffsetPx'] * 9525).'</xdr:colOff><xdr:row>'.$image['fromRow'].'</xdr:row><xdr:rowOff>'.($image['rowOffsetPx'] * 9525).'</xdr:rowOff></xdr:from>'
+                .'<xdr:ext cx="'.($image['widthPx'] * 9525).'" cy="'.($image['heightPx'] * 9525).'"/>'
                 .'<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="'.$id.'" name="'.$this->escape($image['name']).'"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'
                 .'<xdr:blipFill><a:blip r:embed="rId'.$id.'"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
                 .'<xdr:spPr><a:xfrm/><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></xdr:spPr></xdr:pic>'
-                .'<xdr:clientData/></xdr:twoCellAnchor>';
+                .'<xdr:clientData/></xdr:oneCellAnchor>';
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

@@ -23,6 +23,10 @@ class DocumentController extends Controller
         if ($s = $request->get('q')) {
             $query->where('name', 'like', "%$s%");
         }
+        if ($request->filled('project')) {
+            $query->where('documentable_type', Project::class)
+                ->where('documentable_id', $request->integer('project'));
+        }
         $documents = $query->paginate(10)->withQueryString();
 
         $statsQuery = Document::query()->visibleTo(Auth::user());
@@ -43,7 +47,14 @@ class DocumentController extends Controller
             return view('drafter.documents.index', compact('documents', 'stats', 'selectedDocument'));
         }
 
-        return view('shared.documents.index', compact('documents', 'stats'));
+        $projectOptions = Auth::user()->isProduction()
+            ? Project::query()
+                ->whereHas('documents', fn ($documents) => $documents->where('category', 'fabrication_drawing')->where('is_current', true))
+                ->orderBy('name')
+                ->get(['id', 'code', 'name'])
+            : collect();
+
+        return view('shared.documents.index', compact('documents', 'stats', 'projectOptions'));
     }
 
     public function store(Request $request)
@@ -68,7 +79,13 @@ class DocumentController extends Controller
         if ($user->isDrafter()) {
             abort_unless(in_array($data['category'] ?? null, ['request_drawing', 'fabrication_drawing', 'supporting_document'], true), 422, 'Kategori dokumen drafter tidak valid.');
             if (($data['category'] ?? null) === 'fabrication_drawing') {
-                abort_unless($documentable instanceof DesignRequest && $documentable->hasPrePo(), 422, 'Gambar fabrikasi baru dapat diunggah setelah Pra PO / Request PO tersedia.');
+                $canUploadFabrication = $documentable instanceof DesignRequest
+                    ? $documentable->hasPrePo()
+                    : ($documentable instanceof Project
+                        && in_array($documentable->quotation?->purchaseOrderRequest?->status, [
+                            'po_created', 'production', 'installation', 'invoicing', 'paid',
+                        ], true));
+                abort_unless($canUploadFabrication, 422, 'Gambar fabrikasi baru dapat diunggah setelah PO Accurate dibuat.');
             }
         }
 
@@ -131,6 +148,14 @@ class DocumentController extends Controller
             }
         }
 
+        if ($documentable instanceof Project && $user->isDrafter() && $document->category === 'fabrication_drawing') {
+            $documentable->workflow()->firstOrCreate();
+            $documentable->update([
+                'status' => 'ongoing',
+                'progress' => max(10, (int) $documentable->progress),
+            ]);
+        }
+
         return back()->with('success', 'Dokumen berhasil diunggah.');
     }
 
@@ -176,12 +201,16 @@ class DocumentController extends Controller
         }
 
         if ($user->isDrafter()) {
-            return $documentable instanceof DesignRequest
-                && (int) $documentable->production_pic_id === (int) $user->id;
+            return match (true) {
+                $documentable instanceof DesignRequest => (int) $documentable->production_pic_id === (int) $user->id,
+                $documentable instanceof Project => \App\Support\ProjectAccess::canView($user, $documentable),
+                default => false,
+            };
         }
 
         if ($user->isProduction()) {
-            return $documentable instanceof DesignRequest;
+            return $documentable instanceof Project
+                && \App\Support\ProjectAccess::canView($user, $documentable);
         }
 
         return false;

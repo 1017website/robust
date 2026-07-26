@@ -90,7 +90,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $page .= $this->sectionTitle($y, 'PENGIRIMAN & BILLING', '02');
         $y -= 22;
         $page .= $this->addressPanel($y, $requestPo);
-        $y -= 98;
+        $y -= 108;
 
         $page .= $this->sectionTitle($y, 'CHECKLIST KELENGKAPAN', '03');
         $y -= 22;
@@ -328,7 +328,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
                 $content .= $this->line($lineX, $top - $height + 12, $lineX, $top - 12, [0.86, 0.90, 0.95], 0.55);
             }
             $content .= $this->text($x, $y, $label, 6.4, true, [0.39, 0.47, 0.59]);
-            $content .= $this->text($x, $y - 13, $this->truncate((string) ($value ?: '-'), 31), 8.4, true, [0.05, 0.12, 0.23]);
+            $displayValue = (string) ($value ?: '-');
+            $valueFontSize = mb_strlen($displayValue) > 31 ? 7.2 : 8.4;
+            $content .= $this->text($x, $y - 13, $this->truncate($displayValue, 39), $valueFontSize, true, [0.05, 0.12, 0.23]);
         }
 
         return $content;
@@ -371,7 +373,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
 
     private function addressPanel(float $top, PurchaseOrderRequest $requestPo): string
     {
-        $height = 82;
+        $height = 92;
         $mid = self::LEFT + self::CONTENT_WIDTH * 0.56;
         $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.985, 0.99, 1], [0.85, 0.89, 0.94]);
         $content .= $this->line($mid, $top - $height + 10, $mid, $top - 10, [0.87, 0.91, 0.95], 0.5);
@@ -388,8 +390,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $content .= $this->text($rightX, $top - 17, 'PIC PENERIMA', 6.3, true, [0.42, 0.49, 0.60]);
         $content .= $this->text($rightX, $top - 31, $this->truncate((string) ($requestPo->delivery_pic_name ?: '-'), 34), 8, true, [0.06, 0.13, 0.24]);
         $content .= $this->text($rightX, $top - 44, (string) ($requestPo->delivery_pic_phone ?: '-'), 7.5, false, [0.31, 0.39, 0.51]);
-        $content .= $this->text($rightX, $top - 61, 'NPWP / BILLING', 6.3, true, [0.42, 0.49, 0.60]);
-        $content .= $this->text($rightX + 78, $top - 61, $this->truncate(trim(($requestPo->npwp_name ?: '-').' - '.($requestPo->npwp_number ?: '-')), 41), 7.2, false, [0.12, 0.20, 0.32]);
+        $content .= $this->text($rightX, $top - 60, 'NPWP / BILLING', 6.3, true, [0.42, 0.49, 0.60]);
+        $content .= $this->text($rightX, $top - 73, $this->truncate((string) ($requestPo->npwp_name ?: '-'), 39), 7, false, [0.12, 0.20, 0.32]);
+        $content .= $this->text($rightX, $top - 84, (string) ($requestPo->npwp_number ?: '-'), 7, true, [0.12, 0.20, 0.32]);
 
         return $content;
     }

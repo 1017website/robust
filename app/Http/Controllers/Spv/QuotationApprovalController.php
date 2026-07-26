@@ -77,7 +77,7 @@ class QuotationApprovalController extends Controller
 
         $this->recordHistory($quotation, 'approved', $oldStatus, 'approved', $data['approval_note'] ?? null);
         Logger::record('approved', "Penawaran {$quotation->code} disetujui SPV", $quotation);
-        return redirect()->route('spv.quotation-approvals.show', $quotation)->with('success', 'Penawaran berhasil di-approve. Sales sudah bisa download PDF.');
+        return redirect()->route('spv.quotation-approvals.show', $quotation)->with('success', 'Penawaran berhasil di-approve. Sales sudah bisa download Excel dan PDF.');
     }
 
     public function revision(Request $request, Quotation $quotation)

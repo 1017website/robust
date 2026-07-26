@@ -113,6 +113,23 @@ class DesignRequestRevisionWorkflowTest extends TestCase
         $this->assertCount(1, $designRequest->fresh()->items);
 
         $this->actingAs($sales)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Design Request selesai diproses')
+            ->assertSeeInOrder([
+                'bi bi-file-earmark-text',
+                'Penawaran',
+                'side-badge',
+            ], false);
+
+        $this->actingAs($sales)
+            ->get(route('sales.quotations.create'))
+            ->assertOk()
+            ->assertSee('Pilih Design Request')
+            ->assertSee('name="design_request_id"', false)
+            ->assertSee($designRequest->code);
+
+        $this->actingAs($sales)
             ->get(route('sales.design-requests.show', $designRequest))
             ->assertOk()
             ->assertSee('Request & Riwayat Revisi', false)

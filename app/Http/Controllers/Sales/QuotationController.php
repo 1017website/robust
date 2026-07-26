@@ -45,17 +45,15 @@ class QuotationController extends Controller
     public function create(Request $request)
     {
         $designRequest = $request->get('dr')
-            ? DesignRequest::with('items', 'lead', 'customer', 'sales')->find($request->get('dr'))
+            ? $this->accessibleCompletedDesignRequests()->with('items')->find($request->get('dr'))
             : null;
 
-        if ($designRequest && ! $this->canAccessDesignRequestForQuotation($designRequest)) {
-            abort(403, 'Design request ini bukan milik Anda.');
+        if ($request->filled('dr') && ! $designRequest) {
+            abort(404, 'Design Request selesai tidak ditemukan atau bukan milik Anda.');
         }
 
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
-        $completedDR = DesignRequest::where('status', 'completed')
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->get();
+        $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
 
         return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR', 'itemMasters'));
@@ -145,9 +143,7 @@ class QuotationController extends Controller
         $quotation->load('items', 'designRequest');
         $designRequest = $quotation->designRequest;
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
-        $completedDR = DesignRequest::where('status', 'completed')
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->get();
+        $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
 
         return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR', 'itemMasters'));
@@ -269,6 +265,10 @@ class QuotationController extends Controller
     public function downloadExcel(Quotation $quotation, QuotationExcelExporter $excel)
     {
         $this->ensureOwner($quotation);
+
+        if (! $quotation->canDownloadPdf()) {
+            return back()->with('error', 'Excel penawaran hanya bisa didownload setelah disetujui SPV.');
+        }
 
         return $excel->download($quotation);
     }

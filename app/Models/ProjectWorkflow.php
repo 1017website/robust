@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\StructuredSpecification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,7 @@ class ProjectWorkflow extends Model
         'production_status' => 'stock',
         'production_report_completed' => false,
         'qc_completed' => false,
+        'delivery_status' => 'scheduling',
         'delivery_out_completed' => false,
         'delivery_returned_completed' => false,
     ];
@@ -21,7 +23,10 @@ class ProjectWorkflow extends Model
         'production_report_completed' => 'boolean',
         'production_updated_at' => 'datetime',
         'qc_completed' => 'boolean',
+        'qc_checklist' => 'array',
         'qc_updated_at' => 'datetime',
+        'delivery_scheduled_at' => 'datetime',
+        'customer_received_at' => 'datetime',
         'delivery_out_completed' => 'boolean',
         'delivery_returned_completed' => 'boolean',
         'delivery_updated_at' => 'datetime',
@@ -35,19 +40,86 @@ class ProjectWorkflow extends Model
     public static function productionStatuses(): array
     {
         return [
-            'stock' => 'Stock',
-            'production' => 'Production',
-            'production_finished' => 'Production Finished',
+            'stock' => 'Menunggu Produksi',
+            'production' => 'Sedang Diproduksi',
+            'production_finished' => 'Produksi Selesai',
         ];
+    }
+
+    public static function deliveryStatuses(): array
+    {
+        return [
+            'scheduling' => 'Atur Jadwal',
+            'scheduled' => 'Terjadwal',
+            'in_transit' => 'Dalam Pengiriman',
+            'delivered' => 'Terkirim',
+            'customer_received' => 'Diterima Customer',
+            'completed' => 'Selesai',
+        ];
+    }
+
+    public static function qcChecklistDefinition(Project $project): array
+    {
+        $project->loadMissing('quotation.items');
+
+        return $project->quotation?->items
+            ->values()
+            ->map(function (QuotationItem $item): array {
+                $checks = [[
+                    'key' => "item_{$item->id}_quantity",
+                    'label' => 'Jumlah: '.rtrim(rtrim(number_format((float) $item->qty, 2, '.', ''), '0'), '.').' '.($item->unit ?: 'Unit'),
+                ]];
+
+                foreach (StructuredSpecification::flatten($item->specification) as $index => $specification) {
+                    if (($specification['type'] ?? null) === 'section') {
+                        continue;
+                    }
+
+                    $label = trim((string) ($specification['label'] ?? 'Spesifikasi'));
+                    if (($specification['type'] ?? null) === 'breakdown') {
+                        $value = trim(implode(' ', array_filter([
+                            $specification['qty'] ?? null,
+                            $specification['unit'] ?? null,
+                            isset($specification['unit_price']) ? '@ Rp '.number_format((float) $specification['unit_price'], 0, ',', '.') : null,
+                        ])));
+                    } else {
+                        $value = trim((string) ($specification['value'] ?? ''));
+                    }
+
+                    $checks[] = [
+                        'key' => "item_{$item->id}_spec_{$index}",
+                        'label' => $label.($value !== '' ? ': '.$value : ''),
+                    ];
+                }
+
+                $checks[] = ['key' => "item_{$item->id}_visual", 'label' => 'Kondisi fisik, warna, dan finishing sesuai'];
+                $checks[] = ['key' => "item_{$item->id}_function", 'label' => 'Fungsi dan kelengkapan item telah diuji'];
+
+                return [
+                    'item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'variant' => $item->variant,
+                    'checks' => $checks,
+                ];
+            })
+            ->all() ?? [];
+    }
+
+    public function qcChecklistComplete(Project $project): bool
+    {
+        $values = $this->qc_checklist ?? [];
+        $keys = collect(self::qcChecklistDefinition($project))->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'));
+
+        return $keys->isNotEmpty() && $keys->every(fn (string $key) => ! empty($values[$key]));
     }
 
     public function completionPercent(): int
     {
         $done = collect([
-            $this->production_report_completed,
+            $this->production_status === 'production_finished',
             $this->qc_completed,
-            $this->delivery_out_completed,
-            $this->delivery_returned_completed,
+            in_array($this->delivery_status, ['delivered', 'customer_received', 'completed'], true),
+            $this->delivery_status === 'completed',
         ])->filter()->count();
 
         return $done * 25;

@@ -29,7 +29,7 @@ class OperationalPdfExportTest extends TestCase
 
         $response->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
-            ->assertDownload('rpo-pdf-modern.pdf');
+            ->assertDownload('PRJ-PDF-MODERN.pdf');
         $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
         $this->assertStringContainsString('REQUEST PURCHASE ORDER', $response->getContent());
         $this->assertStringContainsString('ROBUST', $response->getContent());

@@ -8,10 +8,11 @@
     @if($quotation->canBeSubmittedForApproval())
         <form method="POST" action="{{ route('sales.quotations.submit-approval',$quotation) }}" class="d-inline">@csrf<button class="btn btn-primary btn-sm"><i class="bi bi-send-check me-1"></i>Ajukan Approval SPV</button></form>
     @endif
-    <a href="{{ route('sales.quotations.excel',$quotation) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>{{ $quotation->canDownloadPdf() ? 'Export Excel' : 'Preview Excel' }}</a>
     @if($quotation->canDownloadPdf())
+        <a href="{{ route('sales.quotations.excel',$quotation) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</a>
         <a href="{{ route('sales.quotations.pdf',$quotation) }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Download PDF</a>
     @else
+        <button class="btn btn-soft btn-sm" disabled title="Excel aktif setelah approval SPV"><i class="bi bi-lock me-1"></i>Excel Terkunci</button>
         <button class="btn btn-soft btn-sm" disabled title="PDF aktif setelah approval SPV"><i class="bi bi-lock me-1"></i>PDF Terkunci</button>
     @endif
     @if($quotation->status === 'approved')

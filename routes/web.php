@@ -130,7 +130,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Request PO terintegrasi langsung dari penawaran; sales dapat membuat tanpa input ulang.
-    Route::middleware('role:administrator,sales_admin,sales')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:administrator,sales_admin,sales,sales_spv')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/request-po', [PurchaseOrderRequestController::class, 'index'])->name('purchase-order-requests.index');
         Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
         Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
@@ -149,7 +149,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- Sales ----------
-    Route::middleware('role:sales')->prefix('sales')->name('sales.')->group(function () {
+    Route::middleware('role:sales,sales_spv')->prefix('sales')->name('sales.')->group(function () {
         Route::get('/request-masuk', [RequestMasukController::class, 'index'])->name('request-masuk.index');
         Route::post('/request-masuk/{praLead}/accept', [RequestMasukController::class, 'accept'])->name('request-masuk.accept');
         Route::post('/request-masuk/{praLead}/reject', [RequestMasukController::class, 'reject'])->name('request-masuk.reject');

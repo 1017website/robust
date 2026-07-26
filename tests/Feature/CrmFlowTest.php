@@ -50,8 +50,11 @@ class CrmFlowTest extends TestCase
                 'sales.projects.index', 'activities.index', 'calendar.index', 'reports.index', 'profile.edit',
             ],
             'sales_spv' => [
-                'dashboard', 'spv.quotation-approvals.index', 'activities.index',
-                'calendar.index', 'reports.index', 'sales.customers.index',
+                'dashboard', 'sales.request-masuk.index', 'sales.leads.index',
+                'sales.design-requests.index', 'sales.quotations.index',
+                'spv.quotation-approvals.index', 'admin.purchase-order-requests.index',
+                'sales.customers.index', 'sales.projects.index', 'activities.index',
+                'calendar.index', 'reports.index', 'profile.edit',
             ],
             'drafter' => [
                 'dashboard', 'drafter.design-requests.index', 'drafter.projects.index',
@@ -88,6 +91,19 @@ class CrmFlowTest extends TestCase
             'status' => 'ongoing',
             'total_value' => 100000000,
         ]);
+        Document::create([
+            'documentable_type' => Project::class,
+            'documentable_id' => $project->id,
+            'name' => 'Gambar Fabrikasi Workflow',
+            'category' => 'fabrication_drawing',
+            'file_path' => 'documents/fabrikasi-workflow.pdf',
+            'file_type' => 'pdf',
+            'file_size' => 1024,
+            'version' => 'v1.0',
+            'revision_number' => 1,
+            'is_current' => true,
+            'uploaded_by' => $drafter->id,
+        ]);
 
         $this->actingAs($production)->put(route('project-workflow.production', $project), [
             'production_status' => 'production_finished',
@@ -101,10 +117,12 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $this->actingAs($delivery)->put(route('project-workflow.delivery', $project), [
-            'delivery_out_completed' => 1,
-            'delivery_out_photo' => UploadedFile::fake()->image('do-keluar.jpg'),
-            'delivery_returned_completed' => 1,
-            'delivery_returned_photo' => UploadedFile::fake()->image('ba-kembali.jpg'),
+            'delivery_status' => 'completed',
+            'delivery_scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+            'pod' => UploadedFile::fake()->image('pod-customer.jpg'),
+            'customer_receiver_name' => 'Budi Customer',
+            'customer_received_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'delivery_note' => 'Barang diterima lengkap.',
         ])->assertRedirect();
 
         $workflow = ProjectWorkflow::where('project_id', $project->id)->firstOrFail();
@@ -113,6 +131,8 @@ class CrmFlowTest extends TestCase
         $this->assertTrue($workflow->qc_completed);
         $this->assertTrue($workflow->delivery_out_completed);
         $this->assertTrue($workflow->delivery_returned_completed);
+        $this->assertSame('completed', $workflow->delivery_status);
+        $this->assertSame('Budi Customer', $workflow->customer_receiver_name);
 
         $this->actingAs($drafter)->post(route('design-revisions.store', $project), [
             'revision_date' => now()->format('Y-m-d'),
@@ -132,7 +152,7 @@ class CrmFlowTest extends TestCase
         $this->actingAs($administration)->get(route('administration.project-monitoring.index'))
             ->assertSuccessful()
             ->assertSee('Project Workflow Test')
-            ->assertSee('Production Finished');
+            ->assertSee('Produksi Selesai');
 
         $this->actingAs($sales)->get(route('project-workspace.show', $project))
             ->assertSuccessful()
@@ -150,6 +170,19 @@ class CrmFlowTest extends TestCase
             'name' => 'Project Administrator Workspace',
             'status' => 'ongoing',
         ]);
+        Document::create([
+            'documentable_type' => Project::class,
+            'documentable_id' => $project->id,
+            'name' => 'Gambar Fabrikasi Administrator',
+            'category' => 'fabrication_drawing',
+            'file_path' => 'documents/fabrikasi-administrator.pdf',
+            'file_type' => 'pdf',
+            'file_size' => 1024,
+            'version' => 'v1.0',
+            'revision_number' => 1,
+            'is_current' => true,
+            'uploaded_by' => $administrator->id,
+        ]);
 
         $this->actingAs($administrator)->put(route('project-workflow.production', $project), [
             'production_status' => 'production_finished',
@@ -163,10 +196,11 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $this->actingAs($administrator)->put(route('project-workflow.delivery', $project), [
-            'delivery_out_completed' => 1,
-            'delivery_out_photo' => UploadedFile::fake()->image('do-keluar-admin.jpg'),
-            'delivery_returned_completed' => 1,
-            'delivery_returned_photo' => UploadedFile::fake()->image('ba-kembali-admin.jpg'),
+            'delivery_status' => 'completed',
+            'delivery_scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+            'pod' => UploadedFile::fake()->image('pod-admin.jpg'),
+            'customer_receiver_name' => 'Penerima Administrator',
+            'customer_received_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
         ])->assertRedirect();
 
         $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
@@ -183,6 +217,7 @@ class CrmFlowTest extends TestCase
         $this->assertTrue($workflow->qc_completed);
         $this->assertTrue($workflow->delivery_out_completed);
         $this->assertTrue($workflow->delivery_returned_completed);
+        $this->assertSame('completed', $workflow->delivery_status);
         $this->assertSame($administrator->id, $workflow->production_updated_by);
         $this->assertSame($administrator->id, $workflow->qc_updated_by);
         $this->assertSame($administrator->id, $workflow->delivery_updated_by);
@@ -516,6 +551,8 @@ class CrmFlowTest extends TestCase
         $assigned = User::factory()->create(['role' => 'drafter']);
         $other = User::factory()->create(['role' => 'drafter']);
         $production = User::factory()->create(['role' => 'production']);
+        $qc = User::factory()->create(['role' => 'qc']);
+        $delivery = User::factory()->create(['role' => 'delivery']);
         $request = DesignRequest::create([
             'code' => 'DR-TEST-'.str()->random(6),
             'customer_name' => 'Customer Drafter Test',
@@ -687,6 +724,8 @@ class CrmFlowTest extends TestCase
         $sales = User::factory()->create(['role' => 'sales']);
         $drafter = User::factory()->create(['role' => 'drafter']);
         $production = User::factory()->create(['role' => 'production']);
+        $qc = User::factory()->create(['role' => 'qc']);
+        $delivery = User::factory()->create(['role' => 'delivery']);
         $spv = User::factory()->create(['role' => 'sales_spv']);
         $admin = User::factory()->create(['role' => 'sales_admin']);
         $customer = Customer::create([
@@ -783,21 +822,21 @@ class CrmFlowTest extends TestCase
             'approval_note' => 'Disetujui dari automated flow test.',
         ])->assertRedirect(route('spv.quotation-approvals.show', $quotation));
 
+        $this->actingAs($sales)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Penawaran disetujui SPV')
+            ->assertSeeInOrder([
+                'bi bi-file-earmark-text',
+                'Penawaran',
+                'side-badge',
+            ], false);
+
         $this->actingAs($sales)->post(route('sales.quotations.sent-to-customer', $quotation))->assertRedirect();
         $this->actingAs($sales)->post(route('sales.quotations.won', $quotation), ['note' => 'Customer setuju'])->assertRedirect();
         $this->assertSame('customer_accepted', $quotation->fresh()->status);
 
-        $this->actingAs($sales)->post(route('sales.projects.store'), [
-            'quotation_id' => $quotation->id,
-            'name' => 'Project End To End',
-            'priority' => 'high',
-            'status' => 'planning',
-            'start_date' => now()->format('Y-m-d'),
-            'target_date' => now()->addMonth()->format('Y-m-d'),
-            'project_manager_id' => $sales->id,
-            'internal_team' => [$drafter->id],
-        ])->assertRedirect();
-        $this->assertDatabaseHas('projects', ['name' => 'Project End To End', 'quotation_id' => $quotation->id]);
+        $this->assertDatabaseMissing('projects', ['quotation_id' => $quotation->id]);
 
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
@@ -815,11 +854,6 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $poRequest = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
-        $this->actingAs($drafter)->post(route('documents.store'), [
-            'documentable_type' => DesignRequest::class, 'documentable_id' => $designRequest->id,
-            'name' => 'Gambar Fabrikasi', 'category' => 'fabrication_drawing',
-            'file' => UploadedFile::fake()->create('fabrikasi.pdf', 20, 'application/pdf'),
-        ])->assertRedirect();
         $this->actingAs($admin)->put(route('admin.purchase-order-requests.update', $poRequest), [
             'status' => 'po_created',
             'accurate_po_number' => 'ACC-PO-TEST',
@@ -829,7 +863,76 @@ class CrmFlowTest extends TestCase
 
         $this->assertSame('po_created', $poRequest->fresh()->status);
         $this->assertSame('request_po_created', $quotation->fresh()->status);
-        $this->assertNotNull(Project::where('quotation_id', $quotation->id)->first());
+        $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->assertSame('PRJ-MANUAL-001', $project->code);
+        $this->assertSame($drafter->id, $project->project_manager_id);
+
+        $this->actingAs($admin)->post(route('admin.invoices.store'), [
+            'purchase_order_request_id' => $poRequest->id,
+            'invoice_date' => now()->format('Y-m-d'),
+            'terms' => [[
+                'description' => 'Pelunasan',
+                'percentage' => 100,
+                'amount' => (float) $quotation->fresh()->grand_total,
+            ]],
+        ])->assertSessionHasErrors('purchase_order_request_id');
+        $this->assertDatabaseMissing('invoices', ['purchase_order_request_id' => $poRequest->id]);
+
+        $this->actingAs($drafter)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Gambar fabrikasi diperlukan');
+
+        $this->actingAs($drafter)->post(route('documents.store'), [
+            'documentable_type' => Project::class,
+            'documentable_id' => $project->id,
+            'name' => 'Gambar Fabrikasi',
+            'category' => 'fabrication_drawing',
+            'file' => UploadedFile::fake()->create('fabrikasi.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($production)->get(route('drafter.projects.index'))
+            ->assertOk()
+            ->assertSee('Gambar fabrikasi siap');
+
+        $this->actingAs($production)->put(route('project-workflow.production', $project), [
+            'production_status' => 'production_finished',
+            'production_report_completed' => 1,
+            'production_report' => UploadedFile::fake()->create('checklist-produksi.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($qc)->get(route('drafter.projects.index'))
+            ->assertOk()
+            ->assertSee('Project menunggu QC');
+
+        $qcChecklist = collect(ProjectWorkflow::qcChecklistDefinition($project))
+            ->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'))
+            ->mapWithKeys(fn (string $key) => [$key => 1])
+            ->all();
+        $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
+            'qc_completed' => 1,
+            'qc_checklist' => $qcChecklist,
+            'qc_note' => 'Seluruh spesifikasi sesuai penawaran.',
+            'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->actingAs($delivery)->get(route('drafter.projects.index'))
+            ->assertOk()
+            ->assertSee('Project siap dikirim');
+
+        $this->actingAs($delivery)->put(route('project-workflow.delivery', $project), [
+            'delivery_status' => 'completed',
+            'delivery_scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+            'pod' => UploadedFile::fake()->image('pod-end-to-end.jpg'),
+            'customer_receiver_name' => 'PIC End To End',
+            'customer_received_at' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'delivery_note' => 'Barang diterima customer.',
+        ])->assertRedirect();
+        $this->assertSame('done', $project->fresh()->status);
+        $this->assertSame('completed', $project->workflow->delivery_status);
+
+        $this->actingAs($admin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Project siap ditagihkan');
 
         $this->actingAs($admin)->post(route('admin.invoices.store'), [
             'purchase_order_request_id' => $poRequest->id,
@@ -944,22 +1047,47 @@ class CrmFlowTest extends TestCase
         $this->assertNotSame($designItem->quotation_image_path, $quotationItem->quotation_image_path);
         Storage::disk('public')->assertExists($quotationItem->quotation_image_path);
 
-        $response = $this->actingAs($sales)->get(route('sales.quotations.excel', $quotation));
+        $this->actingAs($sales)
+            ->get(route('sales.quotations.show', $quotation))
+            ->assertOk()
+            ->assertSee('Excel Terkunci')
+            ->assertSee('PDF Terkunci');
+
+        $this->actingAs($sales)
+            ->get(route('sales.quotations.excel', $quotation))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Excel penawaran hanya bisa didownload setelah disetujui SPV.');
+
+        $this->actingAs($sales)->post(route('sales.quotations.submit-approval', $quotation))->assertRedirect();
+        $this->actingAs($spv)->get(route('spv.quotation-approvals.excel', $quotation->fresh()))
+            ->assertOk()
+            ->assertDownload();
+
+        $this->actingAs($spv)
+            ->post(route('spv.quotation-approvals.approve', $quotation->fresh()), [
+                'approval_note' => 'Excel sudah sesuai.',
+            ])
+            ->assertRedirect();
+
+        $response = $this->actingAs($sales)->get(route('sales.quotations.excel', $quotation->fresh()));
         $response->assertOk()->assertDownload();
         $zip = new ZipArchive;
         $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()) === true);
         $this->assertNotFalse($zip->locateName('xl/drawings/drawing1.xml'));
         $this->assertNotFalse($zip->locateName('xl/media/image1.png'));
         $worksheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $drawing = $zip->getFromName('xl/drawings/drawing1.xml');
         $zip->close();
         $this->assertStringContainsString('Dimensions (W x D x H, mm)', $worksheet);
         $this->assertMatchesRegularExpression('/<f>H\\d+\\*J\\d+<\\/f>/', $worksheet);
         $this->assertMatchesRegularExpression('/<f>D\\d+\\*F\\d+<\\/f><v>2000000<\\/v>/', $worksheet);
-
-        $this->actingAs($sales)->post(route('sales.quotations.submit-approval', $quotation))->assertRedirect();
-        $this->actingAs($spv)->get(route('spv.quotation-approvals.excel', $quotation->fresh()))
-            ->assertOk()
-            ->assertDownload();
+        $this->assertMatchesRegularExpression('/<c r="C7"[^>]*s="1">/', $worksheet);
+        $this->assertMatchesRegularExpression('/<c r="G7"[^>]*s="1">/', $worksheet);
+        $this->assertMatchesRegularExpression('/<mergeCell ref="H\\d+:K\\d+"\\/>/', $worksheet);
+        $this->assertStringContainsString('<xdr:oneCellAnchor>', $drawing);
+        $this->assertStringNotContainsString('<xdr:twoCellAnchor', $drawing);
+        $this->assertMatchesRegularExpression('/<a:picLocks noChangeAspect="1"\\/>/', $drawing);
+        $this->assertMatchesRegularExpression('/<xdr:ext cx="\\d+" cy="\\d+"\\/>/', $drawing);
     }
 
     public function test_sales_can_upload_a_custom_quotation_image_and_optional_item_is_excluded_from_total(): void
@@ -1082,14 +1210,16 @@ class CrmFlowTest extends TestCase
         $this->assertMatchesRegularExpression('/<f>D\\d+\\*F\\d+<\\/f><v>2000000<\\/v>/', $worksheet);
         $this->assertSame(3, substr_count($drawing, '<xdr:pic>'));
         preg_match_all(
-            '/<xdr:from>.*?<xdr:row>(\\d+)<\\/xdr:row>.*?<\\/xdr:from>.*?<xdr:to>.*?<xdr:row>(\\d+)<\\/xdr:row>/s',
+            '/<xdr:oneCellAnchor>.*?<xdr:from>.*?<xdr:row>(\\d+)<\\/xdr:row>.*?<\\/xdr:from><xdr:ext cx="(\\d+)" cy="(\\d+)"\\/>.*?<\\/xdr:oneCellAnchor>/s',
             $drawing,
             $anchors,
             PREG_SET_ORDER
         );
         $this->assertCount(3, $anchors);
         foreach ($anchors as $anchor) {
-            $this->assertLessThanOrEqual(23, (int) $anchor[2] - (int) $anchor[1]);
+            $this->assertGreaterThan(0, (int) $anchor[2]);
+            $this->assertGreaterThan(0, (int) $anchor[3]);
+            $this->assertLessThanOrEqual(6500000, (int) $anchor[3]);
         }
     }
 

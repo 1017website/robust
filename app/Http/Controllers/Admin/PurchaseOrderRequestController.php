@@ -8,6 +8,7 @@ use App\Models\Quotation;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Services\OperationalDocumentPdf;
+use App\Services\ProjectProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -105,7 +106,7 @@ class PurchaseOrderRequestController extends Controller
     public function show(PurchaseOrderRequest $purchaseOrderRequest)
     {
         abort_if(Auth::user()->isSales() && (int) $purchaseOrderRequest->quotation?->sales_id !== (int) Auth::id(), 403);
-        $purchaseOrderRequest->load('quotation.items', 'quotation.sales', 'requester', 'invoice');
+        $purchaseOrderRequest->load('quotation.items', 'quotation.sales', 'quotation.project.workflow', 'requester', 'invoice');
         return view('admin.purchase_order_requests.show', ['requestPo' => $purchaseOrderRequest]);
     }
 
@@ -113,11 +114,11 @@ class PurchaseOrderRequestController extends Controller
     {
         abort_if(Auth::user()->isSales() && (int) $purchaseOrderRequest->quotation?->sales_id !== (int) Auth::id(), 403);
 
-        $filename = str($purchaseOrderRequest->code ?: 'request-po')
-            ->replace(['/', '\\'], '-')
-            ->slug('-')
-            ->append('.pdf')
-            ->toString();
+        $filename = trim((string) preg_replace(
+            '/[^\pL\pN._-]+/u',
+            '-',
+            $purchaseOrderRequest->project_number ?: $purchaseOrderRequest->code ?: 'request-po'
+        ), '-_.').'.pdf';
 
         return response($pdf->makeRequestPo($purchaseOrderRequest), 200, [
             'Content-Type' => 'application/pdf',
@@ -125,13 +126,13 @@ class PurchaseOrderRequestController extends Controller
         ]);
     }
 
-    public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
+    public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
-        abort_if(Auth::user()->isSales(), 403, 'Update proses Request PO hanya untuk Sales Admin.');
+        abort_unless(Auth::user()->isAdminLevel(), 403, 'Update proses Request PO hanya untuk Sales Admin.');
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::statuses()))],
-            'accurate_po_number' => ['nullable', 'string', 'max:100'],
-            'accurate_po_date' => ['nullable', 'date'],
+            'accurate_po_number' => ['nullable', 'required_if:status,po_created', 'string', 'max:100'],
+            'accurate_po_date' => ['nullable', 'required_if:status,po_created', 'date'],
             'accurate_note' => ['nullable', 'string', 'max:1500'],
             'delivery_address' => ['nullable', 'string', 'max:1500'],
             'delivery_pic_name' => ['nullable', 'string', 'max:255'],
@@ -144,27 +145,39 @@ class PurchaseOrderRequestController extends Controller
         ]);
 
         $checklist = $this->normalizedChecklist($data['checklist'] ?? []);
+        $actor = $request->user();
 
-        $purchaseOrderRequest->update([
-            'status' => $data['status'],
-            'accurate_po_number' => $data['accurate_po_number'] ?? null,
-            'accurate_po_date' => $data['accurate_po_date'] ?? null,
-            'accurate_note' => $data['accurate_note'] ?? null,
-            'delivery_address' => $data['delivery_address'] ?? null,
-            'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
-            'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
-            'npwp_name' => $data['npwp_name'] ?? null,
-            'npwp_number' => $data['npwp_number'] ?? null,
-            'payment_term' => $data['payment_term'] ?? null,
-            'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-            'checklist' => $checklist,
-            'checklist_completed_at' => $this->isChecklistComplete($checklist) ? now() : null,
-            'processed_at' => in_array($data['status'], ['processing_accurate', 'po_created', 'production', 'installation', 'invoicing', 'paid'], true) ? now() : $purchaseOrderRequest->processed_at,
-        ]);
+        $project = DB::transaction(function () use ($data, $checklist, $purchaseOrderRequest, $projectProvisioner, $actor) {
+            $purchaseOrderRequest->update([
+                'status' => $data['status'],
+                'accurate_po_number' => $data['accurate_po_number'] ?? null,
+                'accurate_po_date' => $data['accurate_po_date'] ?? null,
+                'accurate_note' => $data['accurate_note'] ?? null,
+                'delivery_address' => $data['delivery_address'] ?? null,
+                'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
+                'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
+                'npwp_name' => $data['npwp_name'] ?? null,
+                'npwp_number' => $data['npwp_number'] ?? null,
+                'payment_term' => $data['payment_term'] ?? null,
+                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+                'checklist' => $checklist,
+                'checklist_completed_at' => $this->isChecklistComplete($checklist) ? now() : null,
+                'processed_at' => in_array($data['status'], ['processing_accurate', 'po_created', 'production', 'installation', 'invoicing', 'paid'], true) ? now() : $purchaseOrderRequest->processed_at,
+            ]);
+
+            return $data['status'] === 'po_created'
+                ? $projectProvisioner->fromAccuratePurchaseOrder($purchaseOrderRequest->fresh(), $actor)
+                : null;
+        });
 
         Logger::record('updated', "Status Request PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
-        return back()->with('success', 'Request PO berhasil diperbarui.');
+        return back()->with(
+            'success',
+            $project
+                ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
+                : 'Request PO berhasil diperbarui.'
+        );
     }
 
     protected function validatedData(Request $request, bool $creating = false): array
