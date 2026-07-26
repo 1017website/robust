@@ -23,6 +23,7 @@ class PraLeadController extends Controller
         if ($s = $request->get('q')) {
             $query->where(function ($w) use ($s) {
                 $w->where('instansi', 'like', "%$s%")
+                  ->orWhere('division', 'like', "%$s%")
                   ->orWhere('pic_name', 'like', "%$s%")
                   ->orWhere('phone', 'like', "%$s%")
                   ->orWhere('initial_need', 'like', "%$s%");
@@ -144,9 +145,10 @@ class PraLeadController extends Controller
     {
         return $request->validate([
             'instansi' => ['required', 'string', 'max:255'],
+            'division' => ['nullable', 'string', 'max:255'],
             'pic_name' => ['required', 'string', 'max:255'],
             'pic_position' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255'],
             'source' => ['required', Rule::in(array_keys(PraLead::sources()))],
             'lab_type' => ['nullable', 'string', 'max:255'],

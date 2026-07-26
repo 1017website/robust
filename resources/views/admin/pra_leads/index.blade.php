@@ -98,6 +98,7 @@
                                     <div class="dropdown-menu dropdown-menu-end">
                                         <button type="button" class="dropdown-item pra-load-detail" id="pra-detail-{{ $pl->id }}"
                                             data-instansi="{{ e($pl->instansi) }}"
+                                            data-division="{{ e($pl->division) }}"
                                             data-pic="{{ e($pl->pic_name) }}"
                                             data-phone="{{ e($pl->phone) }}"
                                             data-email="{{ e($pl->email) }}"
@@ -113,6 +114,7 @@
                                         <button type="button" class="dropdown-item pra-edit"
                                             data-update-url="{{ route('admin.pra-leads.update', $pl) }}"
                                             data-instansi="{{ e($pl->instansi) }}"
+                                            data-division="{{ e($pl->division) }}"
                                             data-pic-name="{{ e($pl->pic_name) }}"
                                             data-pic-position="{{ e($pl->pic_position) }}"
                                             data-phone="{{ e($pl->phone) }}"
@@ -171,6 +173,7 @@
             <h4 id="previewInstansi">Instansi</h4>
             <div class="info-box mt-3">
                 <div class="info-row"><span>PIC</span><strong id="previewPic">—</strong></div>
+                <div class="info-row"><span>Divisi</span><strong id="previewDivision">—</strong></div>
                 <div class="info-row"><span>No. WhatsApp</span><strong id="previewPhone">—</strong></div>
                 <div class="info-row"><span>Email</span><strong id="previewEmail">—</strong></div>
                 <div class="info-row"><span>Sumber</span><strong id="previewSource">—</strong></div>
@@ -194,9 +197,10 @@
             <div class="section-title">Informasi Prospek</div>
             <div class="mb-3"><label class="form-label small fw-semibold">Nama Instansi <span class="text-danger">*</span></label><input name="instansi" value="{{ old('instansi') }}" class="form-control" required></div>
             <div class="row g-3">
+                <div class="col-md-6"><label class="form-label small fw-semibold">Divisi</label><input name="division" value="{{ old('division') }}" class="form-control" placeholder="Contoh: Laboratorium, Procurement, R&D"></div>
                 <div class="col-md-6"><label class="form-label small fw-semibold">PIC <span class="text-danger">*</span></label><input name="pic_name" value="{{ old('pic_name') }}" class="form-control" required></div>
                 <div class="col-md-6"><label class="form-label small fw-semibold">Jabatan PIC</label><input name="pic_position" value="{{ old('pic_position') }}" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label small fw-semibold">No. WhatsApp</label><input name="phone" value="{{ old('phone') }}" class="form-control" placeholder="0812-xxxx-xxxx"></div>
+                <div class="col-md-6"><label class="form-label small fw-semibold">No. WhatsApp <span class="text-danger">*</span></label><input name="phone" value="{{ old('phone') }}" class="form-control" required placeholder="0812-xxxx-xxxx"></div>
                 <div class="col-md-6"><label class="form-label small fw-semibold">Email</label><input name="email" type="email" value="{{ old('email') }}" class="form-control"></div>
                 <div class="col-md-6"><label class="form-label small fw-semibold">Sumber <span class="text-danger">*</span></label>
                     <select name="source" class="form-select" required>
@@ -306,6 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (subtitle) subtitle.textContent = 'Informasi prospek yang dipilih dari tabel.';
             setText('previewInstansi', btn.dataset.instansi);
             setText('previewPic', btn.dataset.pic);
+            setText('previewDivision', btn.dataset.division || '—');
             setText('previewPhone', btn.dataset.phone || '—');
             setText('previewEmail', btn.dataset.email || '—');
             setText('previewSource', btn.dataset.source || '—');
@@ -342,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (title) title.textContent = 'Edit Pra Lead';
             if (subtitle) subtitle.textContent = 'Ubah data prospek, assign sales, atau kirim ulang ke sales.';
             setField('instansi', btn.dataset.instansi);
+            setField('division', btn.dataset.division);
             setField('pic_name', btn.dataset.picName);
             setField('pic_position', btn.dataset.picPosition);
             setField('phone', btn.dataset.phone);

@@ -1057,3 +1057,35 @@ tr.customer-select-row:focus-visible{outline:2px solid #2563eb;outline-offset:-2
     .progress-row,.progress-row:has(.stage-dot){grid-template-columns:1fr}.progress-row .stage-dot{display:none}.progress-row>strong{text-align:left}
     .calendar-toolbar{flex-wrap:wrap}.calendar-toolbar strong{width:100%;margin-left:0;order:-1}
 }
+
+/* Keep Activities pipeline identical and tidy for every user role. */
+.sales-kanban,
+.sales-admin-ui .sales-kanban{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    overflow:visible!important;
+    align-items:stretch;
+}
+.sales-kanban .kanban-col{
+    display:flex;
+    min-width:0!important;
+    flex-direction:column;
+}
+.sales-kanban .kanban-col>.btn-link{margin-top:auto}
+
+/* Keep project estimates readable in the narrow request detail panel. */
+.request-detail-body .estimate-range strong{
+    overflow-wrap:normal;
+    word-break:normal;
+    white-space:nowrap;
+    font-size:clamp(12px,1vw,15px);
+}
+
+@media(max-width:1100px){
+    .sales-kanban,
+    .sales-admin-ui .sales-kanban{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:767.98px){
+    .sales-kanban,
+    .sales-admin-ui .sales-kanban{grid-template-columns:1fr!important}
+    .request-detail-body .estimate-range strong{white-space:normal}
+}

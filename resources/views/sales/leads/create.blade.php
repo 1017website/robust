@@ -32,6 +32,10 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label class="form-label lead-label">Divisi</label>
+                            <input name="division" value="{{ old('division') }}" class="form-control lead-control" placeholder="Contoh: Laboratorium, Procurement, R&D">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label lead-label">PIC (Person In Charge) <span>*</span></label>
                             <input name="pic_name" value="{{ old('pic_name') }}" class="form-control lead-control" required placeholder="Masukkan nama PIC">
                         </div>

@@ -83,6 +83,7 @@ class RequestMasukController extends Controller
                 'code' => CodeGenerator::next(Lead::class, 'LD', 5, true),
                 'pra_lead_id' => $praLead->id,
                 'instansi' => $praLead->instansi,
+                'division' => $praLead->division,
                 'pic_name' => $praLead->pic_name,
                 'pic_position' => $praLead->pic_position,
                 'phone' => $praLead->phone,

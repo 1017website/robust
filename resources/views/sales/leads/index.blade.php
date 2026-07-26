@@ -38,12 +38,13 @@
                 </form>
                 <div class="table-wrap">
                     <table class="sales-table">
-                        <thead><tr><th>No</th><th>Instansi / PIC</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Stage</th><th>Prioritas</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+                        <thead><tr><th>No</th><th>Instansi / PIC</th><th>Divisi</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Stage</th><th>Prioritas</th><th>Tanggal</th><th>Aksi</th></tr></thead>
                         <tbody>
                         @forelse($leads as $lead)
                             <tr class="{{ $selected && $selected->id === $lead->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($lead->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview lead">
                                 <td>{{ $leads->firstItem()+$loop->index }}</td>
                                 <td><a class="fw-bold" href="{{ route('sales.leads.show',$lead) }}">{{ $lead->instansi }}</a><div class="small text-muted-2">{{ $lead->pic_name }} · {{ $lead->phone }}</div></td>
+                                <td>{{ $lead->division ?: '—' }}</td>
                                 <td><div class="fw-bold text-truncate-cell">{{ $lead->lab_name ?: '-' }}</div><div class="small text-muted-2 text-truncate-cell">{{ $lead->need_description ?: '-' }}</div></td>
                                 <td>{{ $lead->city ?: $lead->location }}</td>
                                 <td><span class="status-soft st-blue">{{ $stageLabel($lead->stage) }}</span></td>
@@ -52,7 +53,7 @@
                                 <td><div class="dropdown"><button class="btn btn-sm btn-soft" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" href="{{ route('sales.leads.show',$lead) }}"><i class="bi bi-eye me-2"></i>Lihat Detail</a><a class="dropdown-item" href="{{ route('sales.leads.edit',$lead) }}"><i class="bi bi-pencil me-2"></i>Edit</a><a class="dropdown-item" href="{{ route('sales.design-requests.create',['lead'=>$lead->id]) }}"><i class="bi bi-pencil-square me-2"></i>Buat Design Request</a></div></div></td>
                             </tr>
                         @empty
-                            <tr><td colspan="8"><x-empty text="Belum ada lead." /></td></tr>
+                            <tr><td colspan="9"><x-empty text="Belum ada lead." /></td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -95,6 +96,7 @@
                         <section class="info-card">
                             <h6>Informasi Customer</h6>
                             <div class="kv"><div class="k">PIC</div><div class="v">{{ $selected->pic_name ?: '-' }}</div></div>
+                            <div class="kv"><div class="k">Divisi</div><div class="v">{{ $selected->division ?: '-' }}</div></div>
                             <div class="kv"><div class="k">Email</div><div class="v lead-detail-break">{{ $selected->email ?: '-' }}</div></div>
                             <div class="kv"><div class="k">No. Telepon</div><div class="v">{{ $selected->phone ?: '-' }}</div></div>
                             <div class="kv"><div class="k">Alamat</div><div class="v lead-detail-break">{{ $selected->location ?: '-' }}</div></div>

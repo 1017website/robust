@@ -77,6 +77,7 @@
                     <div class="row g-3">
                         <div class="col-12"><div class="info-card"><h6><i class="bi bi-person sblue rounded p-2 me-2"></i>Informasi Customer</h6>
                             <div class="kv"><div class="k">Nama Instansi</div><div class="v">{{ $selected->instansi }}</div></div>
+                            <div class="kv"><div class="k">Divisi</div><div class="v">{{ $selected->division ?: '—' }}</div></div>
                             <div class="kv"><div class="k">PIC</div><div class="v">{{ $selected->pic_name }}</div></div>
                             <div class="kv"><div class="k">No. WA</div><div class="v">{{ $selected->phone ?: '—' }}</div></div>
                             <div class="kv"><div class="k">Email</div><div class="v">{{ $selected->email ?: '—' }}</div></div>
@@ -86,8 +87,8 @@
                             <div class="fw-bold mb-2">{{ $selected->lab_type ?: 'Jenis kebutuhan belum diisi' }}</div>
                             <div class="small text-muted-2">{{ $selected->initial_need ?: 'Belum ada deskripsi kebutuhan.' }}</div>
                         </div></div>
-                        <div class="col-md-6"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-card h-100"><h6>Estimasi Nilai Proyek <i class="bi bi-info-circle text-muted" title="Rentang perkiraan nilai proyek berdasarkan kebutuhan awal, bukan harga penawaran final."></i></h6><div class="small text-muted-2 mb-2">Rentang awal, bukan harga penawaran final</div><div class="estimate-range"><span><small>Minimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</strong></span><i class="bi bi-arrow-right"></i><span><small>Maksimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</strong></span></div></div></div>
+                        <div class="col-12"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
+                        <div class="col-12"><div class="info-card h-100"><h6>Estimasi Nilai Proyek <i class="bi bi-info-circle text-muted" title="Rentang perkiraan nilai proyek berdasarkan kebutuhan awal, bukan harga penawaran final."></i></h6><div class="small text-muted-2 mb-2">Rentang awal, bukan harga penawaran final</div><div class="estimate-range"><span><small>Minimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</strong></span><i class="bi bi-arrow-right"></i><span><small>Maksimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</strong></span></div></div></div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">

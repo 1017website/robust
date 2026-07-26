@@ -148,7 +148,7 @@
             <?php else: ?>
                 <?php
                     $isActive = request()->routeIs($menu['active']);
-                    $badge = (int) ($menu['badge'] ?? 0);
+                    $badge = (int) ($menu['badge'] ?? ($sidebarNotificationCounts[$menu['active']] ?? 0));
                 ?>
                 <a href="{{ route($menu['route']) }}" class="{{ $isActive ? 'active' : '' }}">
                     <i class="bi {{ $menu['icon'] }}"></i>

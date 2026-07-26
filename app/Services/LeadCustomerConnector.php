@@ -61,6 +61,7 @@ class LeadCustomerConnector
         return Customer::create([
             'code' => CodeGenerator::next(Customer::class, 'CUST', 4),
             'name' => $lead->instansi,
+            'division' => $lead->division,
             'category' => $lead->instansi_type,
             'type' => $lead->lab_name,
             'email' => $lead->email,
@@ -79,6 +80,7 @@ class LeadCustomerConnector
     {
         $payload = [
             'name' => $lead->instansi,
+            'division' => $lead->division,
             'category' => $lead->instansi_type,
             'type' => $lead->lab_name,
             'email' => $lead->email,

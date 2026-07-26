@@ -12,6 +12,7 @@ use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -148,6 +149,9 @@ class ActivityController extends Controller
                     ->whereNull('deleted_at')),
             ],
         ]);
+        $selectedPipelineStage = $data['pipeline_stage'] ?? null;
+        $customer = null;
+
         if (! empty($data['customer_id'])) {
             $customer = Customer::findOrFail($data['customer_id']);
             abort_if(Auth::user()->isSales() && (int) $customer->sales_id !== (int) Auth::id(), 403);
@@ -167,7 +171,15 @@ class ActivityController extends Controller
         $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : $data['sales_id'];
         $data['created_by'] = Auth::id();
 
-        $activity = Activity::create($data);
+        $activity = DB::transaction(function () use ($data, $customer, $selectedPipelineStage) {
+            $activity = Activity::create($data);
+
+            if ($customer && $selectedPipelineStage && $customer->pipeline_stage !== $selectedPipelineStage) {
+                $customer->update(['pipeline_stage' => $selectedPipelineStage]);
+            }
+
+            return $activity;
+        });
         Logger::record('created', "Aktivitas {$activity->title} dibuat", $activity);
 
         return redirect()->route('activities.index')->with('success', 'Aktivitas berhasil disimpan.');

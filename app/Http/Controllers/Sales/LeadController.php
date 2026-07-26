@@ -24,6 +24,7 @@ class LeadController extends Controller
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('instansi', 'like', "%$s%")
+                ->orWhere('division', 'like', "%$s%")
                 ->orWhere('pic_name', 'like', "%$s%"));
         }
         if ($stage = $request->get('stage')) {
@@ -156,6 +157,7 @@ class LeadController extends Controller
     {
         $data = $request->validate([
             'instansi' => ['required', 'string', 'max:255'],
+            'division' => ['nullable', 'string', 'max:255'],
             'pic_name' => ['required', 'string', 'max:255'],
             'pic_position' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
