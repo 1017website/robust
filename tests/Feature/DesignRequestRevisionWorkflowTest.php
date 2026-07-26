@@ -72,7 +72,23 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->where('name', 'Drawing Awal')
             ->firstOrFail();
 
+        $this->assertSame('Dokumen awal', $initialDocument->revisionLabel());
         $this->assertSame('drawing_uploaded', $designRequest->fresh()->status);
+
+        $readyForProductionCount = DesignRequest::whereIn('status', [
+            'drawing_uploaded',
+            'revision_drawing_uploaded',
+        ])->count();
+
+        $this->actingAs($production)
+            ->get(route('drafter.design-requests.index'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'bi bi-pencil-square',
+                'Design Request',
+                'side-badge',
+                (string) min(99, $readyForProductionCount),
+            ], false);
 
         $this->actingAs($production)
             ->post(route('drafter.design-requests.feedback', $designRequest), [
@@ -147,6 +163,10 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             'revision_number' => 2,
             'is_current' => 1,
         ]);
+        $this->assertSame(
+            'Rev 1',
+            Document::where('parent_document_id', $initialDocument->id)->firstOrFail()->revisionLabel()
+        );
 
         $this->actingAs($drafter)
             ->delete(route('documents.destroy', $initialDocument))

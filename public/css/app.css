@@ -920,6 +920,8 @@ canvas{display:block;max-width:100%}
 .design-spec-fieldset[disabled] .form-control::placeholder{color:#8b98ae!important;opacity:1!important;-webkit-text-fill-color:#8b98ae!important}
 .design-spec-fieldset[disabled] .spec-card .table-r td{padding:7px 6px}
 .design-spec-fieldset[disabled] .spec-card,.design-spec-fieldset[disabled] .info-card{background:#fff}
+.material-spec-card .table-r th,.material-spec-card .table-r td{width:33.333%;padding-left:6px!important;padding-right:6px!important}
+.material-spec-card .form-control{width:100%;min-width:0!important;max-width:100%}
 
 /* Quotation auto-pricing columns stay legible and scroll as one table on narrower screens. */
 .table-wrap>.quotation-item-table{min-width:1120px!important}

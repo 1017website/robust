@@ -5,19 +5,22 @@
     $companyTagline = \App\Models\SystemSetting::value('company_tagline', 'Laboratory Furniture & Equipment');
     $companyLogo = \App\Models\SystemSetting::assetUrl('company_logo');
 
-    $drafterNewDesignRequestCount = 0;
+    $designRequestBadgeCount = 0;
     if (in_array($role, ['drafter', 'production'], true) && class_exists(\App\Models\DesignRequest::class)) {
         try {
-            $drafterNewDesignRequestCount = \App\Models\DesignRequest::query()
-                ->where('status', 'assigned')
-                ->when($role === 'drafter', fn ($query) => $query->where('production_pic_id', $u->id))
-                ->count()
-                + \App\Models\DesignRequest::query()
+            $designRequestBadgeCount = $role === 'production'
+                ? \App\Models\DesignRequest::query()
+                    ->whereIn('status', ['drawing_uploaded', 'revision_drawing_uploaded'])
+                    ->count()
+                : \App\Models\DesignRequest::query()
                     ->where('status', 'assigned')
-                    ->whereNull('production_pic_id')
+                    ->where(function ($query) use ($u) {
+                        $query->where('production_pic_id', $u->id)
+                            ->orWhereNull('production_pic_id');
+                    })
                     ->count();
         } catch (\Throwable $e) {
-            $drafterNewDesignRequestCount = 0;
+            $designRequestBadgeCount = 0;
         }
     }
 
@@ -87,7 +90,7 @@
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'production') {
-        $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $drafterNewDesignRequestCount);
+        $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $designRequestBadgeCount);
         $pushItem($menuGroups, 'Laporan Produksi', 'drafter.projects.index', 'drafter.projects.*', 'bi-clipboard2-check');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
@@ -102,7 +105,7 @@
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'drafter') {
-        $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $drafterNewDesignRequestCount);
+        $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square', $designRequestBadgeCount);
         $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
         $pushItem($menuGroups, 'Tasks', 'drafter.tasks.index', 'drafter.tasks.*', 'bi-ui-checks');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');

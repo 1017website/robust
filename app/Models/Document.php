@@ -23,7 +23,13 @@ class Document extends Model
 
     public function revisionLabel(): string
     {
-        return 'Rev '.(int) ($this->revision_number ?: 1);
+        if (! $this->parent_document_id) {
+            return 'Dokumen awal';
+        }
+
+        // Urutan penyimpanan dimulai dari 1 untuk dokumen awal. Nomor revisi
+        // yang dilihat user karena itu satu tingkat lebih kecil.
+        return 'Rev '.max(1, (int) $this->revision_number - 1);
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
