@@ -64,11 +64,13 @@ class InvoiceController extends Controller
             ]);
         }
         $quotation = $requestPo->quotation;
-        $termsTotalInCents = collect($data['terms'])->sum(fn ($term) => (int) round((float) $term['amount'] * 100));
-        $grandTotalInCents = (int) round((float) $quotation->grand_total * 100);
-        if ($termsTotalInCents !== $grandTotalInCents) {
+        // Seluruh layar dan dokumen menggunakan rupiah tanpa desimal. Validasi
+        // harus mengikuti nominal yang terlihat, bukan pecahan sen tersembunyi.
+        $termsTotal = collect($data['terms'])->sum(fn ($term) => (int) round((float) $term['amount']));
+        $grandTotal = (int) round((float) $quotation->grand_total);
+        if ($termsTotal !== $grandTotal) {
             throw ValidationException::withMessages([
-                'terms' => 'Total seluruh termin harus sama dengan grand total penawaran. Selisih: '.\App\Support\Format::rupiah(abs($termsTotalInCents - $grandTotalInCents) / 100).'.',
+                'terms' => 'Total seluruh termin harus sama dengan grand total penawaran. Selisih: '.\App\Support\Format::rupiah(abs($termsTotal - $grandTotal)).'.',
             ]);
         }
 

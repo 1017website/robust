@@ -930,6 +930,10 @@ class CrmFlowTest extends TestCase
         $this->assertSame('done', $project->fresh()->status);
         $this->assertSame('completed', $project->workflow->delivery_status);
 
+        // Nilai PPN dapat menghasilkan pecahan rupiah. Form invoice harus
+        // menggunakan pembulatan yang sama dengan nominal yang ditampilkan.
+        $quotation->update(['grand_total' => 14308823.53]);
+
         $this->actingAs($admin)->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Project siap ditagihkan');
@@ -937,19 +941,31 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->get(route('admin.invoices.create', ['request_po' => $poRequest->id]))
             ->assertOk()
             ->assertSee('Terbitkan Invoice')
-            ->assertSee('Pelunasan 100%');
+            ->assertSee('Pelunasan 100%')
+            ->assertSee('const grand=14308824', false);
+
+        $this->actingAs($admin)->post(route('admin.invoices.store'), [
+            'purchase_order_request_id' => $poRequest->id,
+            'invoice_date' => now()->format('Y-m-d'),
+            'terms' => [[
+                'description' => 'Pelunasan',
+                'percentage' => 100,
+                'amount' => 14308823,
+            ]],
+        ])->assertSessionHasErrors('terms');
 
         $this->actingAs($admin)->post(route('admin.invoices.store'), [
             'purchase_order_request_id' => $poRequest->id,
             'invoice_date' => now()->format('Y-m-d'),
             'terms' => [[
                 'description' => 'Pelunasan', 'percentage' => 100,
-                'amount' => (float) $quotation->fresh()->grand_total,
+                'amount' => (int) round((float) $quotation->fresh()->grand_total),
                 'due_date' => now()->addDays(14)->format('Y-m-d'),
             ]],
         ])->assertRedirect();
         $invoice = Invoice::where('purchase_order_request_id', $poRequest->id)->firstOrFail();
         $term = $invoice->terms()->firstOrFail();
+        $this->assertSame(14308824.0, (float) $term->amount);
         $this->actingAs($admin)->put(route('admin.invoices.terms.update', [$invoice, $term]), [
             'status' => 'paid', 'paid_date' => now()->format('Y-m-d'),
         ])->assertRedirect();
