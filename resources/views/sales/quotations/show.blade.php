@@ -37,7 +37,12 @@
     <div class="col-lg-8">
         <div class="card-r">
             <div class="card-head"><h2>Item Penawaran</h2><x-status-badge :status="$quotation->status" :label="$quotation->statusLabel()" /></div>
-            <div class="table-wrap">
+            <div class="quotation-item-list">
+                @foreach($quotation->items as $it)
+                    <x-quotation-item-card :item="$it" />
+                @endforeach
+            </div>
+            <div class="table-wrap d-none">
                 <table class="table-r">
                     <thead><tr><th>Item</th><th>Spesifikasi</th><th>Qty</th><th>HPP</th><th>Margin</th><th>Harga Jual</th><th>Total</th></tr></thead>
                     <tbody>
@@ -118,7 +123,7 @@
         </div>
         <div class="card-r">
             <div class="card-head"><h2>Kontrol Margin</h2></div>
-            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Margin Total Otomatis</span><span class="fw-semibold">{{ rtrim(rtrim(number_format($quotation->target_margin,2),'0'),'.') }}%</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Margin Kotor Total <small class="d-block">(dari harga jual)</small></span><span class="fw-semibold">{{ rtrim(rtrim(number_format($quotation->target_margin,2),'0'),'.') }}%</span></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Estimasi Cost Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->estimatedCostTotal()) }}</span></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Estimasi Gross Profit</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->estimatedGrossProfit()) }}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Estimasi Margin</span><strong>{{ number_format($quotation->estimatedGrossMarginPercent(), 2) }}%</strong></div>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Quotation;
 use App\Models\QuotationItem;
+use App\Support\StructuredSpecification;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
@@ -11,7 +12,9 @@ use ZipArchive;
 class QuotationExcelExporter
 {
     private array $merges = [];
+
     private array $images = [];
+
     private array $mainTotalCells = [];
 
     public function download(Quotation $quotation): BinaryFileResponse
@@ -150,6 +153,22 @@ class QuotationExcelExporter
                     $rows[] = $this->borderedRow($row, [
                         $this->textCell("B{$row}", $spec['title'], 4),
                     ], 20);
+                } elseif ($spec['type'] === 'breakdown') {
+                    $cells = [
+                        $this->textCell("C{$row}", $spec['label'], 5),
+                        $this->numberCell("D{$row}", $spec['qty'], 7),
+                        $this->textCell("E{$row}", $spec['unit'], 7),
+                    ];
+                    if ($spec['unit_price'] !== null) {
+                        $cells[] = $this->numberCell("F{$row}", $spec['unit_price'], 6);
+                        $cells[] = $this->formulaCell(
+                            "G{$row}",
+                            "D{$row}*F{$row}",
+                            round($spec['qty'] * $spec['unit_price'], 2),
+                            6
+                        );
+                    }
+                    $rows[] = $this->borderedRow($row, $cells, 20);
                 } else {
                     $this->merges[] = "D{$row}:G{$row}";
                     $rows[] = $this->borderedRow($row, [
@@ -167,7 +186,9 @@ class QuotationExcelExporter
             }
 
             if ($item->quotation_image_path) {
-                $this->addImage($item, $startRow + 1, $row - 1);
+                $imageEndRow = $row - 1;
+                $imageStartRow = max($startRow + 1, $imageEndRow - 22);
+                $this->addImage($item, $imageStartRow, $imageEndRow);
             }
         }
 
@@ -255,36 +276,15 @@ class QuotationExcelExporter
 
     private function specificationRows(?string $specification): array
     {
-        $lines = preg_split('/\R/u', trim((string) $specification)) ?: [];
-        $rows = [];
+        return collect(StructuredSpecification::flatten($specification))
+            ->map(function (array $row): array {
+                if ($row['type'] === 'detail') {
+                    $row['value'] = wordwrap($row['value'], 76, "\n", true);
+                }
 
-        if (! $lines || (count($lines) === 1 && blank($lines[0]))) {
-            return [['type' => 'section', 'title' => 'Spesifikasi'], ['type' => 'detail', 'label' => '', 'value' => '-']];
-        }
-
-        $hasSection = false;
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '') {
-                continue;
-            }
-            if (preg_match('/^\[(.+)]$/u', $line, $matches)) {
-                $rows[] = ['type' => 'section', 'title' => trim($matches[1])];
-                $hasSection = true;
-                continue;
-            }
-            if (! $hasSection) {
-                $rows[] = ['type' => 'section', 'title' => 'Spesifikasi'];
-                $hasSection = true;
-            }
-            [$label, $value] = str_contains($line, ':')
-                ? array_map('trim', explode(':', $line, 2))
-                : ['', $line];
-            $wrapped = wordwrap($value, 76, "\n", true);
-            $rows[] = ['type' => 'detail', 'label' => $label, 'value' => $wrapped];
-        }
-
-        return $rows;
+                return $row;
+            })
+            ->all();
     }
 
     private function addImage(QuotationItem $item, int $fromRow, int $toRow): void
@@ -330,6 +330,7 @@ class QuotationExcelExporter
     private function summaryRow(int $row, string $label, string $formula, float $cached): string
     {
         $this->merges[] = "A{$row}:J{$row}";
+
         return $this->row($row, [
             $this->textCell("A{$row}", $label, 9),
             $this->formulaCell("K{$row}", $formula, $cached, 6),

@@ -9,8 +9,10 @@ use App\Models\Project;
 use App\Models\Quotation;
 use App\Models\User;
 use App\Services\ExcelWorkbook;
+use App\Services\LeadCustomerConnector;
 use App\Services\Logger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AssignmentController extends Controller
@@ -95,10 +97,19 @@ class AssignmentController extends Controller
             ],
         ]);
 
-        $lead = Lead::findOrFail($data['lead_id']);
-        $lead->update(['sales_id' => $data['to_sales_id']]);
+        $lead = DB::transaction(function () use ($data) {
+            $lead = Lead::query()->lockForUpdate()->findOrFail($data['lead_id']);
+            $lead->update(['sales_id' => $data['to_sales_id']]);
+
+            // Customer adalah bagian dari ownership pipeline Lead. Saat Lead dialihkan,
+            // owner Customer dan data PIC terkait harus langsung sinkron agar Sales baru
+            // tidak mendapat akses setengah-setengah.
+            app(LeadCustomerConnector::class)->ensureForLead($lead);
+
+            return $lead->fresh('customer');
+        });
         Logger::record('reassigned', "Lead {$lead->instansi} dialihkan", $lead);
 
-        return back()->with('success', 'Lead berhasil dialihkan.');
+        return back()->with('success', 'Lead dan Customer terkait berhasil dialihkan.');
     }
 }

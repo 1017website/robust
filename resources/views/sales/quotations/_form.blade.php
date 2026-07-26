@@ -67,7 +67,7 @@
     </div>
 @endif
 
-<form method="POST" action="{{ $formAction }}" id="quoteForm">
+<form method="POST" action="{{ $formAction }}" id="quoteForm" enctype="multipart/form-data">
     @csrf
     @if(($formMethod ?? 'POST') !== 'POST')
         @method($formMethod)
@@ -112,7 +112,7 @@
                     </select>
                 </div>
                 <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label small fw-semibold">Margin Total Otomatis</label><input type="hidden" name="target_margin" id="targetMargin" value="{{ old('target_margin', $quotation?->target_margin ?? 0) }}"><input id="targetMarginDisplay" value="0%" class="form-control bg-light" readonly></div>
+                <div class="col-md-4"><label class="form-label small fw-semibold">Margin Kotor Total <span class="text-muted-2">(dari harga jual)</span></label><input type="hidden" name="target_margin" id="targetMargin" value="{{ old('target_margin', $quotation?->target_margin ?? 0) }}"><input id="targetMarginDisplay" value="0%" class="form-control bg-light" readonly></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
             </div>
         </div>
@@ -124,11 +124,17 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:120px">Gambar / Jenis</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:90px">Margin %</th><th style="width:130px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:115px">Target Margin <small class="d-block text-lowercase fw-normal">(dari harga jual)</small></th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
-            <div class="form-text mt-2">Harga jual dihitung otomatis dari HPP dan margin: HPP / (1 - margin%). Margin total dihitung dari seluruh item.</div>
+            <div class="quotation-margin-help mt-3">
+                <i class="bi bi-info-circle"></i>
+                <div>
+                    <strong>Target margin dihitung dari harga jual, bukan ditambahkan langsung ke HPP.</strong>
+                    <span>Contoh: HPP Rp1.000.000 dengan target margin 10% menghasilkan harga jual Rp1.111.111 dan laba Rp111.111.</span>
+                </div>
+            </div>
         </div>
         <div class="d-flex justify-content-between"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
     </div>
@@ -187,6 +193,24 @@
     </div>
 </form>
 
+<div class="modal fade" id="quotationSpecificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div><h5 class="modal-title">Atur Spesifikasi Item</h5><small class="text-muted-2">Tambah bagian dan detail tanpa mengetik kode format.</small></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <x-specification-editor name="" label="Spesifikasi Item" id="quotationSpecificationEditor" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="saveQuotationSpecification"><i class="bi bi-check2 me-1"></i>Terapkan Spesifikasi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 const itemsData = @json($itemsSource);
@@ -194,8 +218,37 @@ const itemMasters = @json($itemMasters ?? []);
 const costsData = @json(array_values($costsSource ?? []));
 const storageBase = @json(asset('storage'));
 let step = 1, itemIdx = 0, costIdx = 0;
+let activeSpecificationInput = null;
 const rupiah = n => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n||0));
 const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const quotationSpecificationRoot = document.getElementById('quotationSpecificationEditor');
+const quotationSpecificationApi = StructuredSpecificationEditor.mount(quotationSpecificationRoot);
+const quotationSpecificationModal = new bootstrap.Modal(document.getElementById('quotationSpecificationModal'));
+
+function specificationSummary(value){
+    const sections = StructuredSpecificationEditor.parse(value);
+    const rowCount = sections.reduce((sum, section) => sum + section.rows.length, 0);
+    const titles = sections.slice(0, 3).map(section => section.title).filter(Boolean);
+    return {
+        titles,
+        rowCount,
+        label: titles.length ? titles.join(' · ') : 'Belum ada spesifikasi',
+    };
+}
+
+function renderSpecificationSummary(tr){
+    const input = tr.querySelector('.it-specification');
+    const summary = specificationSummary(input.value);
+    const box = tr.querySelector('.quotation-spec-summary');
+    box.innerHTML = `<span><i class="bi bi-layers"></i>${esc(summary.label)}</span><span><i class="bi bi-list-check"></i>${summary.rowCount} detail</span>`;
+}
+
+document.getElementById('saveQuotationSpecification').addEventListener('click', () => {
+    if (!activeSpecificationInput) return;
+    activeSpecificationInput.value = quotationSpecificationApi.getValue();
+    renderSpecificationSummary(activeSpecificationInput.closest('tr'));
+    quotationSpecificationModal.hide();
+});
 
 function showStep(s){
     step = s;
@@ -222,23 +275,52 @@ function validateStep(){
 
 function addItem(data={}){
     const i = itemIdx++;
+    const imageInputId = `quotationImage${i}`;
+    const hasImage = Boolean(data.quotation_image_path);
+    const imageOrigin = data.source_design_request_item_id ? 'Dari Design Request' : 'Gambar penawaran';
     const tr = document.createElement('tr');
     const masterOptions = itemMasters.map(m => `<option value="${m.id}" ${String(data.item_master_id||'')===String(m.id)?'selected':''}>${esc(m.category ? m.category+' · '+m.name : m.name)}${m.variant ? ' · '+esc(m.variant) : ''}</option>`).join('');
     tr.innerHTML = `
         <td><input type="hidden" name="items[${i}][id]" value="${esc(data.id)}"><input type="hidden" name="items[${i}][source_design_request_item_id]" value="${esc(data.source_design_request_item_id)}"><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
         <td><input name="items[${i}][name]" class="form-control form-control-sm mb-1 it-name" value="${esc(data.name)}" required placeholder="Nama item"><input name="items[${i}][variant]" class="form-control form-control-sm it-variant" value="${esc(data.variant)}" placeholder="Detail: Laci 3 / Layout L / Layout U"></td>
-        <td><textarea name="items[${i}][specification]" rows="5" class="form-control form-control-sm" placeholder="[General]\\nType: ...\\n[Dimensions]\\nOverall Dimension: ...">${esc(data.specification)}</textarea></td>
-        <td>${data.quotation_image_path ? `<img src="${storageBase}/${esc(data.quotation_image_path)}" alt="" class="d-block mb-1" style="width:100%;height:70px;object-fit:contain">` : '<span class="small text-muted-2 d-block mb-2">Tanpa gambar</span>'}<label class="form-check small"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input" ${data.is_optional ? 'checked' : ''}><span class="form-check-label">Opsional</span></label></td>
+        <td class="it-spec-cell"><textarea name="items[${i}][specification]" class="d-none it-specification">${esc(data.specification)}</textarea><button type="button" class="btn btn-soft btn-sm w-100 it-spec-edit"><i class="bi bi-sliders me-1"></i>Atur Spesifikasi</button><div class="quotation-spec-summary"></div></td>
+        <td class="it-image-cell">
+            <div class="quotation-image-preview">
+                <img src="${hasImage ? `${storageBase}/${esc(data.quotation_image_path)}` : ''}" alt="Preview gambar item" class="it-image-preview ${hasImage ? '' : 'd-none'}">
+                <div class="it-image-empty ${hasImage ? 'd-none' : ''}"><i class="bi bi-image"></i><span>Belum ada gambar</span></div>
+            </div>
+            <input id="${imageInputId}" name="items[${i}][quotation_image]" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="d-none it-image-input">
+            <label for="${imageInputId}" class="btn btn-soft btn-sm w-100 mt-1 it-image-button"><i class="bi bi-upload me-1"></i><span class="it-image-action">${hasImage ? 'Ganti gambar' : 'Tambah gambar'}</span></label>
+            <small class="it-image-origin d-block text-muted-2 mt-1">${hasImage ? imageOrigin : 'JPG, PNG, atau WebP · maks. 5 MB'}</small>
+            <label class="form-check quotation-optional-check mt-2"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input" ${data.is_optional ? 'checked' : ''}><span class="form-check-label fw-semibold">Item alternatif</span></label>
+            <small class="d-block text-muted-2">Tidak dihitung ke total penawaran.</small>
+        </td>
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
         <td><input name="items[${i}][cost_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-cost" value="${data.cost_price ?? data.unit_price ?? 0}"></td>
-        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-margin" value="${data.margin||0}" min="0" max="99.99"></td>
-        <td><input name="items[${i}][unit_price]" type="hidden" class="it-price" value="0"><span class="fw-num it-price-display">Rp 0</span></td>
+        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-margin" value="${data.margin||0}" min="0" max="99.99" aria-label="Target margin dari harga jual dalam persen" title="Persentase laba terhadap harga jual, bukan markup dari HPP"></td>
+        <td><input name="items[${i}][unit_price]" type="hidden" class="it-price" value="0"><span class="fw-num it-price-display">Rp 0</span><small class="it-profit-display d-block text-success mt-1">Laba/unit Rp 0</small></td>
         <td class="fw-num it-total">Rp 0</td>
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
     bindNumberInputs(tr);
+    renderSpecificationSummary(tr);
+    tr.querySelector('.it-image-input').addEventListener('change', event => {
+        const file = event.target.files?.[0];
+        if(!file) return;
+        const preview = tr.querySelector('.it-image-preview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('d-none');
+        tr.querySelector('.it-image-empty').classList.add('d-none');
+        tr.querySelector('.it-image-action').textContent = 'Ganti gambar';
+        tr.querySelector('.it-image-origin').textContent = 'Gambar baru dipilih';
+    });
+    tr.querySelector('.it-spec-edit').addEventListener('click', () => {
+        activeSpecificationInput = tr.querySelector('.it-specification');
+        quotationSpecificationApi.setValue(activeSpecificationInput.value);
+        quotationSpecificationModal.show();
+    });
     tr.querySelector('.it-master').addEventListener('change', function(){
         const master = itemMasters.find(m => String(m.id) === this.value);
         if(!master) return;
@@ -246,6 +328,7 @@ function addItem(data={}){
         tr.querySelector('.it-name').value = master.name || '';
         tr.querySelector('.it-variant').value = master.variant || '';
         tr.querySelector('[name$="[specification]"]').value = master.specification || '';
+        renderSpecificationSummary(tr);
         tr.querySelector('[name$="[unit]"]').value = master.unit || 'Unit';
         tr.querySelector('.it-cost').value = master.default_cost_price || 0;
         tr.querySelector('.it-margin').value = master.default_margin || 0;
@@ -262,6 +345,7 @@ function rowTotal(tr){
     const p=cost/(1-(margin/100));
     tr.querySelector('.it-price').value=Number.isFinite(p)?p.toFixed(2):0;
     tr.querySelector('.it-price-display').textContent=rupiah(p);
+    tr.querySelector('.it-profit-display').textContent=`Laba/unit ${rupiah(Math.max(0,p-cost))}`;
     tr.querySelector('.it-total').textContent = rupiah(q*p);
     return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost,optional:tr.querySelector('[name$="[is_optional]"]').checked};
 }

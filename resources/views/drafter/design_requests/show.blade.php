@@ -49,7 +49,7 @@
 
             <div class="info-card mt-3">
                 <div class="card-head">
-                    <div><h2>Item Hasil untuk Penawaran</h2><small class="text-muted-2">Gunakan format <code>[Nama Bagian]</code> lalu <code>Label: Nilai</code> agar spesifikasi tersusun seperti template Excel.</small></div>
+                    <div><h2>Item Hasil untuk Penawaran</h2><small class="text-muted-2">Gunakan <code>[Nama Bagian]</code>, <code>Label: Nilai</code>, dan <code>@ Qty | UoM | Harga</code> untuk baris breakdown export Excel.</small></div>
                     <button type="button" class="btn btn-soft btn-sm" id="addRow"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button>
                 </div>
                 <div id="itemEditors" class="d-grid gap-3">
@@ -61,7 +61,7 @@
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Nama Item *</label><input name="items[{{ $i }}][name]" value="{{ $it->name }}" class="form-control form-control-sm" required></div>
                                 <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[{{ $i }}][variant]" value="{{ $it->variant }}" class="form-control form-control-sm"></div>
                                 <div class="col-md-1 d-flex align-items-end justify-content-end"><button type="button" class="btn btn-sm btn-soft text-danger row-del"><i class="bi bi-trash"></i></button></div>
-                                <div class="col-md-7"><label class="form-label small fw-semibold">Spesifikasi untuk Penawaran</label><textarea name="items[{{ $i }}][specification]" rows="8" class="form-control form-control-sm" placeholder="[General]&#10;Type: WB-2005&#10;Manufacturer: PT. Robust Multilab Solusindo&#10;[Dimensions (W x D x H, mm)]&#10;Overall Dimension: 2000 x 750 x 850">{{ $it->specification }}</textarea></div>
+                                <div class="col-12"><x-specification-editor :name="'items['.$i.'][specification]'" :value="$it->specification" label="Spesifikasi untuk Penawaran" /></div>
                                 <div class="col-md-5">
                                     <label class="form-label small fw-semibold">Gambar Utama Penawaran</label>
                                     @if($it->quotation_image_path)
@@ -82,7 +82,7 @@
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Nama Item *</label><input name="items[0][name]" class="form-control form-control-sm" required></div>
                                 <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[0][variant]" class="form-control form-control-sm"></div>
                                 <div class="col-md-1"></div>
-                                <div class="col-md-7"><label class="form-label small fw-semibold">Spesifikasi untuk Penawaran</label><textarea name="items[0][specification]" rows="8" class="form-control form-control-sm" placeholder="[General]&#10;Type: ...&#10;Manufacturer: ...&#10;[Dimensions (W x D x H, mm)]&#10;Overall Dimension: ..."></textarea></div>
+                                <div class="col-12"><x-specification-editor name="items[0][specification]" label="Spesifikasi untuk Penawaran" /></div>
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>@if(auth()->user()->isDrafter())<input type="file" name="items[0][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">@else<small class="text-muted-2 d-block">Gambar dikelola oleh Drafter.</small>@endif</div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[0][qty]" type="text" inputmode="decimal" data-qty value="1" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[0][unit]" value="Unit" class="form-control form-control-sm"></div>
@@ -136,7 +136,7 @@ document.getElementById('addRow')?.addEventListener('click', function(){
         <div class="col-md-5"><label class="form-label small fw-semibold">Nama Item *</label><input name="items[${i}][name]" class="form-control form-control-sm" required></div>
         <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[${i}][variant]" class="form-control form-control-sm"></div>
         <div class="col-md-1 d-flex align-items-end justify-content-end"><button type="button" class="btn btn-sm btn-soft text-danger row-del"><i class="bi bi-trash"></i></button></div>
-        <div class="col-md-7"><label class="form-label small fw-semibold">Spesifikasi untuk Penawaran</label><textarea name="items[${i}][specification]" rows="8" class="form-control form-control-sm" placeholder="[General]\\nType: ...\\nManufacturer: ...\\n[Dimensions (W x D x H, mm)]\\nOverall Dimension: ..."></textarea></div>
+        <div class="col-12" data-dynamic-spec-editor></div>
         <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>${canEditQuotationImage ? `<input type="file" name="items[${i}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">` : '<small class="text-muted-2 d-block">Gambar dikelola oleh Drafter.</small>'}</div>
         <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty value="1" class="form-control form-control-sm"></div>
         <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[${i}][unit]" value="Unit" class="form-control form-control-sm"></div>
@@ -144,6 +144,10 @@ document.getElementById('addRow')?.addEventListener('click', function(){
         <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input"><span class="form-check-label">Item opsional</span></label></div>
     </div>`;
     document.getElementById('itemEditors').appendChild(editor);
+    StructuredSpecificationEditor.attach(editor.querySelector('[data-dynamic-spec-editor]'), {
+        name: `items[${i}][specification]`,
+        label: 'Spesifikasi untuk Penawaran',
+    });
     bindNumberInputs(editor);
     editor.querySelector('.row-del').onclick=()=>editor.remove();
 });

@@ -71,6 +71,7 @@ class DesignRequestController extends Controller
         $drafters = User::assignableDraftersQuery()->get();
         $drafterWorkloads = $this->drafterWorkloads($drafters);
         $salesList = User::assignableSales();
+
         return view('sales.design_requests.create', compact('lead', 'drafters', 'drafterWorkloads', 'salesList'));
     }
 
@@ -164,7 +165,7 @@ class DesignRequestController extends Controller
     public function show(DesignRequest $designRequest)
     {
         abort_unless($this->canViewDesignRequest($designRequest), 403);
-        $designRequest->load('items', 'productionPic', 'documents', 'sales', 'customer.primaryPic', 'lead');
+        $designRequest->load('items.itemMaster', 'productionPic', 'documents', 'sales', 'customer.primaryPic', 'lead');
 
         return view('sales.design_requests.show', compact('designRequest'));
     }

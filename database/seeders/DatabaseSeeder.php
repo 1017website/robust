@@ -56,7 +56,9 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->call([
             ProductionUserSeeder::class,
+            OperationalUserSeeder::class,
             ItemMasterSeeder::class,
+            RichQuotationSeeder::class,
         ]);
 
         // ---------- Customers ----------

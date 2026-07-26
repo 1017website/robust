@@ -59,20 +59,17 @@
 
         <div class="card-r">
             <div class="card-head"><h2>Item Penawaran</h2></div>
-            <div class="table-wrap">
-                <table class="table-r">
-                    <thead><tr><th>Item</th><th>Spesifikasi</th><th>Qty</th><th>Total</th></tr></thead>
-                    <tbody>
-                    @foreach($requestPo->quotation?->items ?? [] as $it)
-                        <tr>
-                            <td class="fw-semibold">{{ $it->name }}</td>
-                            <td class="small">{{ $it->specification ?: '—' }}</td>
-                            <td>{{ rtrim(rtrim(number_format($it->qty,2),'0'),'.') }} {{ $it->unit }}</td>
-                            <td class="fw-num">{{ \App\Support\Format::rupiah($it->total) }}</td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+            <div class="d-grid gap-3">
+                @forelse($requestPo->quotation?->items ?? [] as $it)
+                    <x-quotation-item-card
+                        :item="$it"
+                        :show-cost="false"
+                        :show-master-code="false"
+                        price-label="Harga Satuan"
+                    />
+                @empty
+                    <x-empty text="Belum ada item penawaran pada Request PO ini." />
+                @endforelse
             </div>
         </div>
     </div>

@@ -15,6 +15,7 @@ use App\Services\QuotationCalculator;
 use App\Services\QuotationExcelExporter;
 use App\Services\SimpleQuotationPdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -37,6 +38,7 @@ class QuotationController extends Controller
         }
 
         $quotations = $query->paginate(10)->withQueryString();
+
         return view('sales.quotations.index', compact('quotations'));
     }
 
@@ -55,6 +57,7 @@ class QuotationController extends Controller
             ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->get();
         $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+
         return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR', 'itemMasters'));
     }
 
@@ -127,6 +130,7 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         $quotation->load('items.itemMaster', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
+
         return view('sales.quotations.show', compact('quotation'));
     }
 
@@ -285,6 +289,7 @@ class QuotationController extends Controller
 
         $this->recordHistory($quotation, 'sent_to_customer', $oldStatus, 'sent_to_customer', 'Penawaran ditandai sudah dikirim ke customer.');
         Logger::record('sent', "Penawaran {$quotation->code} dikirim ke customer", $quotation);
+
         return back()->with('success', 'Penawaran ditandai sudah dikirim ke customer.');
     }
 
@@ -307,6 +312,7 @@ class QuotationController extends Controller
         }
         $this->recordHistory($quotation, 'customer_accepted', $oldStatus, 'customer_accepted', $request->input('note'));
         Logger::record('customer_accepted', "Penawaran {$quotation->code} disetujui customer", $quotation);
+
         return back()->with('success', 'Penawaran ditandai customer setuju. Sales Admin sudah bisa membuat Request PO.');
     }
 
@@ -329,6 +335,7 @@ class QuotationController extends Controller
         }
         $this->recordHistory($quotation, 'customer_rejected', $oldStatus, 'customer_rejected', $request->input('note'));
         Logger::record('customer_rejected', "Penawaran {$quotation->code} tidak disetujui customer", $quotation);
+
         return back()->with('success', 'Penawaran ditandai tidak disetujui customer.');
     }
 
@@ -363,6 +370,7 @@ class QuotationController extends Controller
             'items.*.name' => ['required', 'string', 'max:255'],
             'items.*.variant' => ['nullable', 'string', 'max:255'],
             'items.*.specification' => ['nullable', 'string', 'max:12000'],
+            'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
@@ -415,7 +423,12 @@ class QuotationController extends Controller
             $costPrice = (float) ($item['cost_price'] ?? $item['unit_price'] ?? 0);
             $margin = min(max((float) ($item['margin'] ?? 0), 0), 99.99);
             $unitPrice = QuotationCalculator::sellingPrice($costPrice, $margin);
-            [$imagePath, $imageName] = $this->snapshotQuotationImage($quotation, $sourceItem, $existing);
+            [$imagePath, $imageName] = $this->snapshotQuotationImage(
+                $quotation,
+                $sourceItem,
+                $existing,
+                $item['quotation_image'] ?? null,
+            );
 
             $quotation->items()->create([
                 'source_design_request_item_id' => $sourceItem?->id,
@@ -438,18 +451,28 @@ class QuotationController extends Controller
         }
     }
 
-    protected function snapshotQuotationImage(Quotation $quotation, ?DesignRequestItem $sourceItem, $existing): array
-    {
+    protected function snapshotQuotationImage(
+        Quotation $quotation,
+        ?DesignRequestItem $sourceItem,
+        $existing,
+        ?UploadedFile $uploadedImage = null,
+    ): array {
+        if ($uploadedImage) {
+            $target = $uploadedImage->store("quotation-snapshots/{$quotation->id}", 'public');
+
+            return [$target, $uploadedImage->getClientOriginalName()];
+        }
+
+        if ($existing?->quotation_image_path && Storage::disk('public')->exists($existing->quotation_image_path)) {
+            return [$existing->quotation_image_path, $existing->quotation_image_name];
+        }
+
         if ($sourceItem?->quotation_image_path && Storage::disk('public')->exists($sourceItem->quotation_image_path)) {
             $extension = strtolower(pathinfo($sourceItem->quotation_image_path, PATHINFO_EXTENSION)) ?: 'png';
             $target = "quotation-snapshots/{$quotation->id}/item-{$sourceItem->id}-".str()->random(8).".{$extension}";
             Storage::disk('public')->put($target, Storage::disk('public')->get($sourceItem->quotation_image_path));
 
             return [$target, $sourceItem->quotation_image_name ?: basename($sourceItem->quotation_image_path)];
-        }
-
-        if ($existing?->quotation_image_path && Storage::disk('public')->exists($existing->quotation_image_path)) {
-            return [$existing->quotation_image_path, $existing->quotation_image_name];
         }
 
         return [null, null];

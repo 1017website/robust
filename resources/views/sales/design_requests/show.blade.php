@@ -82,21 +82,14 @@
             @if($designRequest->items->count())
                 <div class="info-card mb-3">
                     <div class="card-head px-0 pt-0"><h2>Item Hasil Produksi</h2></div>
-                    <div class="table-wrap">
-                        <table class="table-r">
-                            <thead><tr><th>Item</th><th>Spesifikasi</th><th>Qty</th><th>Harga Satuan</th><th>Total</th></tr></thead>
-                            <tbody>
-                            @foreach($designRequest->items as $item)
-                                <tr>
-                                    <td class="fw-semibold">{{ $item->name }}</td>
-                                    <td class="small">{{ $item->specification ?: '—' }}</td>
-                                    <td>{{ rtrim(rtrim(number_format($item->qty, 2), '0'), '.') }} {{ $item->unit }}</td>
-                                    <td class="fw-num">{{ \App\Support\Format::rupiah($item->unit_price) }}</td>
-                                    <td class="fw-num">{{ \App\Support\Format::rupiah($item->total) }}</td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                    <div class="quotation-item-list design-request-production-items">
+                        @foreach($designRequest->items as $item)
+                            <x-quotation-item-card
+                                :item="$item"
+                                :show-cost="false"
+                                price-label="Harga Satuan"
+                            />
+                        @endforeach
                     </div>
                 </div>
             @endif

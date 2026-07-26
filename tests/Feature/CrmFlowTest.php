@@ -7,8 +7,8 @@ use App\Models\Customer;
 use App\Models\DesignRequest;
 use App\Models\DesignRevision;
 use App\Models\Document;
-use App\Models\Lead;
 use App\Models\Invoice;
+use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\ProjectWorkflow;
@@ -16,6 +16,7 @@ use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\SystemSetting;
 use App\Models\User;
+use Database\Seeders\RichQuotationSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -549,7 +550,7 @@ class CrmFlowTest extends TestCase
         $this->assertStringContainsString('spreadsheetml.sheet', $response->headers->get('content-type'));
         $this->assertStringContainsString('.xlsx', $response->headers->get('content-disposition'));
 
-        $zip = new \ZipArchive;
+        $zip = new ZipArchive;
         $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()));
         $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
         $zip->close();
@@ -809,7 +810,7 @@ class CrmFlowTest extends TestCase
             'production_pic_id' => $drafter->id,
             'status' => 'assigned',
         ]);
-        $specification = "[General]\nType: FH-150 ECO\nManufacturer: PT. Robust Multilab Solusindo\n[Dimensions (W x D x H, mm)]\nOverall Dimension: 1500 x 890 x 2350";
+        $specification = "[General]\nType: FH-150 ECO\nManufacturer: PT. Robust Multilab Solusindo\n[Dimensions (W x D x H, mm)]\nOverall Dimension: 1500 x 890 x 2350\n[Utilities]\nElectrical Socket: Single electric socket, IP55\n@ 4 | pcs | 500000";
 
         $this->actingAs($drafter)->post(route('drafter.design-requests.feedback', $designRequest), [
             'technical_note' => 'Render final untuk penawaran.',
@@ -894,11 +895,143 @@ class CrmFlowTest extends TestCase
         $zip->close();
         $this->assertStringContainsString('Dimensions (W x D x H, mm)', $worksheet);
         $this->assertMatchesRegularExpression('/<f>H\\d+\\*J\\d+<\\/f>/', $worksheet);
+        $this->assertMatchesRegularExpression('/<f>D\\d+\\*F\\d+<\\/f><v>2000000<\\/v>/', $worksheet);
 
         $this->actingAs($sales)->post(route('sales.quotations.submit-approval', $quotation))->assertRedirect();
         $this->actingAs($spv)->get(route('spv.quotation-approvals.excel', $quotation->fresh()))
             ->assertOk()
             ->assertDownload();
+    }
+
+    public function test_sales_can_upload_a_custom_quotation_image_and_optional_item_is_excluded_from_total(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $this->actingAs($sales)->post(route('sales.quotations.store'), [
+            'customer_name' => 'Customer Gambar Custom',
+            'project_name' => 'Penawaran Item Alternatif',
+            'delivery_method' => 'email',
+            'quote_date' => today()->format('Y-m-d'),
+            'valid_until' => today()->addMonth()->format('Y-m-d'),
+            'priority' => 'medium',
+            'currency' => 'IDR',
+            'discount_type' => 'percent',
+            'discount_value' => 0,
+            'tax_percent' => 11,
+            'items' => [[
+                'name' => 'CUSTOM LAB ITEM',
+                'specification' => 'Gambar diunggah langsung dari penawaran.',
+                'quotation_image' => UploadedFile::fake()->image('custom-item.png', 800, 600),
+                'qty' => 1,
+                'unit' => 'Unit',
+                'cost_price' => 1000000,
+                'margin' => 10,
+                'is_optional' => 1,
+            ]],
+            'action' => 'draft',
+        ])->assertRedirect();
+
+        $quotation = Quotation::where('project_name', 'Penawaran Item Alternatif')->firstOrFail();
+        $item = $quotation->items()->firstOrFail();
+
+        $this->assertTrue($item->is_optional);
+        $this->assertSame(0.0, (float) $quotation->subtotal);
+        $this->assertSame('custom-item.png', $item->quotation_image_name);
+        Storage::disk('public')->assertExists($item->quotation_image_path);
+    }
+
+    public function test_rich_quotation_seeder_creates_idempotent_reference_export(): void
+    {
+        Storage::fake('public');
+
+        $this->seed(RichQuotationSeeder::class);
+        $this->seed(RichQuotationSeeder::class);
+
+        $quotation = Quotation::where('code', 'Q-DEMO-DETAIL-2026')->firstOrFail();
+        $items = $quotation->items()->get();
+
+        $this->assertCount(3, $items);
+        $this->assertSame(1500000.0, (float) $quotation->subtotal);
+        $this->assertSame(1665000.0, (float) $quotation->grand_total);
+        $this->assertStringContainsString('[Under-Bench Cabinet formations]', $items->first()->specification);
+        $this->assertStringContainsString('@ 4 | pcs | 500000', $items->first()->specification);
+        foreach ($items as $item) {
+            Storage::disk('public')->assertExists($item->quotation_image_path);
+        }
+
+        $sales = User::where('email', 'sales@robust.test')->firstOrFail();
+        $this->actingAs($sales)->get(route('sales.design-requests.show', $quotation->designRequest))
+            ->assertOk()
+            ->assertSee('quotation-item-card', false)
+            ->assertSee('structured-spec-view', false)
+            ->assertSee('Under-Bench Cabinet formations');
+
+        $this->actingAs($sales)->get(route('sales.quotations.create', ['dr' => $quotation->design_request_id]))
+            ->assertOk()
+            ->assertSee('Tambah gambar')
+            ->assertSee('Item alternatif')
+            ->assertSee('Tidak dihitung ke total penawaran.');
+
+        $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))
+            ->assertOk()
+            ->assertSee('quotation-item-card', false)
+            ->assertSee('structured-spec-view', false)
+            ->assertSee('Under-Bench Cabinet formations');
+
+        $drafter = User::where('email', 'drafter@robust.test')->firstOrFail();
+        $this->actingAs($drafter)->get(route('drafter.design-requests.show', $quotation->designRequest))
+            ->assertOk()
+            ->assertSee('data-specification-editor', false)
+            ->assertSee('Tambah Bagian');
+
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $this->actingAs($administrator)->get(route('admin.item-masters.index'))
+            ->assertOk()
+            ->assertSee('master-item-list', false)
+            ->assertSee('data-specification-editor', false);
+
+        $requestPo = PurchaseOrderRequest::create([
+            'code' => 'RPO-STRUCTURED-SPEC',
+            'quotation_id' => $quotation->id,
+            'customer_id' => $quotation->customer_id,
+            'project_number' => 'PRJ-STRUCTURED-SPEC',
+            'customer_name' => $quotation->customer_name,
+            'requested_by' => $administrator->id,
+            'request_date' => today(),
+            'status' => 'submitted',
+        ]);
+        $this->actingAs($administrator)
+            ->get(route('admin.purchase-order-requests.show', $requestPo))
+            ->assertOk()
+            ->assertSee('quotation-item-card', false)
+            ->assertSee('structured-spec-view', false)
+            ->assertSee('Under-Bench Cabinet formations')
+            ->assertDontSee('<td class="small">[General]', false);
+
+        $response = $this->actingAs($sales)->get(route('sales.quotations.excel', $quotation));
+        $response->assertOk()->assertDownload();
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()) === true);
+        $worksheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $drawing = $zip->getFromName('xl/drawings/drawing1.xml');
+        $zip->close();
+
+        $this->assertStringContainsString('Under-Bench Cabinet formations', $worksheet);
+        $this->assertStringContainsString('By Others / by Client', $worksheet);
+        $this->assertMatchesRegularExpression('/<f>D\\d+\\*F\\d+<\\/f><v>2000000<\\/v>/', $worksheet);
+        $this->assertSame(3, substr_count($drawing, '<xdr:pic>'));
+        preg_match_all(
+            '/<xdr:from>.*?<xdr:row>(\\d+)<\\/xdr:row>.*?<\\/xdr:from>.*?<xdr:to>.*?<xdr:row>(\\d+)<\\/xdr:row>/s',
+            $drawing,
+            $anchors,
+            PREG_SET_ORDER
+        );
+        $this->assertCount(3, $anchors);
+        foreach ($anchors as $anchor) {
+            $this->assertLessThanOrEqual(23, (int) $anchor[2] - (int) $anchor[1]);
+        }
     }
 
     public function test_pra_lead_assignment_and_acceptance_does_not_duplicate_lead(): void

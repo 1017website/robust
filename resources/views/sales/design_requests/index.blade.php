@@ -17,7 +17,7 @@
 @endphp
 
 <div class="sales-ui">
-    <div class="sales-page-head align-items-center">
+    <div class="sales-main-grid design-request-index-layout">
         <div>
             <div class="sales-page-head">
                 <div><h1 class="page-title mb-1">Design Request</h1><div class="page-subtitle">Kelola permintaan desain dan spesifikasi teknis ke tim produksi.</div></div>
