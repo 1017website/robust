@@ -12,6 +12,7 @@ use App\Services\OperationalDocumentPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
@@ -24,11 +25,14 @@ class InvoiceController extends Controller
                 ->orWhere('project_name', 'like', '%'.$request->q.'%')->orWhere('project_number', 'like', '%'.$request->q.'%')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
             ->latest()->paginate(12)->withQueryString();
-        $readyRequests = PurchaseOrderRequest::with('quotation.project.workflow')
-            ->whereDoesntHave('invoice')
-            ->whereHas('quotation.project.workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
-            ->latest('processed_at')
-            ->get();
+        $readyRequests = Schema::hasTable('project_workflows')
+            && Schema::hasColumn('project_workflows', 'delivery_status')
+            ? PurchaseOrderRequest::with('quotation.project.workflow')
+                ->whereDoesntHave('invoice')
+                ->whereHas('quotation.project.workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
+                ->latest('processed_at')
+                ->get()
+            : collect();
 
         return view('admin.invoices.index', compact('invoices', 'readyRequests'));
     }

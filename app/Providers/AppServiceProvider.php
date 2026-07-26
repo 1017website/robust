@@ -30,6 +30,10 @@ class AppServiceProvider extends ServiceProvider
             $user = Auth::user();
             $notifications = [];
             $sidebarNotificationCounts = [];
+            // Layout harus tetap bisa dirender sebelum migration terbaru dijalankan,
+            // terutama karena command migrate tersedia dari halaman System Settings.
+            $hasExpandedOperationalWorkflow = Schema::hasTable('project_workflows')
+                && Schema::hasColumn('project_workflows', 'delivery_status');
 
             if ($user) {
                 if ($user->isSales()) {
@@ -66,9 +70,11 @@ class AppServiceProvider extends ServiceProvider
                     $submittedPo = PurchaseOrderRequest::where('status', 'submitted')->count();
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request PO baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
 
-                    $readyInvoices = Project::whereHas('workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
-                        ->whereHas('quotation.purchaseOrderRequest', fn ($po) => $po->whereDoesntHave('invoice'))
-                        ->count();
+                    $readyInvoices = $hasExpandedOperationalWorkflow
+                        ? Project::whereHas('workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
+                            ->whereHas('quotation.purchaseOrderRequest', fn ($po) => $po->whereDoesntHave('invoice'))
+                            ->count()
+                        : 0;
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.invoices.*', $readyInvoices, 'Project siap ditagihkan', 'Delivery dan penerimaan customer selesai. Invoice dapat diterbitkan.', route('admin.invoices.index'), 'bi-file-earmark-richtext', 'text-success');
                 }
 
@@ -110,10 +116,12 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 if ($user->isDelivery()) {
-                    $pendingDelivery = Project::whereHas('workflow', fn ($workflow) => $workflow
-                        ->where('qc_completed', true)
-                        ->where('delivery_status', '!=', 'completed'))
-                        ->count();
+                    $pendingDelivery = $hasExpandedOperationalWorkflow
+                        ? Project::whereHas('workflow', fn ($workflow) => $workflow
+                            ->where('qc_completed', true)
+                            ->where('delivery_status', '!=', 'completed'))
+                            ->count()
+                        : 0;
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingDelivery, 'Project siap dikirim', 'QC selesai. Atur jadwal, unggah POD, dan konfirmasi penerimaan customer.', route('drafter.projects.index'), 'bi-truck', 'text-primary');
                 }
 
