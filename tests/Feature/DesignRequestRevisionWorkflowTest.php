@@ -72,8 +72,25 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->where('name', 'Drawing Awal')
             ->firstOrFail();
 
+        $this->actingAs($drafter)
+            ->get(route('drafter.design-requests.show', $designRequest))
+            ->assertOk()
+            ->assertSee('document-download-link', false)
+            ->assertSee(route('documents.download', $initialDocument), false);
+
         $this->assertSame('Dokumen awal', $initialDocument->revisionLabel());
         $this->assertSame('drawing_uploaded', $designRequest->fresh()->status);
+
+        $this->actingAs($drafter)
+            ->get(route('documents.download', $initialDocument))
+            ->assertOk()
+            ->assertDownload('Drawing Awal.pdf');
+
+        $otherDrafter = User::factory()->create(['role' => 'drafter']);
+        $this->actingAs($otherDrafter)
+            ->get(route('documents.download', $initialDocument))
+            ->assertOk()
+            ->assertDownload('Drawing Awal.pdf');
 
         $readyForProductionCount = DesignRequest::whereIn('status', [
             'drawing_uploaded',

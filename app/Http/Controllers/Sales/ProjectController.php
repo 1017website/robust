@@ -89,7 +89,7 @@ class ProjectController extends Controller
     {
         abort_unless($this->canViewProject($project), 403);
         $project->load([
-            'customer', 'projectManager', 'quotation.items', 'quotation.purchaseOrderRequest',
+            'customer', 'projectManager', 'quotation.items', 'quotation.documents.uploader', 'quotation.purchaseOrderRequest',
             'quotation.designRequest.items.itemMaster', 'quotation.designRequest.documents.uploader',
             'quotation.designRequest.revisionRequests.requester', 'quotation.designRequest.sales',
             'quotation.designRequest.productionPic', 'quotation.designRequest.customer.primaryPic',
@@ -102,9 +102,10 @@ class ProjectController extends Controller
             ->where('category', 'fabrication_drawing')
             ->sortByDesc('created_at')
             ->values();
-        $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project);
+        $showPrices = Auth::user()->isSales() || Auth::user()->isSalesAdmin();
+        $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'qcChecklistDefinition'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'qcChecklistDefinition', 'showPrices'));
     }
 
     protected function eligibleQuotationQuery(): Builder

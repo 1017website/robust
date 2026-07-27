@@ -93,7 +93,7 @@
                             <label class="form-label lead-label">Sumber Lead <span>*</span></label>
                             <select name="source" class="form-select lead-control" required>
                                 <option value="">Pilih sumber lead</option>
-                                @foreach(['whatsapp'=>'WhatsApp','website'=>'Website','referensi'=>'Referensi','telepon'=>'Telepon','email'=>'Email','lainnya'=>'Lainnya'] as $k=>$v)
+                                @foreach(\App\Models\PraLead::sources() as $k=>$v)
                                     <option value="{{ $k }}" @selected(old('source')==$k)>{{ $v }}</option>
                                 @endforeach
                             </select>

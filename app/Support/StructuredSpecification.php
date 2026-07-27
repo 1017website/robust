@@ -9,6 +9,7 @@ final class StructuredSpecification
         $lines = preg_split('/\R/u', trim((string) $specification)) ?: [];
         $sections = [];
         $currentSection = null;
+        $lastDetail = null;
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -22,6 +23,7 @@ final class StructuredSpecification
                     'rows' => [],
                 ];
                 $currentSection = array_key_last($sections);
+                $lastDetail = null;
 
                 continue;
             }
@@ -34,10 +36,31 @@ final class StructuredSpecification
                 $currentSection = array_key_last($sections);
             }
 
+            if (str_starts_with($line, '>')) {
+                $childLine = trim(substr($line, 1));
+                [$label, $value] = str_contains($childLine, ':')
+                    ? array_map('trim', explode(':', $childLine, 2))
+                    : ['', $childLine];
+
+                if ($lastDetail !== null) {
+                    $sections[$currentSection]['rows'][$lastDetail]['children'] ??= [];
+                    $sections[$currentSection]['rows'][$lastDetail]['children'][] = [
+                        'type' => 'subdetail',
+                        'label' => $label,
+                        'value' => $value,
+                    ];
+
+                    continue;
+                }
+
+                $line = $childLine;
+            }
+
             if (str_starts_with($line, '@')) {
                 $breakdown = self::breakdownRow(substr($line, 1));
                 if ($breakdown) {
                     $sections[$currentSection]['rows'][] = $breakdown;
+                    $lastDetail = null;
 
                     continue;
                 }
@@ -51,6 +74,7 @@ final class StructuredSpecification
                 'label' => $label,
                 'value' => $value,
             ];
+            $lastDetail = array_key_last($sections[$currentSection]['rows']);
         }
 
         return array_values(array_filter(
@@ -68,7 +92,24 @@ final class StructuredSpecification
                 'type' => 'section',
                 'title' => $section['title'],
             ];
-            array_push($rows, ...$section['rows']);
+            foreach ($section['rows'] as $row) {
+                $children = $row['children'] ?? [];
+                unset($row['children']);
+                $rows[] = $row;
+
+                if (($row['type'] ?? null) !== 'detail') {
+                    continue;
+                }
+
+                foreach ($children as $child) {
+                    $rows[] = [
+                        'type' => 'subdetail',
+                        'label' => $child['label'] ?? '',
+                        'value' => $child['value'] ?? '',
+                        'parent_label' => $row['label'] ?? '',
+                    ];
+                }
+            }
         }
 
         if ($rows === []) {

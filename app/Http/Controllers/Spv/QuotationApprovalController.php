@@ -41,7 +41,7 @@ class QuotationApprovalController extends Controller
 
     public function show(Quotation $quotation)
     {
-        $quotation->load('items', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'approvalHistories.user');
+        $quotation->load('items', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'documents.uploader', 'approvedBy', 'rejectedBy', 'approvalHistories.user');
         return view('spv.quotation_approvals.show', compact('quotation'));
     }
 

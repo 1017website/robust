@@ -34,7 +34,6 @@
                 'unit' => $i->unit,
                 'cost_price' => $i->unit_price,
                 'unit_price' => 0,
-                'margin' => $i->margin,
                 'is_optional' => $i->is_optional,
             ])->values()->all();
         } else {
@@ -51,7 +50,7 @@
 
 <div class="steps" id="steps">
     <div class="step active" data-step="1"><div class="n">1</div><div class="lbl">Info Dasar</div></div>
-    <div class="step" data-step="2"><div class="n">2</div><div class="lbl">Item & Margin</div></div>
+    <div class="step" data-step="2"><div class="n">2</div><div class="lbl">Item & Harga</div></div>
     <div class="step" data-step="3"><div class="n">3</div><div class="lbl">Harga</div></div>
     <div class="step" data-step="4"><div class="n">4</div><div class="lbl">Review</div></div>
 </div>
@@ -128,8 +127,30 @@
                     </select>
                 </div>
                 <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label small fw-semibold">Margin Kotor Total <span class="text-muted-2">(dari harga jual)</span></label><input type="hidden" name="target_margin" id="targetMargin" value="{{ old('target_margin', $quotation?->target_margin ?? 0) }}"><input id="targetMarginDisplay" value="0%" class="form-control bg-light" readonly></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Dokumen Pendukung Penawaran</label>
+                    <input type="file" name="documents[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                    <div class="form-text">Opsional. Maksimal 5 file per penyimpanan, masing-masing 10 MB. Format: PDF, Word, Excel, JPG, atau PNG.</div>
+                    @if($quotation?->documents?->isNotEmpty())
+                        <div class="border rounded-3 p-3 mt-2">
+                            <div class="small fw-semibold mb-2">Dokumen yang sudah tersimpan</div>
+                            @foreach($quotation->documents as $document)
+                                <div class="d-flex align-items-center justify-content-between gap-2 @unless($loop->last) mb-2 @endunless">
+                                    <div class="small">
+                                        <i class="bi bi-file-earmark-text text-primary me-1"></i>
+                                        {{ $document->name }}.{{ $document->file_type }}
+                                        <span class="text-muted-2">({{ $document->humanSize() }})</span>
+                                    </div>
+                                    <a href="{{ route('documents.download', $document) }}" class="btn btn-soft btn-sm">
+                                        <i class="bi bi-download"></i>
+                                        <span class="visually-hidden">Download {{ $document->name }}</span>
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
         <div class="d-flex justify-content-end"><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
@@ -140,16 +161,9 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:115px">Target Margin <small class="d-block text-lowercase fw-normal">(dari harga jual)</small></th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
-            </div>
-            <div class="quotation-margin-help mt-3">
-                <i class="bi bi-info-circle"></i>
-                <div>
-                    <strong>Target margin dihitung dari harga jual, bukan ditambahkan langsung ke HPP.</strong>
-                    <span>Contoh: HPP Rp1.000.000 dengan target margin 10% menghasilkan harga jual Rp1.111.111 dan laba Rp111.111.</span>
-                </div>
             </div>
         </div>
         <div class="d-flex justify-content-between"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
@@ -243,7 +257,13 @@ const quotationSpecificationModal = new bootstrap.Modal(document.getElementById(
 
 function specificationSummary(value){
     const sections = StructuredSpecificationEditor.parse(value);
-    const rowCount = sections.reduce((sum, section) => sum + section.rows.length, 0);
+    const rowCount = sections.reduce(
+        (sum, section) => sum + section.rows.reduce(
+            (sectionTotal, row) => sectionTotal + 1 + (row.children?.length ?? 0),
+            0
+        ),
+        0
+    );
     const titles = sections.slice(0, 3).map(section => section.title).filter(Boolean);
     return {
         titles,
@@ -315,8 +335,7 @@ function addItem(data={}){
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
         <td><input name="items[${i}][cost_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-cost" value="${data.cost_price ?? data.unit_price ?? 0}"></td>
-        <td><input name="items[${i}][margin]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-margin" value="${data.margin||0}" min="0" max="99.99" aria-label="Target margin dari harga jual dalam persen" title="Persentase laba terhadap harga jual, bukan markup dari HPP"></td>
-        <td><input name="items[${i}][unit_price]" type="hidden" class="it-price" value="0"><span class="fw-num it-price-display">Rp 0</span><small class="it-profit-display d-block text-success mt-1">Laba/unit Rp 0</small></td>
+        <td><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-price" value="${data.unit_price ?? 0}" required aria-label="Harga jual per unit"><small class="it-profit-display d-block text-success mt-1">Laba/unit Rp 0</small></td>
         <td class="fw-num it-total">Rp 0</td>
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
@@ -347,21 +366,23 @@ function addItem(data={}){
         renderSpecificationSummary(tr);
         tr.querySelector('[name$="[unit]"]').value = master.unit || 'Unit';
         tr.querySelector('.it-cost').value = master.default_cost_price || 0;
-        tr.querySelector('.it-margin').value = master.default_margin || 0;
+        tr.querySelector('.it-price').value = master.default_cost_price || 0;
         bindNumberInputs(tr); rowTotal(tr); recalc();
     });
-    tr.querySelectorAll('.it-qty,.it-cost,.it-margin').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
+    tr.querySelectorAll('.it-qty,.it-cost,.it-price').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
     tr.querySelector('[name$="[is_optional]"]').addEventListener('change', recalc);
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);
 }
 function rowTotal(tr){
     const q=numberValue(tr.querySelector('.it-qty')), cost=numberValue(tr.querySelector('.it-cost'));
-    const margin=Math.min(Math.max(numberValue(tr.querySelector('.it-margin')),0),99.99);
-    const p=cost/(1-(margin/100));
-    tr.querySelector('.it-price').value=Number.isFinite(p)?p.toFixed(2):0;
-    tr.querySelector('.it-price-display').textContent=rupiah(p);
-    tr.querySelector('.it-profit-display').textContent=`Laba/unit ${rupiah(Math.max(0,p-cost))}`;
+    const p=numberValue(tr.querySelector('.it-price'));
+    const profit=p-cost;
+    const margin=p>0?(profit/p*100):0;
+    const profitDisplay=tr.querySelector('.it-profit-display');
+    profitDisplay.textContent=`Laba/unit ${rupiah(profit)}`;
+    profitDisplay.classList.toggle('text-success',profit>=0);
+    profitDisplay.classList.toggle('text-danger',profit<0);
     tr.querySelector('.it-total').textContent = rupiah(q*p);
     return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost,optional:tr.querySelector('[name$="[is_optional]"]').checked};
 }
@@ -430,8 +451,6 @@ function recalc(){
     document.getElementById('sumSubtotal').textContent=rupiah(sub);
     document.getElementById('sumCost').textContent=rupiah(totalCost);
     document.getElementById('sumMargin').textContent=`${rupiah(marginAmount)} (${new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(marginPercent)}%)`;
-    document.getElementById('targetMargin').value=marginPercent.toFixed(2);
-    document.getElementById('targetMarginDisplay').value=`${new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(marginPercent)}%`;
     document.getElementById('sumDiscount').textContent='- '+rupiah(disc);
     document.getElementById('sumTax').textContent=rupiah(tax);
     document.getElementById('sumAdd').textContent=rupiah(add);

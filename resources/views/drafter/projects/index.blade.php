@@ -20,7 +20,7 @@
                 <form class="drafter-filter" method="GET"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Cari project, customer, kode..."><select class="form-select" name="status"><option value="">Semua Status</option>@foreach(\App\Models\Project::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach</select><button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button></form>
                 <div class="table-wrap">
                     <table class="drafter-table">
-                        <thead><tr><th>Kode</th><th>Project</th><th>Customer</th><th>Status</th><th>Deadline</th><th>Progress</th><th>Nilai</th></tr></thead>
+                        <thead><tr><th>Kode</th><th>Project</th><th>Customer</th><th>Status</th><th>Deadline</th><th>Progress</th></tr></thead>
                         <tbody>
                         @forelse($projects as $project)
                             <tr class="{{ $selectedProject && $selectedProject->id === $project->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($project->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview project">
@@ -30,10 +30,9 @@
                                 <td><x-status-badge :status="$project->status" :label="\App\Models\Project::statuses()[$project->status] ?? $project->status" /></td>
                                 <td>{{ $project->target_date?->translatedFormat('d M Y') ?? '—' }}</td>
                                 <td style="min-width:150px"><div class="sales-progress"><span style="width:{{ $project->progress }}%"></span></div><small>{{ $project->progress }}%</small></td>
-                                <td>{{ \App\Support\Format::rupiahShort($project->total_value) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7"><x-empty text="Belum ada project produksi." /></td></tr>
+                            <tr><td colspan="6"><x-empty text="Belum ada project produksi." /></td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -44,8 +43,8 @@
         <aside class="drafter-detail" id="project-detail">
             @if($selectedProject)
                 <div class="detail-top"><div><h2>{{ $selectedProject->name }}</h2><div class="text-muted-2">{{ $selectedProject->code }}</div></div><x-status-badge :status="$selectedProject->status" /></div>
-                <div class="info-card"><h6>Informasi Project</h6><div class="detail-grid"><div><small>Customer</small><strong>{{ $selectedProject->customer?->name ?? '—' }}</strong></div><div><small>Project Manager</small><strong>{{ $selectedProject->projectManager?->name ?? '—' }}</strong></div><div><small>Tanggal Mulai</small><strong>{{ $selectedProject->start_date?->translatedFormat('d M Y') ?? '—' }}</strong></div><div><small>Target Selesai</small><strong>{{ $selectedProject->target_date?->translatedFormat('d M Y') ?? '—' }}</strong></div><div><small>Nilai Project</small><strong>{{ \App\Support\Format::rupiahShort($selectedProject->total_value) }}</strong></div></div></div>
-                <div class="info-card"><h6>Progress Pekerjaan</h6><div class="fs-3 fw-black">{{ $selectedProject->workflow?->completionPercent() ?? 0 }}%</div><div class="sales-progress mt-2"><span style="width:{{ $selectedProject->workflow?->completionPercent() ?? 0 }}%"></span></div><p class="mt-3 mb-0 text-muted-2">{{ $selectedProject->scope_of_work ?: 'Belum ada ruang lingkup pekerjaan.' }}</p><a href="{{ route('project-workspace.show', $selectedProject) }}" class="btn btn-primary w-100 mt-3">Buka Project Workspace</a></div>
+                <div class="info-card"><h6>Informasi Project</h6><div class="detail-grid"><div><small>Customer</small><strong>{{ $selectedProject->customer?->name ?? '—' }}</strong></div><div><small>Project Manager</small><strong>{{ $selectedProject->projectManager?->name ?? '—' }}</strong></div><div><small>Tanggal Mulai</small><strong>{{ $selectedProject->start_date?->translatedFormat('d M Y') ?? '—' }}</strong></div><div><small>Target Selesai</small><strong>{{ $selectedProject->target_date?->translatedFormat('d M Y') ?? '—' }}</strong></div></div></div>
+                <div class="info-card"><h6>Progress Pekerjaan</h6><div class="fs-3 fw-black">{{ $selectedProject->workflow?->completionPercent() ?? 0 }}%</div><div class="sales-progress mt-2"><span style="width:{{ $selectedProject->workflow?->completionPercent() ?? 0 }}%"></span></div><p class="mt-3 mb-0 text-muted-2">{{ $selectedProject->scope_of_work ?: 'Belum ada ruang lingkup pekerjaan.' }}</p><a href="{{ route('project-workspace.show', $selectedProject) }}" class="btn btn-primary w-100 mt-3">Buka Project Workspace</a>@if(auth()->user()->isDelivery())<a href="{{ route('project-workspace.show', $selectedProject) }}#operations" class="btn btn-soft w-100 mt-2"><i class="bi bi-file-earmark-text me-1"></i>Buat / Lihat DO</a>@endif</div>
             @else
                 <x-empty text="Pilih project untuk melihat detail." />
             @endif

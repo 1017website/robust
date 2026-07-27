@@ -20,32 +20,52 @@
     function parse(value) {
         const sections = [];
         let current = null;
+        let lastDetail = null;
         String(value ?? '').split(/\r?\n/).forEach(rawLine => {
-            const line = rawLine.trim();
+            let line = rawLine.trim();
             if (!line) return;
             const sectionMatch = line.match(/^\[(.+)]$/);
             if (sectionMatch) {
                 current = {title: sectionMatch[1].trim(), rows: []};
                 sections.push(current);
+                lastDetail = null;
                 return;
             }
             if (!current) {
                 current = {title: 'Spesifikasi', rows: []};
                 sections.push(current);
             }
+            if (line.startsWith('>')) {
+                const childLine = line.replace(/^>\s*/, '');
+                const colon = childLine.indexOf(':');
+                const child = {
+                    type: 'subdetail',
+                    label: colon >= 0 ? childLine.slice(0, colon).trim() : '',
+                    value: colon >= 0 ? childLine.slice(colon + 1).trim() : childLine,
+                };
+                if (lastDetail) {
+                    lastDetail.children = Array.isArray(lastDetail.children) ? lastDetail.children : [];
+                    lastDetail.children.push(child);
+                    return;
+                }
+                line = childLine;
+            }
             if (line.startsWith('@')) {
                 const breakdown = parseBreakdown(line);
                 if (breakdown) {
                     current.rows.push(breakdown);
+                    lastDetail = null;
                     return;
                 }
             }
             const colon = line.indexOf(':');
-            current.rows.push({
+            const detail = {
                 type: 'detail',
                 label: colon >= 0 ? line.slice(0, colon).trim() : '',
                 value: colon >= 0 ? line.slice(colon + 1).trim() : line,
-            });
+            };
+            current.rows.push(detail);
+            lastDetail = detail;
         });
         if (!sections.length) {
             sections.push({
@@ -79,6 +99,13 @@
                 const label = String(row.label ?? '').trim();
                 const value = String(row.value ?? '').trim();
                 if (label || value) lines.push(label ? `${label}: ${value}` : value);
+                (row.children ?? []).forEach(child => {
+                    const childLabel = String(child.label ?? '').trim();
+                    const childValue = String(child.value ?? '').trim();
+                    if (childLabel || childValue) {
+                        lines.push(childLabel ? `> ${childLabel}: ${childValue}` : `> ${childValue}`);
+                    }
+                });
             });
         });
         return lines.join('\n');
@@ -119,6 +146,7 @@
         function renderRow(sectionIndex, rowIndex, row) {
             const rowEl = document.createElement('div');
             rowEl.className = `spec-editor-row is-${row.type}`;
+            let nestedDetails = null;
 
             if (row.type === 'breakdown') {
                 const badge = document.createElement('span');
@@ -141,6 +169,7 @@
                     syncRaw();
                 }));
             } else {
+                row.children = Array.isArray(row.children) ? row.children : [];
                 const badge = document.createElement('span');
                 badge.className = 'spec-editor-row-badge';
                 badge.textContent = 'Detail';
@@ -155,6 +184,53 @@
                     state[sectionIndex].rows[rowIndex].value = value.value;
                     syncRaw();
                 });
+
+                nestedDetails = document.createElement('div');
+                nestedDetails.className = 'spec-editor-subdetails';
+                nestedDetails.classList.toggle('is-empty', !row.children.length);
+                const nestedHead = document.createElement('div');
+                nestedHead.className = 'spec-editor-subdetails-head';
+                const nestedLabel = document.createElement('span');
+                nestedLabel.innerHTML = '<i class="bi bi-diagram-2"></i> Rincian detail';
+                const addSubdetail = actionButton('bi-plus-circle', 'Tambah Sub-detail');
+                addSubdetail.classList.add('spec-editor-add-subdetail');
+                addSubdetail.addEventListener('click', () => {
+                    state[sectionIndex].rows[rowIndex].children.push({
+                        type: 'subdetail',
+                        label: '',
+                        value: '',
+                    });
+                    render();
+                    syncRaw();
+                });
+                nestedHead.append(nestedLabel, addSubdetail);
+                nestedDetails.append(nestedHead);
+
+                row.children.forEach((child, childIndex) => {
+                    const childEl = document.createElement('div');
+                    childEl.className = 'spec-editor-subdetail-row';
+                    const childBadge = document.createElement('span');
+                    childBadge.className = 'spec-editor-row-badge';
+                    childBadge.textContent = 'Sub';
+                    const childLabel = input('spec-subdetail-label', 'Label, mis. Ketebalan', child.label);
+                    const childValue = input('spec-subdetail-value', 'Nilai sub-detail', child.value);
+                    const removeChild = actionButton('bi-x-lg', 'Hapus sub-detail', 'btn btn-link btn-sm text-danger spec-editor-remove');
+                    childLabel.addEventListener('input', () => {
+                        state[sectionIndex].rows[rowIndex].children[childIndex].label = childLabel.value;
+                        syncRaw();
+                    });
+                    childValue.addEventListener('input', () => {
+                        state[sectionIndex].rows[rowIndex].children[childIndex].value = childValue.value;
+                        syncRaw();
+                    });
+                    removeChild.addEventListener('click', () => {
+                        state[sectionIndex].rows[rowIndex].children.splice(childIndex, 1);
+                        render();
+                        syncRaw();
+                    });
+                    childEl.append(childBadge, childLabel, childValue, removeChild);
+                    nestedDetails.append(childEl);
+                });
             }
 
             const remove = actionButton('bi-x-lg', 'Hapus', 'btn btn-link btn-sm text-danger spec-editor-remove');
@@ -164,6 +240,7 @@
                 syncRaw();
             });
             rowEl.append(remove);
+            if (nestedDetails) rowEl.append(nestedDetails);
             return rowEl;
         }
 
@@ -199,7 +276,7 @@
             actions.className = 'spec-editor-section-actions';
             const addDetail = actionButton('bi-plus-circle', 'Tambah Detail');
             addDetail.addEventListener('click', () => {
-                state[sectionIndex].rows.push({type: 'detail', label: '', value: ''});
+                state[sectionIndex].rows.push({type: 'detail', label: '', value: '', children: []});
                 render();
                 syncRaw();
             });
@@ -220,7 +297,7 @@
         }
 
         root.querySelector('[data-spec-add-section]')?.addEventListener('click', () => {
-            state.push({title: 'Bagian Baru', rows: [{type: 'detail', label: '', value: ''}]});
+            state.push({title: 'Bagian Baru', rows: [{type: 'detail', label: '', value: '', children: []}]});
             render();
             syncRaw();
         });
@@ -252,7 +329,7 @@
         root.dataset.specificationEditor = '';
         root.innerHTML = `
             <div class="spec-editor-heading">
-                <div><strong>${options.label || 'Spesifikasi'}</strong><small>Susun per bagian; format export dibuat otomatis.</small></div>
+                <div><strong>${options.label || 'Spesifikasi'}</strong><small>Susun per bagian dan tambahkan sub-detail bila diperlukan.</small></div>
                 <button type="button" class="btn btn-soft btn-sm" data-spec-add-section><i class="bi bi-plus-lg me-1"></i>Tambah Bagian</button>
             </div>
             <div class="spec-editor-sections" data-spec-sections></div>

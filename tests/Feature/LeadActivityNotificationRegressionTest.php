@@ -34,6 +34,40 @@ class LeadActivityNotificationRegressionTest extends TestCase
         $this->assertDatabaseMissing('pra_leads', ['instansi' => 'Prospek Tanpa WhatsApp']);
     }
 
+    public function test_new_marketing_sources_are_available_and_accepted_for_pra_leads(): void
+    {
+        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $sources = [
+            'loops_lab_nusantara' => 'Loops Lab Nusantara',
+            'loops_robust' => 'Loops Robust',
+            'website_robust_indonesia' => 'Website Robust Indonesia',
+            'mec' => 'MEC',
+        ];
+
+        $this->assertSame($sources, array_intersect_key(PraLead::sources(), $sources));
+
+        $response = $this->actingAs($admin)->get(route('admin.pra-leads.index'));
+        foreach ($sources as $label) {
+            $response->assertSee($label);
+        }
+
+        foreach ($sources as $source => $label) {
+            $this->actingAs($admin)->post(route('admin.pra-leads.store'), [
+                'instansi' => 'Prospek '.$label,
+                'pic_name' => 'PIC '.$label,
+                'phone' => '081234567890',
+                'source' => $source,
+                'priority' => 'medium',
+                'action' => 'save',
+            ])->assertRedirect(route('admin.pra-leads.index'));
+
+            $this->assertDatabaseHas('pra_leads', [
+                'instansi' => 'Prospek '.$label,
+                'source' => $source,
+            ]);
+        }
+    }
+
     public function test_division_flows_from_pra_lead_to_lead_and_customer(): void
     {
         $admin = User::factory()->create(['role' => 'sales_admin']);

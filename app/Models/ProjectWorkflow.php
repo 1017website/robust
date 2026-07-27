@@ -62,13 +62,13 @@ class ProjectWorkflow extends Model
         ];
     }
 
-    public static function qcChecklistDefinition(Project $project): array
+    public static function qcChecklistDefinition(Project $project, bool $includePrices = true): array
     {
         $project->loadMissing('quotation.items');
 
         return $project->quotation?->items
             ->values()
-            ->map(function (QuotationItem $item): array {
+            ->map(function (QuotationItem $item) use ($includePrices): array {
                 $checks = [[
                     'key' => "item_{$item->id}_quantity",
                     'label' => 'Jumlah: '.rtrim(rtrim(number_format((float) $item->qty, 2, '.', ''), '0'), '.').' '.($item->unit ?: 'Unit'),
@@ -84,9 +84,13 @@ class ProjectWorkflow extends Model
                         $value = trim(implode(' ', array_filter([
                             $specification['qty'] ?? null,
                             $specification['unit'] ?? null,
-                            isset($specification['unit_price']) ? '@ Rp '.number_format((float) $specification['unit_price'], 0, ',', '.') : null,
+                            $includePrices && isset($specification['unit_price']) ? '@ Rp '.number_format((float) $specification['unit_price'], 0, ',', '.') : null,
                         ])));
                     } else {
+                        if (($specification['type'] ?? null) === 'subdetail') {
+                            $parent = trim((string) ($specification['parent_label'] ?? ''));
+                            $label = trim(implode(' - ', array_filter([$parent, $label])));
+                        }
                         $value = trim((string) ($specification['value'] ?? ''));
                     }
 

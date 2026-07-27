@@ -41,6 +41,10 @@ class PraLead extends Model
             'referensi' => 'Referensi',
             'telepon' => 'Telepon',
             'email' => 'Email',
+            'loops_lab_nusantara' => 'Loops Lab Nusantara',
+            'loops_robust' => 'Loops Robust',
+            'website_robust_indonesia' => 'Website Robust Indonesia',
+            'mec' => 'MEC',
             'lainnya' => 'Lainnya',
         ];
     }

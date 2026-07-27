@@ -20,9 +20,13 @@ class ProjectController extends Controller
                         ->orWhereJsonContains('internal_team', $user->id);
                 });
             } elseif ($user->isProduction()) {
-                $query->whereHas('documents', fn ($documents) => $documents
-                    ->where('category', 'fabrication_drawing')
-                    ->where('is_current', true));
+                $query->where(function ($projects) {
+                    $projects->whereHas('documents', fn ($documents) => $documents
+                        ->where('category', 'fabrication_drawing')
+                        ->where('is_current', true))
+                        ->orWhereHas('quotation', fn ($quotations) => $quotations
+                            ->whereNull('design_request_id'));
+                });
             } elseif ($user->isQc()) {
                 $query->whereHas('workflow', fn ($workflow) => $workflow
                     ->where('production_status', 'production_finished'));

@@ -12,7 +12,7 @@
     <div class="spec-editor-heading">
         <div>
             <strong>{{ $label }}</strong>
-            <small>Susun per bagian; format export dibuat otomatis.</small>
+            <small>Susun per bagian dan tambahkan sub-detail bila diperlukan.</small>
         </div>
         <button type="button" class="btn btn-soft btn-sm" data-spec-add-section>
             <i class="bi bi-plus-lg me-1"></i>Tambah Bagian

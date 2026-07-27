@@ -177,9 +177,12 @@ class QuotationExcelExporter
                     }
                     $rows[] = $this->borderedRow($row, $cells, 20);
                 } else {
+                    $label = $spec['type'] === 'subdetail'
+                        ? '- '.($spec['label'] ?: 'Sub-detail')
+                        : $spec['label'];
                     $this->merges[] = "D{$row}:G{$row}";
                     $rows[] = $this->borderedRow($row, [
-                        $this->textCell("C{$row}", $spec['label'], 5),
+                        $this->textCell("C{$row}", $label, 5),
                         $this->textCell("D{$row}", $spec['value'], 5),
                     ], max(20, 15 * max(1, substr_count($spec['value'], "\n") + 1)));
                 }
@@ -286,7 +289,7 @@ class QuotationExcelExporter
     {
         return collect(StructuredSpecification::flatten($specification))
             ->map(function (array $row): array {
-                if ($row['type'] === 'detail') {
+                if (in_array($row['type'], ['detail', 'subdetail'], true)) {
                     $row['value'] = wordwrap($row['value'], 76, "\n", true);
                 }
 

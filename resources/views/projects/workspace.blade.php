@@ -8,9 +8,19 @@
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
     $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
+    $showPrices = $showPrices ?? in_array($role, ['sales', 'sales_admin'], true);
     $designRequest = $project->quotation?->designRequest;
+    $directProduction = ! $designRequest;
     $statusLabel = \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? $workflow->production_status;
     $deliveryStatusLabel = \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? $workflow->delivery_status;
+    $deliveryOrder = $project->deliveryOrder;
+    $purchaseOrder = $project->quotation?->purchaseOrderRequest;
+    $defaultDeliveryItems = $project->quotation?->items
+        ?->where('is_optional', false)
+        ->map(fn($item) => ['name' => trim($item->name.($item->variant ? ' - '.$item->variant : '')), 'qty' => (float) $item->qty, 'unit' => $item->unit ?: 'Unit'])
+        ->values()
+        ->all() ?? [];
+    $deliveryOrderItems = collect(old('items', $deliveryOrder?->items ?: $defaultDeliveryItems));
 @endphp
 
 @push('styles')
@@ -37,7 +47,7 @@
 <div class="card-r p-0 overflow-hidden">
     <ul class="nav workspace-tabs px-3" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#project-info" type="button">Informasi Project</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">Design Request <span class="badge text-bg-light ms-1">{{ $designRequest ? 1 : 0 }}</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">{{ $directProduction ? 'Spesifikasi Penawaran' : 'Design Request' }} <span class="badge text-bg-light ms-1">{{ $directProduction ? ($project->quotation?->items?->count() ?? 0) : 1 }}</span></button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#operations" type="button">Production, QC & Delivery</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-revisions" type="button">Design Revision <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></button></li>
     </ul>
@@ -61,13 +71,15 @@
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="workflow-card mb-3">
-                        <h3 class="mb-3">Nilai Project</h3>
-                        <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Subtotal</span><span class="fw-num">{{ \App\Support\Format::rupiah($project->project_value) }}</span></div>
-                        <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">PPN</span><span class="fw-num">{{ \App\Support\Format::rupiah($project->tax_amount) }}</span></div>
-                        <hr>
-                        <div class="d-flex justify-content-between"><strong>Total</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($project->total_value) }}</strong></div>
-                    </div>
+                    @if($showPrices)
+                        <div class="workflow-card mb-3">
+                            <h3 class="mb-3">Nilai Project</h3>
+                            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Subtotal</span><span class="fw-num">{{ \App\Support\Format::rupiah($project->project_value) }}</span></div>
+                            <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">PPN</span><span class="fw-num">{{ \App\Support\Format::rupiah($project->tax_amount) }}</span></div>
+                            <hr>
+                            <div class="d-flex justify-content-between"><strong>Total</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($project->total_value) }}</strong></div>
+                        </div>
+                    @endif
                     <div class="workflow-card">
                         <div class="d-flex justify-content-between align-items-center mb-2"><h3>Progress Operasional</h3><strong>{{ $workflow->completionPercent() }}%</strong></div>
                         <div class="prog"><span style="width:{{ $workflow->completionPercent() }}%"></span></div>
@@ -78,16 +90,22 @@
         </div>
 
         <div class="tab-pane fade" id="design-request">
-            @include('projects._design-request', ['designRequest' => $designRequest])
+            @include('projects._design-request', ['designRequest' => $designRequest, 'quotation' => $project->quotation, 'showPrices' => $showPrices])
         </div>
 
         <div class="tab-pane fade" id="operations">
             <section class="workflow-card mb-3">
                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                    <div><h3>Gambar Fabrikasi</h3><small class="text-muted-2">Drafter mengunggah gambar final setelah PO Accurate terbit. Produksi dapat mengunduh file aktif dari sini.</small></div>
-                    <x-status-badge :status="$fabricationDocuments->isNotEmpty() ? 'completed' : 'pending'" :label="$fabricationDocuments->isNotEmpty() ? 'Siap Produksi' : 'Menunggu Drafter'" />
+                    <div>
+                        <h3>{{ $directProduction ? 'Dokumen Referensi Produksi' : 'Gambar Fabrikasi' }}</h3>
+                        <small class="text-muted-2">{{ $directProduction ? 'Penawaran ini tidak melalui Request Gambar. Produksi menggunakan item, spesifikasi, dan dokumen penawaran sebagai acuan.' : 'Drafter mengunggah gambar final setelah PO Accurate terbit. Produksi dapat mengunduh file aktif dari sini.' }}</small>
+                    </div>
+                    <x-status-badge
+                        :status="$directProduction || $fabricationDocuments->isNotEmpty() ? 'completed' : 'pending'"
+                        :label="$directProduction ? 'Langsung Produksi' : ($fabricationDocuments->isNotEmpty() ? 'Siap Produksi' : 'Menunggu Drafter')"
+                    />
                 </div>
-                @if($canFabrication)
+                @if($canFabrication && ! $directProduction)
                     <form method="POST" action="{{ route('documents.store') }}" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
                         @csrf
                         <input type="hidden" name="documentable_type" value="{{ \App\Models\Project::class }}">
@@ -99,10 +117,11 @@
                     </form>
                 @endif
                 <div class="row g-2">
-                    @forelse($fabricationDocuments as $document)
+                    @php($productionReferenceDocuments = $directProduction ? ($project->quotation?->documents ?? collect()) : $fabricationDocuments)
+                    @forelse($productionReferenceDocuments as $document)
                         <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ asset('storage/'.$document->file_path) }}"><i class="bi bi-download me-1"></i>Download</a></div></div>
                     @empty
-                        <div class="col-12"><x-empty text="Gambar fabrikasi belum diunggah." /></div>
+                        <div class="col-12"><x-empty :text="$directProduction ? 'Tidak ada dokumen tambahan. Gunakan spesifikasi item penawaran sebagai acuan produksi.' : 'Gambar fabrikasi belum diunggah.'" /></div>
                     @endforelse
                 </div>
             </section>
@@ -176,6 +195,53 @@
                             @if($workflow->pod_path)<div class="mb-2"><span class="small fw-semibold">POD: {{ $workflow->pod_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-pod']) }}">Lihat POD</a> - <a href="{{ route('project-workflow.attachment', [$project, 'delivery-pod', 'download' => 1]) }}">Download</a></div>@endif
                             @if($workflow->delivery_out_photo_path)<div class="mb-2"><span class="small fw-semibold">Keluar: {{ $workflow->delivery_out_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-out']) }}">Lihat foto</a></div>@endif
                             @if($workflow->delivery_returned_photo_path)<div><span class="small fw-semibold">Kembali: {{ $workflow->delivery_returned_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-returned']) }}">Lihat foto</a></div>@endif
+                        </div>
+                    @endif
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <div><h3>Delivery Order (DO)</h3><small class="text-muted-2">Surat jalan barang untuk customer</small></div>
+                        @if($deliveryOrder)<span class="status-soft st-green">{{ $deliveryOrder->code }}</span>@endif
+                    </div>
+                    @if(!$workflow->qc_completed)
+                        <div class="alert alert-warning py-2 small">DO dapat dibuat setelah QC selesai.</div>
+                    @elseif($canDelivery)
+                        <form method="POST" action="{{ route('delivery-orders.store', $project) }}">
+                            @csrf
+                            <label class="form-label">Tanggal Pengiriman *</label>
+                            <input type="date" name="delivery_date" value="{{ old('delivery_date', $deliveryOrder?->delivery_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="form-control mb-3" required>
+                            <label class="form-label">Alamat Pengiriman *</label>
+                            <textarea name="delivery_address" class="form-control mb-3" rows="3" required>{{ old('delivery_address', $deliveryOrder?->delivery_address ?? $purchaseOrder?->delivery_address) }}</textarea>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6"><label class="form-label">PIC Penerima</label><input name="recipient_name" value="{{ old('recipient_name', $deliveryOrder?->recipient_name ?? $purchaseOrder?->delivery_pic_name) }}" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">Telepon PIC</label><input name="recipient_phone" value="{{ old('recipient_phone', $deliveryOrder?->recipient_phone ?? $purchaseOrder?->delivery_pic_phone) }}" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">Nama Pengemudi</label><input name="driver_name" value="{{ old('driver_name', $deliveryOrder?->driver_name) }}" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">Nomor Kendaraan</label><input name="vehicle_number" value="{{ old('vehicle_number', $deliveryOrder?->vehicle_number) }}" class="form-control text-uppercase"></div>
+                            </div>
+                            <label class="form-label">Daftar Barang *</label>
+                            <div class="d-grid gap-2 mb-3">
+                                @forelse($deliveryOrderItems as $index => $item)
+                                    <div class="row g-2">
+                                        <div class="col-12"><input name="items[{{ $index }}][name]" value="{{ $item['name'] ?? '' }}" class="form-control" placeholder="Nama / deskripsi barang" required></div>
+                                        <div class="col-5"><input type="number" step="0.01" min="0.01" name="items[{{ $index }}][qty]" value="{{ $item['qty'] ?? 1 }}" class="form-control" placeholder="Qty" required></div>
+                                        <div class="col-7"><input name="items[{{ $index }}][unit]" value="{{ $item['unit'] ?? 'Unit' }}" class="form-control" placeholder="Satuan" required></div>
+                                    </div>
+                                @empty
+                                    <div class="row g-2">
+                                        <div class="col-12"><input name="items[0][name]" class="form-control" placeholder="Nama / deskripsi barang" required></div>
+                                        <div class="col-5"><input type="number" step="0.01" min="0.01" name="items[0][qty]" value="1" class="form-control" placeholder="Qty" required></div>
+                                        <div class="col-7"><input name="items[0][unit]" value="Unit" class="form-control" placeholder="Satuan" required></div>
+                                    </div>
+                                @endforelse
+                            </div>
+                            <label class="form-label">Catatan DO</label>
+                            <textarea name="notes" class="form-control mb-3" rows="2">{{ old('notes', $deliveryOrder?->notes) }}</textarea>
+                            <button class="btn btn-primary w-100"><i class="bi bi-file-earmark-check me-1"></i>{{ $deliveryOrder ? 'Perbarui DO' : 'Buat DO' }}</button>
+                        </form>
+                    @endif
+                    @if($deliveryOrder)
+                        <div class="d-flex gap-2 mt-3">
+                            <a target="_blank" href="{{ route('delivery-orders.pdf', $project) }}" class="btn btn-soft flex-fill"><i class="bi bi-eye me-1"></i>Lihat PDF</a>
+                            <a href="{{ route('delivery-orders.pdf', [$project, 'download' => 1]) }}" class="btn btn-soft flex-fill"><i class="bi bi-download me-1"></i>Download</a>
                         </div>
                     @endif
                 </section>

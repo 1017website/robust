@@ -63,6 +63,26 @@
             </div>
         </div>
 
+        <div class="card-r">
+            <div class="card-head">
+                <h2>Dokumen Penawaran</h2>
+                <span class="badge text-bg-light">{{ $quotation->documents->count() }} file</span>
+            </div>
+            @forelse($quotation->documents as $document)
+                <div class="d-flex align-items-center justify-content-between gap-3 py-2 @unless($loop->last) border-bottom @endunless">
+                    <div>
+                        <div class="fw-semibold"><i class="bi bi-file-earmark-text text-primary me-1"></i>{{ $document->name }}.{{ $document->file_type }}</div>
+                        <div class="small text-muted-2">{{ $document->humanSize() }} · {{ $document->uploader?->name ?: 'System' }} · {{ $document->created_at?->format('d M Y H:i') }}</div>
+                    </div>
+                    <a href="{{ route('documents.download', $document) }}" class="btn btn-soft btn-sm" download>
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                </div>
+            @empty
+                <x-empty text="Belum ada dokumen pendukung penawaran." />
+            @endforelse
+        </div>
+
         @if($quotation->revision_note || $quotation->rejection_note || $quotation->approval_note)
             <div class="card-r">
                 <div class="card-head"><h2>Catatan Approval SPV</h2></div>

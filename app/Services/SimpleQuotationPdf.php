@@ -232,6 +232,17 @@ class SimpleQuotationPdf
                         'section' => false,
                     ];
                 }
+                if ($row['type'] === 'detail') {
+                    foreach ($row['children'] ?? [] as $child) {
+                        $childValue = trim('- '.($child['label'] ? $child['label'].': ' : '').($child['value'] ?: '-'));
+                        foreach ($this->wrap($childValue, $width) as $wrappedLine) {
+                            $lines[] = [
+                                'text' => $wrappedLine,
+                                'section' => false,
+                            ];
+                        }
+                    }
+                }
             }
         }
 

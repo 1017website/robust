@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Sales;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\Lead;
+use App\Models\PraLead;
 use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\LeadCustomerConnector;
@@ -165,7 +166,7 @@ class LeadController extends Controller
             'location' => ['required', 'string'],
             'city' => ['required', 'string', 'max:100'],
             'instansi_type' => ['required', 'string', 'max:100'],
-            'source' => ['required', 'string'],
+            'source' => ['required', Rule::in(array_keys(PraLead::sources()))],
             'reference' => ['nullable', 'string', 'max:255'],
             'lab_name' => ['required', 'string', 'max:255'],
             'need_description' => ['nullable', 'string', 'max:500'],

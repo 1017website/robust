@@ -1,11 +1,12 @@
 @props([
     'item',
     'showCost' => true,
+    'showPrice' => true,
     'showMasterCode' => true,
     'priceLabel' => 'Harga Jual',
 ])
 
-<article {{ $attributes->class(['quotation-item-card', 'without-cost' => ! $showCost]) }}>
+<article {{ $attributes->class(['quotation-item-card', 'without-cost' => ! $showCost || ! $showPrice]) }}>
     <div class="quotation-item-card-head">
         <div class="quotation-item-identity">
             @if($item->quotation_image_path)
@@ -24,23 +25,25 @@
             <span>Qty</span>
             <b>{{ rtrim(rtrim(number_format($item->qty, 2), '0'), '.') }} {{ $item->unit }}</b>
         </div>
-        @if($showCost)
+        @if($showCost && $showPrice)
             <div class="quotation-item-metric">
                 <span>HPP</span>
                 <b>{{ \App\Support\Format::rupiah($item->cost_price) }}</b>
             </div>
         @endif
-        <div class="quotation-item-metric">
-            <span>{{ $priceLabel }}</span>
-            <b>{{ \App\Support\Format::rupiah($item->unit_price) }}</b>
-            @if($showCost)<small class="text-success">Margin dari harga jual {{ rtrim(rtrim(number_format($item->margin, 2), '0'), '.') }}%</small>@endif
-        </div>
-        <div class="quotation-item-metric">
-            <span>Total</span>
-            <b>{{ \App\Support\Format::rupiah($item->total) }}</b>
-        </div>
+        @if($showPrice)
+            <div class="quotation-item-metric">
+                <span>{{ $priceLabel }}</span>
+                <b>{{ \App\Support\Format::rupiah($item->unit_price) }}</b>
+                @if($showCost)<small class="text-success">Margin dari harga jual {{ rtrim(rtrim(number_format($item->margin, 2), '0'), '.') }}%</small>@endif
+            </div>
+            <div class="quotation-item-metric">
+                <span>Total</span>
+                <b>{{ \App\Support\Format::rupiah($item->total) }}</b>
+            </div>
+        @endif
     </div>
     <div class="quotation-item-spec">
-        <x-specification-view :specification="$item->specification" />
+        <x-specification-view :specification="$item->specification" :show-prices="$showPrice" />
     </div>
 </article>

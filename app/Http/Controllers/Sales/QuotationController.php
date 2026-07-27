@@ -97,6 +97,7 @@ class QuotationController extends Controller
             ]);
 
             $this->syncItems($quotation, $data['items']);
+            $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
             $quotation->load('items', 'designRequest');
             QuotationCalculator::recalculate($quotation)->save();
 
@@ -127,7 +128,7 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        $quotation->load('items.itemMaster', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
+        $quotation->load('items.itemMaster', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'documents.uploader', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
 
         return view('sales.quotations.show', compact('quotation'));
     }
@@ -140,7 +141,7 @@ class QuotationController extends Controller
             return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran hanya bisa diedit saat Draft, Revisi, atau Ditolak SPV.');
         }
 
-        $quotation->load('items', 'designRequest');
+        $quotation->load('items', 'designRequest', 'documents.uploader');
         $designRequest = $quotation->designRequest;
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
@@ -197,6 +198,7 @@ class QuotationController extends Controller
             ]);
 
             $this->syncItems($quotation, $data['items']);
+            $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
             $quotation->load('items', 'designRequest');
             QuotationCalculator::recalculate($quotation)->save();
 
@@ -354,11 +356,12 @@ class QuotationController extends Controller
             'currency' => ['required', 'string', 'max:10'],
             'internal_note' => ['nullable', 'string', 'max:1000'],
             'customer_note' => ['nullable', 'string', 'max:500'],
+            'documents' => ['nullable', 'array', 'max:5'],
+            'documents.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png', 'max:10240'],
             'discount_type' => ['required', 'in:percent,nominal'],
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
             'tax_percent' => ['required', 'numeric', 'min:0'],
-            'target_margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'additional_costs' => ['nullable', 'array'],
             'additional_costs.*.label' => ['nullable', 'string', 'max:100'],
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
@@ -421,8 +424,12 @@ class QuotationController extends Controller
 
             $qty = (float) $item['qty'];
             $costPrice = (float) ($item['cost_price'] ?? $item['unit_price'] ?? 0);
-            $margin = min(max((float) ($item['margin'] ?? 0), 0), 99.99);
-            $unitPrice = QuotationCalculator::sellingPrice($costPrice, $margin);
+            $unitPrice = array_key_exists('unit_price', $item)
+                ? (float) $item['unit_price']
+                : QuotationCalculator::sellingPrice($costPrice, (float) ($item['margin'] ?? 0));
+            $margin = $unitPrice > 0
+                ? min(max((($unitPrice - $costPrice) / $unitPrice) * 100, 0), 99.99)
+                : 0;
             [$imagePath, $imageName] = $this->snapshotQuotationImage(
                 $quotation,
                 $sourceItem,
@@ -447,6 +454,29 @@ class QuotationController extends Controller
                 'is_optional' => ! empty($item['is_optional']),
                 'total' => round($qty * $unitPrice, 2),
                 'sort_order' => $i,
+            ]);
+        }
+    }
+
+    protected function storeQuotationDocuments(Quotation $quotation, array $documents): void
+    {
+        foreach ($documents as $file) {
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            $path = $file->store("quotation-documents/{$quotation->id}", 'public');
+
+            $quotation->documents()->create([
+                'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                'category' => 'quotation_support',
+                'file_path' => $path,
+                'file_type' => strtolower($file->getClientOriginalExtension()),
+                'file_size' => $file->getSize(),
+                'version' => 'v1.0',
+                'revision_number' => 1,
+                'is_current' => true,
+                'uploaded_by' => Auth::id(),
             ]);
         }
     }

@@ -20,6 +20,7 @@ class ProjectProvisioner
         }
 
         $designRequest = $quotation->designRequest;
+        $isDirectProduction = ! $designRequest;
         $drafterId = $designRequest?->production_pic_id;
         $startDate = $requestPo->accurate_po_date ?: today();
         $targetDate = $requestPo->expected_delivery_date;
@@ -37,7 +38,7 @@ class ProjectProvisioner
             'category' => 'Produksi',
             'type' => 'Purchase Order',
             'priority' => $quotation->priority ?: 'medium',
-            'status' => 'planning',
+            'status' => $isDirectProduction ? 'ongoing' : 'planning',
             'start_date' => $startDate,
             'target_date' => $targetDate,
             'duration_days' => $targetDate ? $startDate->diffInDays($targetDate) : null,
@@ -51,11 +52,15 @@ class ProjectProvisioner
             'payment_scheme' => $requestPo->payment_term,
             'project_manager_id' => $drafterId,
             'internal_team' => $drafterId ? [(string) $drafterId] : [],
-            'note' => 'Project otomatis dibuat setelah PO Accurate terbit: '.($requestPo->accurate_po_number ?: $requestPo->code),
-            'progress' => 0,
+            'note' => $isDirectProduction
+                ? 'Project tanpa Request Gambar, otomatis diteruskan langsung ke Produksi setelah PO Accurate terbit: '.($requestPo->accurate_po_number ?: $requestPo->code)
+                : 'Project otomatis dibuat setelah PO Accurate terbit: '.($requestPo->accurate_po_number ?: $requestPo->code),
+            'progress' => $isDirectProduction ? 30 : 0,
             'created_by' => $creator?->id ?: $requestPo->requested_by,
         ]);
-        $project->workflow()->create();
+        $project->workflow()->create([
+            'production_status' => $isDirectProduction ? 'production' : 'stock',
+        ]);
 
         Logger::record('created', "Project {$project->code} otomatis dibuat dari PO Accurate {$requestPo->accurate_po_number}", $project);
 

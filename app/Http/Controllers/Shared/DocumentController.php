@@ -8,8 +8,10 @@ use App\Models\DesignRequest;
 use App\Models\Document;
 use App\Models\Lead;
 use App\Models\Project;
+use App\Models\Quotation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
@@ -171,6 +173,31 @@ class DocumentController extends Controller
         return back()->with('success', 'Dokumen berhasil diarsipkan.');
     }
 
+    public function download(Document $document)
+    {
+        abort_unless(
+            Auth::user()->isDrafter()
+                || Document::query()->visibleTo(Auth::user())->whereKey($document->getKey())->exists(),
+            403,
+            'Anda tidak memiliki akses ke dokumen ini.'
+        );
+        abort_unless(
+            $document->file_path && Storage::disk('public')->exists($document->file_path),
+            404,
+            'File dokumen tidak ditemukan.'
+        );
+
+        $extension = pathinfo($document->file_path, PATHINFO_EXTENSION)
+            ?: ltrim((string) $document->file_type, '.');
+        $baseName = trim(str_replace(['/', '\\'], '-', $document->name))
+            ?: 'dokumen-'.$document->getKey();
+        $filename = $extension && ! str_ends_with(strtolower($baseName), '.'.strtolower($extension))
+            ? $baseName.'.'.$extension
+            : $baseName;
+
+        return Storage::disk('public')->download($document->file_path, $filename);
+    }
+
     protected function documentableTypes(): array
     {
         return [
@@ -178,6 +205,7 @@ class DocumentController extends Controller
             DesignRequest::class => DesignRequest::class,
             Lead::class => Lead::class,
             Project::class => Project::class,
+            Quotation::class => Quotation::class,
         ];
     }
 
@@ -194,6 +222,7 @@ class DocumentController extends Controller
                 $documentable instanceof Customer => (int) $documentable->sales_id === (int) $user->id,
                 $documentable instanceof DesignRequest => (int) $documentable->sales_id === (int) $user->id,
                 $documentable instanceof Lead => (int) $documentable->sales_id === (int) $user->id,
+                $documentable instanceof Quotation => (int) $documentable->sales_id === (int) $user->id,
                 $documentable instanceof Project => (int) $documentable->project_manager_id === (int) $user->id
                     || (int) ($documentable->quotation?->sales_id) === (int) $user->id,
                 default => false,

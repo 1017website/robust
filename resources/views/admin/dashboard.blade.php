@@ -66,7 +66,7 @@
                 <div class="chart-box"><canvas id="saSourceChart"></canvas><div class="donut-center"><small>Total</small><b>{{ $praLeadBySource->sum() }}</b></div></div>
                 <div class="sa-legend-list">
                     @foreach($praLeadBySource as $source => $total)
-                        <div><i></i><span>{{ ucfirst($source) }}</span><strong>{{ $total }} ({{ round($total / max(1,$praLeadBySource->sum()) * 100) }}%)</strong></div>
+                        <div><i></i><span>{{ \App\Models\PraLead::sources()[$source] ?? \Illuminate\Support\Str::headline($source) }}</span><strong>{{ $total }} ({{ round($total / max(1,$praLeadBySource->sum()) * 100) }}%)</strong></div>
                     @endforeach
                 </div>
             </div>

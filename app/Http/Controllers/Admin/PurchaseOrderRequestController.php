@@ -175,7 +175,9 @@ class PurchaseOrderRequestController extends Controller
         return back()->with(
             'success',
             $project
-                ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
+                ? ($project->quotation?->design_request_id
+                    ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
+                    : "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.")
                 : 'Request PO berhasil diperbarui.'
         );
     }

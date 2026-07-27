@@ -1514,7 +1514,7 @@ class CrmFlowTest extends TestCase
         $this->assertSoftDeleted('pra_leads', ['id' => $praLead->id]);
     }
 
-    public function test_quotation_price_margin_owner_error_page_and_pdf_are_consistent(): void
+    public function test_direct_quotation_price_owner_error_page_and_pdf_are_consistent(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $otherSales = User::factory()->create(['role' => 'sales']);
@@ -1537,13 +1537,13 @@ class CrmFlowTest extends TestCase
             'discount_type' => 'percent',
             'discount_value' => 0,
             'tax_percent' => 11,
-            'target_margin' => 1, // Nilai browser harus diabaikan dan dihitung ulang.
             'items' => [[
                 'name' => 'Wall Bench',
                 'qty' => 2,
                 'unit' => 'Unit',
                 'cost_price' => 1000000,
-                'margin' => 20,
+                'unit_price' => 1250000,
+                'margin' => 50, // Input lama harus diabaikan ketika harga jual dikirim langsung.
             ]],
             'action' => 'draft',
         ];
@@ -1557,7 +1557,13 @@ class CrmFlowTest extends TestCase
         $this->assertSame(1000000.0, (float) $item->cost_price);
         $this->assertSame(1250000.0, (float) $item->unit_price);
         $this->assertSame(2500000.0, (float) $item->total);
+        $this->assertSame(20.0, (float) $item->margin);
         $this->assertSame(20.0, (float) $quotation->target_margin);
+        $this->actingAs($sales)->get(route('sales.quotations.edit', $quotation))
+            ->assertSuccessful()
+            ->assertSee('Item & Harga', false)
+            ->assertSee('Harga Jual')
+            ->assertDontSee('Target Margin');
         $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))->assertSuccessful();
 
         $this->actingAs($otherSales)->get(route('sales.quotations.show', $quotation))
@@ -1574,6 +1580,177 @@ class CrmFlowTest extends TestCase
         $pdf->assertSuccessful()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-1.4', $pdf->getContent());
         $this->assertStringContainsString('PENAWARAN HARGA', $pdf->getContent());
+    }
+
+    public function test_sales_can_attach_quotation_documents_for_sales_and_spv_to_download(): void
+    {
+        Storage::fake('public');
+
+        $sales = User::factory()->create(['role' => 'sales']);
+        $otherSales = User::factory()->create(['role' => 'sales']);
+        $spv = User::factory()->create(['role' => 'sales_spv']);
+
+        $response = $this->actingAs($sales)->post(route('sales.quotations.store'), [
+            'customer_name' => 'Customer Dokumen Penawaran',
+            'project_name' => 'Penawaran Dengan Lampiran',
+            'delivery_method' => 'email',
+            'quote_date' => today()->format('Y-m-d'),
+            'valid_until' => today()->addMonth()->format('Y-m-d'),
+            'priority' => 'medium',
+            'currency' => 'IDR',
+            'discount_type' => 'percent',
+            'discount_value' => 0,
+            'tax_percent' => 11,
+            'documents' => [
+                UploadedFile::fake()->create('scope-pekerjaan.pdf', 128, 'application/pdf'),
+                UploadedFile::fake()->create('lampiran-teknis.docx', 64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+            ],
+            'items' => [[
+                'name' => 'Wall Bench',
+                'qty' => 1,
+                'unit' => 'Unit',
+                'cost_price' => 1000000,
+                'unit_price' => 1250000,
+            ]],
+            'action' => 'submit_approval',
+        ]);
+
+        $quotation = Quotation::where('project_name', 'Penawaran Dengan Lampiran')->firstOrFail();
+        $response->assertRedirect(route('sales.quotations.show', $quotation));
+        $this->assertSame('waiting_approval', $quotation->status);
+        $this->assertCount(2, $quotation->documents);
+
+        $pdfDocument = $quotation->documents()->where('file_type', 'pdf')->firstOrFail();
+        Storage::disk('public')->assertExists($pdfDocument->file_path);
+
+        $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))
+            ->assertSuccessful()
+            ->assertSee('Dokumen Penawaran')
+            ->assertSee('scope-pekerjaan.pdf')
+            ->assertSee('lampiran-teknis.docx');
+
+        $this->actingAs($sales)->get(route('documents.download', $pdfDocument))
+            ->assertSuccessful()
+            ->assertDownload('scope-pekerjaan.pdf');
+
+        $this->actingAs($spv)->get(route('spv.quotation-approvals.show', $quotation))
+            ->assertSuccessful()
+            ->assertSee('Dokumen Penawaran')
+            ->assertSee('scope-pekerjaan.pdf');
+
+        $this->actingAs($spv)->get(route('documents.download', $pdfDocument))
+            ->assertSuccessful()
+            ->assertDownload('scope-pekerjaan.pdf');
+
+        $this->actingAs($otherSales)->get(route('documents.download', $pdfDocument))
+            ->assertForbidden();
+    }
+
+    public function test_quotation_without_design_request_goes_directly_to_production(): void
+    {
+        Storage::fake('public');
+
+        $sales = User::factory()->create(['role' => 'sales']);
+        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $production = User::factory()->create(['role' => 'production']);
+        $customer = Customer::create([
+            'name' => 'Customer Produksi Langsung',
+            'pipeline_stage' => 'follow_up',
+            'sales_id' => $sales->id,
+        ]);
+
+        $this->actingAs($sales)->post(route('sales.quotations.store'), [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'project_name' => 'Project Tanpa Request Gambar',
+            'delivery_method' => 'email',
+            'quote_date' => today()->format('Y-m-d'),
+            'valid_until' => today()->addMonth()->format('Y-m-d'),
+            'priority' => 'high',
+            'currency' => 'IDR',
+            'discount_type' => 'percent',
+            'discount_value' => 0,
+            'tax_percent' => 11,
+            'documents' => [
+                UploadedFile::fake()->create('referensi-produksi.pdf', 100, 'application/pdf'),
+            ],
+            'items' => [[
+                'name' => 'Standard Laboratory Cabinet',
+                'variant' => 'SLC-1200',
+                'specification' => "[Construction & Materials]\nDrawer / Door Panel: Galvanized steel plate 1.2 mm\n@ 2 | pcs | 75000",
+                'qty' => 2,
+                'unit' => 'Unit',
+                'cost_price' => 1500000,
+                'unit_price' => 2000000,
+            ]],
+            'action' => 'draft',
+        ])->assertRedirect();
+
+        $quotation = Quotation::where('project_name', 'Project Tanpa Request Gambar')->firstOrFail();
+        $this->assertNull($quotation->design_request_id);
+        $quotation->update(['status' => 'customer_accepted']);
+
+        $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
+            'quotation_id' => $quotation->id,
+            'project_number' => 'PRJ-DIRECT-001',
+            'customer_name' => $customer->name,
+            'request_date' => today()->format('Y-m-d'),
+        ])->assertRedirect();
+
+        $requestPo = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->actingAs($admin)->put(route('admin.purchase-order-requests.update', $requestPo), [
+            'status' => 'po_created',
+            'accurate_po_number' => 'ACC-DIRECT-001',
+            'accurate_po_date' => today()->format('Y-m-d'),
+        ])->assertRedirect()
+            ->assertSessionHas('success', "PO Accurate tersimpan. Project PRJ-DIRECT-001 otomatis dibuat dan langsung masuk ke Produksi.");
+
+        $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->assertSame('ongoing', $project->status);
+        $this->assertSame(30, (int) $project->progress);
+        $this->assertNull($project->project_manager_id);
+        $this->assertSame('production', $project->workflow->production_status);
+
+        $this->actingAs($production)->get(route('drafter.projects.index'))
+            ->assertSuccessful()
+            ->assertSee('Project Tanpa Request Gambar')
+            ->assertDontSee('Nilai Project')
+            ->assertDontSee('Rp 4.000.000');
+
+        $this->actingAs($production)->get(route('project-workspace.show', $project))
+            ->assertSuccessful()
+            ->assertSee('Spesifikasi Penawaran')
+            ->assertSee('Langsung Produksi')
+            ->assertSee('Standard Laboratory Cabinet')
+            ->assertSee('Drawer / Door Panel')
+            ->assertSee('referensi-produksi.pdf')
+            ->assertDontSee('Harga per Item')
+            ->assertDontSee('Nilai Project')
+            ->assertDontSee('Rp 2.000.000')
+            ->assertDontSee('Rp 75.000');
+
+        $this->actingAs($sales)->get(route('project-workspace.show', $project))
+            ->assertSuccessful()
+            ->assertSee('Harga per Item')
+            ->assertSee('Nilai Project')
+            ->assertSee('Rp 2.000.000')
+            ->assertSee('Rp 75.000');
+
+        $this->actingAs($admin)->get(route('project-workspace.show', $project))
+            ->assertSuccessful()
+            ->assertSee('Harga per Item')
+            ->assertSee('Nilai Project')
+            ->assertSee('Rp 2.000.000');
+
+        $this->assertStringNotContainsString(
+            'Rp ',
+            json_encode(ProjectWorkflow::qcChecklistDefinition($project, false), JSON_THROW_ON_ERROR)
+        );
+
+        $document = $quotation->documents()->firstOrFail();
+        $this->actingAs($production)->get(route('documents.download', $document))
+            ->assertSuccessful()
+            ->assertDownload('referensi-produksi.pdf');
     }
 
     public function test_customer_index_updates_the_detail_panel_for_non_superadmin_roles(): void

@@ -39,7 +39,12 @@ class Document extends Model
         }
 
         if ($user->isProduction()) {
-            return $query->where('documentable_type', Project::class);
+            return $query->where(function (Builder $documentQuery) {
+                $documentQuery->where('documentable_type', Project::class)
+                    ->orWhere(fn (Builder $quotationQuery) => $quotationQuery
+                        ->where('documentable_type', Quotation::class)
+                        ->whereIn('documentable_id', Quotation::query()->select('id')->whereHas('project')));
+            });
         }
 
         if ($user->isDrafter()) {
@@ -69,6 +74,8 @@ class Document extends Model
                         ->whereIn('documentable_id', Lead::query()->select('id')->where('sales_id', $user->id)))
                     ->orWhere(fn (Builder $q) => $q->where('documentable_type', DesignRequest::class)
                         ->whereIn('documentable_id', DesignRequest::query()->select('id')->where('sales_id', $user->id)))
+                    ->orWhere(fn (Builder $q) => $q->where('documentable_type', Quotation::class)
+                        ->whereIn('documentable_id', Quotation::query()->select('id')->where('sales_id', $user->id)))
                     ->orWhere(fn (Builder $q) => $q->where('documentable_type', Project::class)
                         ->whereIn('documentable_id', Project::query()->select('id')->where(function (Builder $projectQuery) use ($user) {
                             $projectQuery->where('project_manager_id', $user->id)

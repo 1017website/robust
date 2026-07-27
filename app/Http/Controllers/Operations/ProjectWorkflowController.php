@@ -71,7 +71,7 @@ class ProjectWorkflowController extends Controller
             'qc_note' => ['nullable', 'string', 'max:2000'],
         ]);
         $completed = $request->boolean('qc_completed');
-        $definition = ProjectWorkflow::qcChecklistDefinition($project);
+        $definition = ProjectWorkflow::qcChecklistDefinition($project, false);
         $inputChecklist = $data['qc_checklist'] ?? [];
         $checklist = collect($definition)
             ->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'))

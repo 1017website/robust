@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Quotation extends Model
 {
@@ -37,6 +38,7 @@ class Quotation extends Model
     public function approvedBy(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }
     public function rejectedBy(): BelongsTo { return $this->belongsTo(User::class, 'rejected_by'); }
     public function items(): HasMany { return $this->hasMany(QuotationItem::class)->orderBy('sort_order'); }
+    public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable')->latest(); }
     public function approvalHistories(): HasMany { return $this->hasMany(QuotationApprovalHistory::class)->latest(); }
     public function project(): HasOne { return $this->hasOne(Project::class); }
     public function purchaseOrderRequest(): HasOne { return $this->hasOne(PurchaseOrderRequest::class); }

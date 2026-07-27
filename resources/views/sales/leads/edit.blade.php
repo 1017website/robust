@@ -97,7 +97,7 @@
                             <label class="form-label lead-label">Sumber Lead <span>*</span></label>
                             <select name="source" class="form-select lead-control" required>
                                 <option value="">Pilih sumber lead</option>
-                                @foreach(['whatsapp'=>'WhatsApp','website'=>'Website','referensi'=>'Referensi','telepon'=>'Telepon','email'=>'Email','lainnya'=>'Lainnya'] as $k=>$v)
+                                @foreach(\App\Models\PraLead::sources() as $k=>$v)
                                     <option value="{{ $k }}" @selected(old('source', $lead->source)==$k)>{{ $v }}</option>
                                 @endforeach
                             </select>
@@ -233,7 +233,7 @@
                 <div class="card-head"><h2>Klasifikasi</h2></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Sumber *</label>
                     <select name="source" class="form-select" required>
-                        @foreach(['whatsapp','website','referensi','telepon','email','lainnya'] as $src)<option value="{{ $src }}" @selected($lead->source==$src)>{{ ucfirst($src) }}</option>@endforeach
+                        @foreach(\App\Models\PraLead::sources() as $src => $label)<option value="{{ $src }}" @selected($lead->source==$src)>{{ $label }}</option>@endforeach
                     </select>
                 </div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Prioritas *</label>

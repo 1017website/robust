@@ -1,5 +1,50 @@
 @if(! $designRequest)
-    <x-empty text="Project ini tidak memiliki Design Request yang terhubung dari penawaran." />
+    <div class="alert alert-info">
+        <i class="bi bi-lightning-charge-fill me-1"></i>
+        Penawaran ini tidak memerlukan Request Gambar dan diteruskan langsung ke Produksi.
+    </div>
+
+    <section class="workflow-card mb-3">
+        <div class="card-head">
+            <h2>Item & Spesifikasi Penawaran</h2>
+            <span class="status-soft st-green">Acuan Produksi</span>
+        </div>
+        <div class="quotation-item-list">
+            @forelse($quotation?->items?->sortBy('sort_order') ?? collect() as $item)
+                <x-quotation-item-card
+                    :item="$item"
+                    :show-cost="false"
+                    :show-price="$showPrices"
+                    price-label="Harga per Item"
+                />
+            @empty
+                <x-empty text="Belum ada item penawaran sebagai acuan produksi." />
+            @endforelse
+        </div>
+    </section>
+
+    <section class="workflow-card">
+        <div class="card-head"><h2>Dokumen Penawaran</h2></div>
+        <div class="table-wrap">
+            <table class="table-r compact">
+                <thead><tr><th>Dokumen</th><th>Jenis</th><th>Ukuran</th><th>Uploader</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+                <tbody>
+                @forelse($quotation?->documents ?? collect() as $document)
+                    <tr>
+                        <td class="fw-semibold">{{ $document->name }}.{{ $document->file_type }}</td>
+                        <td>{{ str($document->category)->headline() }}</td>
+                        <td>{{ $document->humanSize() }}</td>
+                        <td>{{ $document->uploader?->name ?? '-' }}</td>
+                        <td>{{ $document->created_at?->translatedFormat('d M Y H:i') ?? '-' }}</td>
+                        <td><a href="{{ route('documents.download', $document) }}" class="btn btn-sm btn-soft"><i class="bi bi-download"></i></a></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6">Tidak ada dokumen tambahan pada penawaran.</td></tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
 @else
     @php
         $designRequestStatus = \App\Models\DesignRequest::statuses()[$designRequest->status]
@@ -62,6 +107,7 @@
                         <x-quotation-item-card
                             :item="$item"
                             :show-cost="false"
+                            :show-price="$showPrices"
                             price-label="HPP per Item"
                         />
                     @empty
@@ -132,14 +178,16 @@
                 <div class="kv"><div class="k">Terakhir Diperbarui</div><div class="v">{{ $designRequest->updated_at?->translatedFormat('d M Y H:i') ?? '-' }}</div></div>
             </section>
 
-            <section class="workflow-card mb-3">
-                <h3 class="mb-3">Estimasi Costing Awal</h3>
-                <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Material</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_material) }}</span></div>
-                <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_production) }}</span></div>
-                <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Instalasi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_installation) }}</span></div>
-                <hr>
-                <div class="d-flex justify-content-between"><strong>Total Estimasi</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div>
-            </section>
+            @if($showPrices)
+                <section class="workflow-card mb-3">
+                    <h3 class="mb-3">Estimasi Costing Awal</h3>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Material</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_material) }}</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_production) }}</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Instalasi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_installation) }}</span></div>
+                    <hr>
+                    <div class="d-flex justify-content-between"><strong>Total Estimasi</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div>
+                </section>
+            @endif
 
             <section class="workflow-card mb-3">
                 <h3 class="mb-3">Catatan</h3>

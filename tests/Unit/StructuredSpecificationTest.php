@@ -45,6 +45,33 @@ class StructuredSpecificationTest extends TestCase
         $this->assertSame('Top phenolic resin, rangka steel powder coating', $sections[0]['rows'][0]['value']);
     }
 
+    public function test_it_parses_and_flattens_nested_subdetails(): void
+    {
+        $specification = implode("\n", [
+            '[Construction & Materials]',
+            'Drawer / Door Panel: Galvanized steel plate',
+            '> Thickness: 1.2 mm',
+            '> Finishing: Chemical-resistant epoxy powder coating',
+        ]);
+
+        $sections = StructuredSpecification::parse($specification);
+
+        $this->assertSame('Drawer / Door Panel', $sections[0]['rows'][0]['label']);
+        $this->assertSame([
+            'type' => 'subdetail',
+            'label' => 'Thickness',
+            'value' => '1.2 mm',
+        ], $sections[0]['rows'][0]['children'][0]);
+
+        $flattened = StructuredSpecification::flatten($specification);
+        $this->assertSame([
+            'type' => 'subdetail',
+            'label' => 'Thickness',
+            'value' => '1.2 mm',
+            'parent_label' => 'Drawer / Door Panel',
+        ], $flattened[2]);
+    }
+
     public function test_flatten_provides_export_fallback_for_empty_specification(): void
     {
         $this->assertSame([

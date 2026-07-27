@@ -85,7 +85,7 @@
                             <div class="lead-detail-name">{{ $selected->instansi }}</div>
                             <div class="lead-detail-meta">
                                 <span>{{ $selected->instansi_type ?: 'Instansi' }}</span>
-                                <span>{{ \Illuminate\Support\Str::headline($selected->source ?: 'Sumber tidak tersedia') }}</span>
+                                <span>{{ \App\Models\PraLead::sources()[$selected->source] ?? \Illuminate\Support\Str::headline($selected->source ?: 'Sumber tidak tersedia') }}</span>
                                 @if($selected->city)<span>{{ $selected->city }}</span>@endif
                             </div>
                         </div>
