@@ -28,7 +28,8 @@ class QuotationApprovalHistory extends Model
         return [
             'created' => 'Dibuat',
             'updated' => 'Diperbarui',
-            'submitted' => 'Diajukan ke SPV',
+            'published' => 'Penawaran Disiapkan',
+            'submitted' => 'Penawaran Disiapkan',
             'approved' => 'Disetujui SPV',
             'revision' => 'Diminta Revisi',
             'rejected' => 'Ditolak SPV',

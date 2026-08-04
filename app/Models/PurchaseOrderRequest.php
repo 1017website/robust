@@ -51,7 +51,7 @@ class PurchaseOrderRequest extends Model
     public static function checklistItems(): array
     {
         return [
-            'quotation_approved' => 'Penawaran final sudah approved SPV',
+            'quotation_approved' => 'Penawaran final sudah siap dikirim',
             'customer_po' => 'PO customer / bukti order sudah dilampirkan',
             'customer_data' => 'Data customer sudah lengkap',
             'delivery_address' => 'Alamat pengiriman / lokasi project sudah jelas',

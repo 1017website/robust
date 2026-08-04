@@ -82,6 +82,7 @@ class ReportController extends Controller
         }
 
         $isSales = Auth::user()->isSales();
+        $showPrices = Auth::user()->canViewPrices();
         $uid = Auth::id();
 
         $leadScope = fn ($q) => $isSales ? $q->where('sales_id', $uid) : $q;
@@ -110,6 +111,11 @@ class ReportController extends Controller
             ->whereYear('created_at', now()->year)
             ->groupBy('m')->get()->keyBy('m');
 
+        if (! $showPrices) {
+            $summary['total_value'] = 0;
+            $monthly->each(fn ($row) => $row->value = 0);
+        }
+
         $winRate = $totalQuotes > 0 ? round($won / $totalQuotes * 100) : 0;
         $salesTarget = (float) SystemSetting::value('sales_monthly_target', 0);
         $targetPercent = $salesTarget > 0 ? min(100, round($summary['total_value'] / $salesTarget * 100, 1)) : 0;
@@ -131,6 +137,9 @@ class ReportController extends Controller
             ->withCount('quotations')
             ->orderByDesc('quotation_value')
             ->take(5)->get();
+        if (! $showPrices) {
+            $topCustomers->each(fn ($customer) => $customer->quotation_value = null);
+        }
 
         $upcomingActivities = $activityScope(Activity::query())
             ->whereDate('activity_date', '>=', today())
@@ -138,19 +147,22 @@ class ReportController extends Controller
             ->take(5)->get();
 
         if ($request->get('export') === 'csv') {
-            return $this->csv('laporan-sales-'.now()->format('Y-m').'.csv', [
+            $rows = [
                 ['Metrik', 'Nilai'],
                 ['Total Leads', $summary['total_leads']],
                 ['Customer Aktif', $summary['active_customers']],
                 ['Total Penawaran', $summary['total_quotations']],
                 ['Won / Closing', $summary['won']],
-                ['Nilai Closing Bulan Ini', $summary['total_value']],
                 ['Conversion Rate (%)', $winRate],
-            ]);
+            ];
+            if ($showPrices) {
+                array_splice($rows, 5, 0, [['Nilai Closing Bulan Ini', $summary['total_value']]]);
+            }
+            return $this->csv('laporan-sales-'.now()->format('Y-m').'.csv', $rows);
         }
 
         return view('shared.reports.index', compact(
-            'summary', 'monthly', 'winRate', 'pipelineValue', 'activitySummary', 'leadSource', 'topCustomers', 'upcomingActivities', 'salesTarget', 'targetPercent'
+            'summary', 'monthly', 'winRate', 'pipelineValue', 'activitySummary', 'leadSource', 'topCustomers', 'upcomingActivities', 'salesTarget', 'targetPercent', 'showPrices'
         ));
     }
 

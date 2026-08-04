@@ -259,10 +259,8 @@ class QuotationExcelExporter
         }
 
         $this->merges[] = "A{$row}:K{$row}";
-        $approval = $quotation->approvedBy
-            ? 'Approved by '.$quotation->approvedBy->name.' pada '.optional($quotation->approved_at)->format('d/m/Y H:i')
-            : 'Dokumen preview — belum disetujui SPV';
-        $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', $approval, 13), 24);
+        $record = 'Dibuat oleh '.($quotation->sales?->name ?: 'Sales').' pada '.optional($quotation->created_at)->format('d/m/Y H:i').' — tidak memerlukan approval SPV';
+        $rows[] = $this->row($row, $this->mergedTextCells($row, 'A', 'K', $record, 13), 24);
 
         $mergeXml = $this->merges
             ? '<mergeCells count="'.count($this->merges).'">'.collect($this->merges)->map(fn ($range) => '<mergeCell ref="'.$range.'"/>')->implode('').'</mergeCells>'

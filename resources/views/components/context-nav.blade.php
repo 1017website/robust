@@ -13,7 +13,7 @@
         'sales.customers.' => ['sales.customers.index', 'Customers'],
         'sales.projects.' => ['sales.projects.index', 'Projects'],
         'sales.leads.' => ['sales.leads.index', 'Leads'],
-        'spv.quotation-approvals.' => ['spv.quotation-approvals.index', 'Approval Penawaran'],
+        'spv.quotation-approvals.' => ['spv.quotation-approvals.index', 'Monitoring Penawaran'],
         'drafter.design-requests.' => ['drafter.design-requests.index', 'Design Request'],
         'drafter.projects.' => ['drafter.projects.index', 'Projects'],
         'drafter.tasks.' => ['drafter.tasks.index', 'Tasks'],

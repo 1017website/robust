@@ -12,6 +12,7 @@ class ProjectWorkflow extends Model
 
     protected $attributes = [
         'production_status' => 'stock',
+        'production_progress' => 0,
         'production_report_completed' => false,
         'qc_completed' => false,
         'delivery_status' => 'scheduling',
@@ -21,6 +22,7 @@ class ProjectWorkflow extends Model
 
     protected $casts = [
         'production_report_completed' => 'boolean',
+        'production_progress' => 'integer',
         'production_updated_at' => 'datetime',
         'qc_completed' => 'boolean',
         'qc_checklist' => 'array',
@@ -123,13 +125,11 @@ class ProjectWorkflow extends Model
 
     public function completionPercent(): int
     {
-        $done = collect([
-            $this->production_status === 'production_finished',
-            $this->qc_completed,
-            in_array($this->delivery_status, ['delivered', 'customer_received', 'completed'], true),
-            $this->delivery_status === 'completed',
-        ])->filter()->count();
+        $production = (int) round(min(100, max(0, (int) $this->production_progress)) * .25);
+        $qc = $this->qc_completed ? 25 : 0;
+        $delivery = in_array($this->delivery_status, ['delivered', 'customer_received', 'completed'], true) ? 25 : 0;
+        $completed = $this->delivery_status === 'completed' ? 25 : 0;
 
-        return $done * 25;
+        return min(100, $production + $qc + $delivery + $completed);
     }
 }

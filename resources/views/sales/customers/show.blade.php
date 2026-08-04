@@ -2,7 +2,7 @@
 @section('title', 'Detail Customer')
 @section('content')
 <x-page-header :title="$customer->name" :subtitle="$customer->category">
-    <a href="{{ route('sales.customers.edit',$customer) }}" class="btn btn-soft btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+    @unless(auth()->user()->isSalesSpv())<a href="{{ route('sales.customers.edit',$customer) }}" class="btn btn-soft btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>@endunless
 </x-page-header>
 
 <div class="row g-3">
@@ -34,7 +34,7 @@
         <div class="card-r">
             <div class="card-head"><h2>Penawaran</h2></div>
             @forelse($customer->quotations as $q)
-                <div class="pipe-card d-flex justify-content-between align-items-center"><div><div class="t">{{ $q->code }}</div><div class="small text-muted-2">{{ $q->project_name }}</div></div><div class="d-flex align-items-center gap-2"><span class="fw-num fw-semibold">{{ \App\Support\Format::rupiahShort($q->grand_total) }}</span><x-status-badge :status="$q->status" /></div></div>
+                <div class="pipe-card d-flex justify-content-between align-items-center"><div><div class="t">{{ $q->code }}</div><div class="small text-muted-2">{{ $q->project_name }}</div></div><div class="d-flex align-items-center gap-2">@if(auth()->user()->canViewPrices())<span class="fw-num fw-semibold">{{ \App\Support\Format::rupiahShort($q->grand_total) }}</span>@endif<x-status-badge :status="$q->status" /></div></div>
             @empty
                 <x-empty text="Belum ada penawaran." />
             @endforelse

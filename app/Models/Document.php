@@ -41,9 +41,15 @@ class Document extends Model
         if ($user->isProduction()) {
             return $query->where(function (Builder $documentQuery) {
                 $documentQuery->where('documentable_type', Project::class)
-                    ->orWhere(fn (Builder $quotationQuery) => $quotationQuery
-                        ->where('documentable_type', Quotation::class)
-                        ->whereIn('documentable_id', Quotation::query()->select('id')->whereHas('project')));
+                    ->orWhere(function (Builder $quotationDocumentQuery) {
+                        $quotationDocumentQuery
+                            ->where('documentable_type', Quotation::class)
+                            ->where(function (Builder $categoryQuery) {
+                                $categoryQuery->whereNull('category')
+                                    ->orWhere('category', '!=', 'quotation_file');
+                            })
+                            ->whereIn('documentable_id', Quotation::query()->select('id')->whereHas('project'));
+                    });
             });
         }
 

@@ -54,7 +54,7 @@
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
-        $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
+        $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
         $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
         $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
         $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
@@ -83,9 +83,7 @@
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
-        $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
-        $pushItem($menuGroups, 'Approval Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-check2-square');
-        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');

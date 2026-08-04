@@ -13,7 +13,7 @@
         'formAction' => route('sales.quotations.store'),
         'formMethod' => 'POST',
         'submitDraftLabel' => 'Simpan Draft',
-        'submitApprovalLabel' => 'Simpan & Kirim Penawaran',
+        'submitApprovalLabel' => 'Simpan Penawaran',
     ])
 </div>
 @endsection

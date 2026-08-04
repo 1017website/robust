@@ -2,7 +2,8 @@
 @section('title', 'Penawaran')
 @section('content')
 <x-page-header title="Penawaran" subtitle="Kelola quotation untuk customer">
-    <a href="{{ route('sales.quotations.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Penawaran Baru</a>
+    <a href="{{ route('sales.quotations.create', ['mode' => 'builder']) }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Buat Penawaran</a>
+    <a href="{{ route('sales.quotations.create', ['mode' => 'upload']) }}" class="btn btn-soft btn-sm"><i class="bi bi-cloud-arrow-up me-1"></i>Upload Penawaran</a>
 </x-page-header>
 
 <div class="card-r">
@@ -16,20 +17,21 @@
     </form>
     <div class="table-wrap">
         <table class="table-r">
-            <thead><tr><th>Kode</th><th>Customer</th><th>Proyek</th><th>Berlaku s/d</th><th>Grand Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Kode</th><th>Customer</th><th>Proyek</th><th>Jenis</th><th>Berlaku s/d</th><th>Grand Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($quotations as $q)
                 <tr>
                     <td class="fw-semibold">{{ $q->code }}</td>
                     <td>{{ $q->customer_name }}</td>
                     <td>{{ $q->project_name }}</td>
+                    <td>{{ $q->isUploaded() ? 'Upload file' : 'Dibuat di sistem' }}</td>
                     <td>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
-                    <td class="fw-num fw-semibold">{{ \App\Support\Format::rupiah($q->grand_total) }}</td>
+                    <td class="fw-num fw-semibold">{{ $q->isUploaded() ? 'Lihat file' : \App\Support\Format::rupiah($q->grand_total) }}</td>
                     <td><x-status-badge :status="$q->status" :label="$q->statusLabel()" /></td>
                     <td><a href="{{ route('sales.quotations.show',$q) }}" class="btn btn-sm btn-soft">Detail</a></td>
                 </tr>
             @empty
-                <tr><td colspan="7"><x-empty text="Belum ada penawaran." /></td></tr>
+                <tr><td colspan="8"><x-empty text="Belum ada penawaran." /></td></tr>
             @endforelse
             </tbody>
         </table>

@@ -142,15 +142,14 @@ class DashboardController extends Controller
     protected function spvDashboard()
     {
         $stats = [
-            'waiting_approval' => Quotation::where('status', 'waiting_approval')->count(),
-            'approved_month' => Quotation::where('status', 'approved')->whereMonth('approved_at', now()->month)->count(),
-            'revision' => Quotation::where('status', 'revision')->count(),
-            'rejected_month' => Quotation::where('status', 'rejected')->whereMonth('rejected_at', now()->month)->count(),
+            'today' => Quotation::whereDate('created_at', today())->count(),
+            'month' => Quotation::whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->count(),
+            'ready' => Quotation::where('status', 'ready')->count(),
+            'sales' => Quotation::whereMonth('created_at', now()->month)->distinct('sales_id')->count('sales_id'),
         ];
 
         $approvalQueue = Quotation::with('sales')
-            ->whereIn('status', ['waiting_approval', 'revision'])
-            ->latest('submitted_for_approval_at')
+            ->latest()
             ->take(8)
             ->get();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Models\Document;
 use App\Models\Project;
 use App\Models\ProjectWorkflow;
 use App\Support\ProjectAccess;
@@ -15,16 +16,23 @@ class ProjectWorkflowController extends Controller
 {
     public function updateProduction(Request $request, Project $project)
     {
+        $project->loadMissing('quotation.designRequest');
+        $hasProductionReference = $project->documents()->where('category', 'fabrication_drawing')->where('is_current', true)->exists()
+            || ($project->quotation && ! $project->quotation->designRequest);
         abort_unless(
-            $project->documents()->where('category', 'fabrication_drawing')->where('is_current', true)->exists(),
+            $hasProductionReference,
             422,
             'Produksi baru dapat dimulai setelah Drafter mengunggah gambar fabrikasi.'
         );
 
         $data = $request->validate([
             'production_status' => ['required', Rule::in(array_keys(ProjectWorkflow::productionStatuses()))],
+            'production_progress' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'production_note' => ['nullable', 'string', 'max:2000'],
             'production_report_completed' => ['nullable', 'boolean'],
             'production_report' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'progress_files' => ['nullable', 'array', 'max:5'],
+            'progress_files.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,webp', 'max:20480'],
         ]);
 
         $workflow = $project->workflow()->firstOrCreate();
@@ -33,8 +41,21 @@ class ProjectWorkflowController extends Controller
             throw ValidationException::withMessages(['production_report' => 'Upload Checklist Produksi PDF sebelum menandai laporan lengkap.']);
         }
 
+        $progress = isset($data['production_progress'])
+            ? (int) $data['production_progress']
+            : match ($data['production_status']) {
+                'production_finished' => 100,
+                'production' => max(30, (int) $workflow->production_progress),
+                default => (int) $workflow->production_progress,
+            };
+        if ($data['production_status'] === 'production_finished') {
+            $progress = 100;
+        }
+
         $update = [
             'production_status' => $data['production_status'],
+            'production_progress' => $progress,
+            'production_note' => $data['production_note'] ?? null,
             'production_report_completed' => $completed,
             'production_updated_by' => $request->user()->id,
             'production_updated_at' => now(),
@@ -43,13 +64,26 @@ class ProjectWorkflowController extends Controller
             $update += $this->replaceFile($workflow->production_report_path, $file, "project-workflows/{$project->id}/production", 'production_report');
         }
         $workflow->update($update);
+        foreach ($request->file('progress_files', []) as $file) {
+            $path = $file->store("projects/{$project->id}/production-progress", 'public');
+            Document::create([
+                'documentable_type' => Project::class,
+                'documentable_id' => $project->id,
+                'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+                'category' => 'production_progress',
+                'description' => $data['production_note'] ?? null,
+                'file_path' => $path,
+                'file_type' => strtolower($file->getClientOriginalExtension()),
+                'file_size' => $file->getSize(),
+                'version' => 'v1.0',
+                'revision_number' => 1,
+                'is_current' => true,
+                'uploaded_by' => $request->user()->id,
+            ]);
+        }
         $project->update([
             'status' => $data['production_status'] === 'production_finished' ? 'finishing' : 'ongoing',
-            'progress' => match ($data['production_status']) {
-                'production_finished' => max(60, (int) $project->progress),
-                'production' => max(30, (int) $project->progress),
-                default => max(10, (int) $project->progress),
-            },
+            'progress' => max(10, min(60, 10 + (int) round($progress * .5))),
         ]);
 
         return back()->with('success', 'Laporan produksi berhasil diperbarui.')->withFragment('operations');

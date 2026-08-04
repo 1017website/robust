@@ -52,8 +52,7 @@ class CrmFlowTest extends TestCase
             ],
             'sales_spv' => [
                 'dashboard', 'sales.request-masuk.index', 'sales.leads.index',
-                'sales.design-requests.index', 'sales.quotations.index',
-                'spv.quotation-approvals.index', 'admin.purchase-order-requests.index',
+                'sales.design-requests.index', 'spv.quotation-approvals.index',
                 'sales.customers.index', 'sales.projects.index', 'activities.index',
                 'calendar.index', 'reports.index', 'profile.edit',
             ],
@@ -425,29 +424,26 @@ class CrmFlowTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertSame($secondSales->id, $lead->fresh()->sales_id);
 
-        $revisionQuote = Quotation::create([
-            'code' => 'Q-REVISION-TEST',
-            'customer_name' => 'Customer Revision',
-            'project_name' => 'Project Revision',
-            'status' => 'waiting_approval',
+        $monitoredQuote = Quotation::create([
+            'code' => 'Q-MONITORING-TEST',
+            'customer_name' => 'Customer Monitoring',
+            'project_name' => 'Project Monitoring',
+            'status' => 'ready',
             'sales_id' => $firstSales->id,
             'grand_total' => 1000000,
         ]);
-        $this->actingAs($spv)->post(route('spv.quotation-approvals.revision', $revisionQuote), [
-            'revision_note' => 'Mohon perbaiki margin.',
-        ])->assertSessionHasNoErrors();
-        $this->assertSame('revision', $revisionQuote->fresh()->status);
-
-        $this->actingAs($spv)->post(route('spv.quotation-approvals.reject', $revisionQuote->fresh()), [
-            'rejection_note' => 'Nilai belum dapat disetujui.',
-        ])->assertSessionHasNoErrors();
-        $this->assertSame('rejected', $revisionQuote->fresh()->status);
+        $this->actingAs($spv)->get(route('spv.quotation-approvals.show', $monitoredQuote))
+            ->assertSuccessful()
+            ->assertSee($firstSales->name)
+            ->assertSee('Tidak diperlukan approval SPV')
+            ->assertDontSee('Rp 1.000.000');
+        $this->actingAs($spv)->get(route('sales.quotations.index'))->assertForbidden();
 
         $lostQuote = Quotation::create([
             'code' => 'Q-LOST-TEST',
             'customer_name' => 'Customer Lost',
             'project_name' => 'Project Lost',
-            'status' => 'approved',
+            'status' => 'ready',
             'sales_id' => $firstSales->id,
             'grand_total' => 2000000,
         ]);
@@ -1056,21 +1052,14 @@ class CrmFlowTest extends TestCase
         $this->assertSame('draft', $quotation->status);
 
         $this->actingAs($sales)->put(route('sales.quotations.update', $quotation), $quoteData + ['action' => 'submit_approval'])->assertRedirect();
-        $this->assertSame('waiting_approval', $quotation->fresh()->status);
+        $this->assertSame('ready', $quotation->fresh()->status);
 
-        $this->actingAs($spv)->post(route('spv.quotation-approvals.approve', $quotation), [
-            'approval_note' => 'Disetujui dari automated flow test.',
-        ])->assertRedirect(route('spv.quotation-approvals.show', $quotation));
-
-        $this->actingAs($sales)
-            ->get(route('dashboard'))
+        $this->actingAs($spv)
+            ->get(route('spv.quotation-approvals.show', $quotation))
             ->assertOk()
-            ->assertSee('Penawaran disetujui SPV')
-            ->assertSeeInOrder([
-                'bi bi-file-earmark-text',
-                'Penawaran',
-                'side-badge',
-            ], false);
+            ->assertSee($sales->name)
+            ->assertSee('Tidak diperlukan approval SPV')
+            ->assertDontSee('Rp ');
 
         $this->actingAs($sales)->post(route('sales.quotations.sent-to-customer', $quotation))->assertRedirect();
         $this->actingAs($sales)->post(route('sales.quotations.won', $quotation), ['note' => 'Customer setuju'])->assertRedirect();
@@ -1297,8 +1286,7 @@ class CrmFlowTest extends TestCase
                 'specification' => $specification,
                 'qty' => 1,
                 'unit' => 'Unit',
-                'cost_price' => 9000000,
-                'margin' => 20,
+                'unit_price' => 11250000,
             ]],
             'action' => 'draft',
         ])->assertRedirect();
@@ -1311,24 +1299,15 @@ class CrmFlowTest extends TestCase
         $this->actingAs($sales)
             ->get(route('sales.quotations.show', $quotation))
             ->assertOk()
-            ->assertSee('Excel Terkunci')
-            ->assertSee('PDF Terkunci');
+            ->assertSee('Siapkan Penawaran');
 
         $this->actingAs($sales)
             ->get(route('sales.quotations.excel', $quotation))
             ->assertRedirect()
-            ->assertSessionHas('error', 'Excel penawaran hanya bisa didownload setelah disetujui SPV.');
+            ->assertSessionHas('error', 'Excel hanya tersedia untuk penawaran yang dibuat di sistem dan sudah siap dikirim.');
 
         $this->actingAs($sales)->post(route('sales.quotations.submit-approval', $quotation))->assertRedirect();
-        $this->actingAs($spv)->get(route('spv.quotation-approvals.excel', $quotation->fresh()))
-            ->assertOk()
-            ->assertDownload();
-
-        $this->actingAs($spv)
-            ->post(route('spv.quotation-approvals.approve', $quotation->fresh()), [
-                'approval_note' => 'Excel sudah sesuai.',
-            ])
-            ->assertRedirect();
+        $this->assertSame('ready', $quotation->fresh()->status);
 
         $response = $this->actingAs($sales)->get(route('sales.quotations.excel', $quotation->fresh()));
         $response->assertOk()->assertDownload();
@@ -1373,8 +1352,7 @@ class CrmFlowTest extends TestCase
                 'quotation_image' => UploadedFile::fake()->image('custom-item.png', 800, 600),
                 'qty' => 1,
                 'unit' => 'Unit',
-                'cost_price' => 1000000,
-                'margin' => 10,
+                'unit_price' => 1100000,
                 'is_optional' => 1,
             ]],
             'action' => 'draft',
@@ -1554,15 +1532,16 @@ class CrmFlowTest extends TestCase
 
         $item = $quotation->items()->firstOrFail();
         $this->assertSame($sales->id, (int) $quotation->sales_id);
-        $this->assertSame(1000000.0, (float) $item->cost_price);
+        $this->assertSame(0.0, (float) $item->cost_price);
         $this->assertSame(1250000.0, (float) $item->unit_price);
         $this->assertSame(2500000.0, (float) $item->total);
-        $this->assertSame(20.0, (float) $item->margin);
-        $this->assertSame(20.0, (float) $quotation->target_margin);
+        $this->assertSame(99.99, (float) $item->margin);
+        $this->assertSame(100.0, (float) $quotation->target_margin);
         $this->actingAs($sales)->get(route('sales.quotations.edit', $quotation))
             ->assertSuccessful()
-            ->assertSee('Item & Harga', false)
+            ->assertSee('Item Penawaran', false)
             ->assertSee('Harga Jual')
+            ->assertDontSee('HPP')
             ->assertDontSee('Target Margin');
         $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))->assertSuccessful();
 
@@ -1572,9 +1551,7 @@ class CrmFlowTest extends TestCase
             ->assertSee('Penawaran ini bukan milik Anda.');
 
         $quotation->update([
-            'status' => 'approved',
-            'approved_by' => $spv->id,
-            'approved_at' => now(),
+            'status' => 'ready',
         ]);
         $pdf = $this->actingAs($sales)->get(route('sales.quotations.pdf', $quotation));
         $pdf->assertSuccessful()->assertHeader('Content-Type', 'application/pdf');
@@ -1617,7 +1594,7 @@ class CrmFlowTest extends TestCase
 
         $quotation = Quotation::where('project_name', 'Penawaran Dengan Lampiran')->firstOrFail();
         $response->assertRedirect(route('sales.quotations.show', $quotation));
-        $this->assertSame('waiting_approval', $quotation->status);
+        $this->assertSame('ready', $quotation->status);
         $this->assertCount(2, $quotation->documents);
 
         $pdfDocument = $quotation->documents()->where('file_type', 'pdf')->firstOrFail();
@@ -1639,8 +1616,7 @@ class CrmFlowTest extends TestCase
             ->assertSee('scope-pekerjaan.pdf');
 
         $this->actingAs($spv)->get(route('documents.download', $pdfDocument))
-            ->assertSuccessful()
-            ->assertDownload('scope-pekerjaan.pdf');
+            ->assertForbidden();
 
         $this->actingAs($otherSales)->get(route('documents.download', $pdfDocument))
             ->assertForbidden();

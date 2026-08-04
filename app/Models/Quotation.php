@@ -47,10 +47,7 @@ class Quotation extends Model
     {
         return [
             'draft' => 'Draft',
-            'waiting_approval' => 'Menunggu Approval SPV',
-            'revision' => 'Perlu Revisi',
-            'approved' => 'Approved SPV',
-            'rejected' => 'Ditolak SPV',
+            'ready' => 'Siap Dikirim',
             'sent_to_customer' => 'Dikirim ke Customer',
             'customer_accepted' => 'Customer Setuju',
             'customer_rejected' => 'Customer Tidak Setuju',
@@ -69,9 +66,7 @@ class Quotation extends Model
     {
         return [
             'draft',
-            'waiting_approval',
-            'revision',
-            'approved',
+            'ready',
             'sent_to_customer',
 
             // Kompatibilitas data lama.
@@ -92,28 +87,48 @@ class Quotation extends Model
 
     public function canBeEdited(): bool
     {
-        return in_array($this->status, ['draft', 'revision', 'rejected'], true);
+        return in_array($this->status, ['draft', 'ready'], true);
     }
 
+    public function canBePublished(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    /** @deprecated Kept for compatibility with older integrations. */
     public function canBeSubmittedForApproval(): bool
     {
-        return $this->canBeEdited();
+        return $this->canBePublished();
     }
 
     public function canBeReviewedBySpv(): bool
     {
-        return in_array($this->status, ['waiting_approval', 'revision'], true);
+        return false;
     }
 
     public function canDownloadPdf(): bool
     {
-        return in_array($this->status, ['approved', 'sent_to_customer', 'customer_accepted', 'request_po_created', 'won'], true);
+        return $this->creation_mode !== 'upload'
+            && in_array($this->status, ['ready', 'sent_to_customer', 'customer_accepted', 'request_po_created', 'won'], true);
     }
 
     public function canCreatePurchaseOrderRequest(): bool
     {
-        return in_array($this->status, ['approved', 'sent_to_customer', 'customer_accepted'], true)
+        return in_array($this->status, ['ready', 'sent_to_customer', 'customer_accepted'], true)
             && ! $this->purchaseOrderRequest()->exists();
+    }
+
+    public function isUploaded(): bool
+    {
+        return $this->creation_mode === 'upload';
+    }
+
+    public function uploadedFile(): ?Document
+    {
+        return $this->documents
+            ->where('category', 'quotation_file')
+            ->where('is_current', true)
+            ->first();
     }
 
     public function estimatedCostTotal(): float

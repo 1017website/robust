@@ -291,13 +291,13 @@ class SimpleQuotationPdf
             $rowY -= $bold ? 20 : 16;
         }
 
-        $approvalTop = min($noteTop - $noteHeight, $top - $summaryHeight) - 18;
-        $content .= $this->rect(self::LEFT, $approvalTop - 54, self::RIGHT - self::LEFT, 54, [0.965, 0.985, 0.975]);
-        $content .= $this->rect(self::LEFT, $approvalTop - 54, 4, 54, [0.05, 0.48, 0.28]);
-        $content .= $this->text(self::LEFT + 14, $approvalTop - 19, 'DOKUMEN TELAH DISETUJUI', 8.5, true, [0.05, 0.48, 0.28]);
-        $content .= $this->text(self::LEFT + 14, $approvalTop - 36, 'Approved by: '.($quotation->approvedBy?->name ?: '-').' pada '.(optional($quotation->approved_at)->format('d/m/Y H:i') ?: '-'), 7.5, false, [0.25, 0.40, 0.33]);
-        $content .= $this->text(self::RIGHT - 14, $approvalTop - 26, 'APPROVED SPV', 9, true, [0.05, 0.48, 0.28], 'right');
-        $content .= $this->text(self::RIGHT - 14, $approvalTop - 40, 'Dokumen resmi ROBUST CRM', 6.8, false, [0.35, 0.50, 0.42], 'right');
+        $recordTop = min($noteTop - $noteHeight, $top - $summaryHeight) - 18;
+        $content .= $this->rect(self::LEFT, $recordTop - 54, self::RIGHT - self::LEFT, 54, [0.965, 0.985, 0.975]);
+        $content .= $this->rect(self::LEFT, $recordTop - 54, 4, 54, [0.05, 0.48, 0.28]);
+        $content .= $this->text(self::LEFT + 14, $recordTop - 19, 'DOKUMEN PENAWARAN', 8.5, true, [0.05, 0.48, 0.28]);
+        $content .= $this->text(self::LEFT + 14, $recordTop - 36, 'Dibuat oleh: '.($quotation->sales?->name ?: '-').' pada '.optional($quotation->created_at)->format('d/m/Y H:i'), 7.5, false, [0.25, 0.40, 0.33]);
+        $content .= $this->text(self::RIGHT - 14, $recordTop - 26, 'SIAP DIKIRIM', 9, true, [0.05, 0.48, 0.28], 'right');
+        $content .= $this->text(self::RIGHT - 14, $recordTop - 40, 'Tidak memerlukan approval SPV', 6.8, false, [0.35, 0.50, 0.42], 'right');
 
         return $content;
     }

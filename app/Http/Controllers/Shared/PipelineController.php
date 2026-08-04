@@ -44,16 +44,16 @@ class PipelineController extends Controller
                 'icon' => 'bi-pencil-square',
             ],
             [
-                'label' => 'Menunggu Approval SPV',
-                'count' => $salesScope(Quotation::query())->where('status', 'waiting_approval')->count(),
-                'route' => $canOpenSpv ? route('spv.quotation-approvals.index', ['status' => 'waiting_approval']) : ($canOpenSales ? route('sales.quotations.index', ['status' => 'waiting_approval']) : '#'),
-                'icon' => 'bi-check2-square',
+                'label' => 'Penawaran Siap',
+                'count' => $salesScope(Quotation::query())->where('status', 'ready')->count(),
+                'route' => $canOpenSpv ? route('spv.quotation-approvals.index', ['status' => 'ready']) : ($canOpenSales ? route('sales.quotations.index', ['status' => 'ready']) : '#'),
+                'icon' => 'bi-send-check',
             ],
             [
-                'label' => 'Revisi Penawaran',
-                'count' => $salesScope(Quotation::query())->where('status', 'revision')->count(),
-                'route' => $canOpenSales ? route('sales.quotations.index', ['status' => 'revision']) : ($canOpenSpv ? route('spv.quotation-approvals.index', ['status' => 'revision']) : '#'),
-                'icon' => 'bi-arrow-repeat',
+                'label' => 'Penawaran Upload',
+                'count' => $salesScope(Quotation::query())->where('creation_mode', 'upload')->count(),
+                'route' => $canOpenSpv ? route('spv.quotation-approvals.index') : ($canOpenSales ? route('sales.quotations.index') : '#'),
+                'icon' => 'bi-cloud-arrow-up',
             ],
             [
                 'label' => 'Request PO Open',
@@ -74,7 +74,7 @@ class PipelineController extends Controller
             ->get();
 
         $quotationPipeline = $salesScope(Quotation::with('sales', 'designRequest', 'purchaseOrderRequest')->latest())
-            ->whereIn('status', ['draft', 'waiting_approval', 'revision', 'approved', 'sent_to_customer', 'customer_accepted', 'request_po_created'])
+            ->whereIn('status', ['draft', 'ready', 'sent_to_customer', 'customer_accepted', 'request_po_created'])
             ->limit(12)
             ->get();
 
@@ -89,15 +89,17 @@ class PipelineController extends Controller
                 ->whereNotIn('status', ['completed', 'rejected'])
                 ->whereDate('deadline', '<', now()->toDateString())
                 ->count(),
-            'approval_overdue' => $salesScope(Quotation::query())
-                ->where('status', 'waiting_approval')
-                ->where('submitted_for_approval_at', '<', now()->subDays(2))
+            'quotation_draft_overdue' => $salesScope(Quotation::query())
+                ->where('status', 'draft')
+                ->where('updated_at', '<', now()->subDays(2))
                 ->count(),
             'po_overdue' => PurchaseOrderRequest::whereIn('status', ['submitted', 'processing_accurate'])
                 ->whereDate('request_date', '<', now()->subDays(3)->toDateString())
                 ->count(),
         ];
 
-        return view('shared.pipeline.index', compact('cards', 'leadPipeline', 'designPipeline', 'quotationPipeline', 'requestPoPipeline', 'sla'));
+        $showPrices = $user->canViewPrices();
+
+        return view('shared.pipeline.index', compact('cards', 'leadPipeline', 'designPipeline', 'quotationPipeline', 'requestPoPipeline', 'sla', 'showPrices'));
     }
 }

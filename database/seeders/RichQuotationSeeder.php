@@ -148,7 +148,7 @@ class RichQuotationSeeder extends Seeder
                     'additional_total' => 0,
                     'grand_total' => $subtotal + $tax,
                     'target_margin' => 20,
-                    'status' => 'approved',
+                    'status' => 'ready',
                     'submitted_for_approval_at' => now()->subDays(2),
                     'approved_by' => $spv->id,
                     'approved_at' => now()->subDay(),

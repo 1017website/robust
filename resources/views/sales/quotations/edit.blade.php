@@ -12,8 +12,8 @@
         'customers' => $customers ?? collect(),
         'formAction' => route('sales.quotations.update', $quotation),
         'formMethod' => 'PUT',
-        'submitDraftLabel' => 'Simpan Revisi sebagai Draft',
-        'submitApprovalLabel' => 'Ajukan Ulang ke SPV',
+        'submitDraftLabel' => 'Simpan sebagai Draft',
+        'submitApprovalLabel' => 'Simpan Penawaran',
     ])
 </div>
 @endsection

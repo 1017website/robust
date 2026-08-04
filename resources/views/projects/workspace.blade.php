@@ -8,7 +8,8 @@
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
     $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
-    $showPrices = $showPrices ?? in_array($role, ['sales', 'sales_admin'], true);
+    $showPrices = $showPrices ?? auth()->user()->canViewPrices();
+    $productionProgressDocuments = $productionProgressDocuments ?? collect();
     $designRequest = $project->quotation?->designRequest;
     $directProduction = ! $designRequest;
     $statusLabel = \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? $workflow->production_status;
@@ -35,6 +36,7 @@
     .qc-checklist { max-height: 420px; overflow: auto; border: 1px solid #e7ebf1; border-radius: 10px; padding: .75rem; background: #fbfcfe; }
     .qc-item + .qc-item { border-top: 1px solid #e7ebf1; margin-top: .75rem; padding-top: .75rem; }
     .revision-note { max-width: 430px; white-space: normal; }
+    .progress-range-value { min-width: 64px; text-align: center; font-size: 1.35rem; font-weight: 800; color: #0b63ce; }
     @media (max-width: 991px) { .workflow-grid { grid-template-columns: 1fr; } }
 </style>
 @endpush
@@ -117,9 +119,9 @@
                     </form>
                 @endif
                 <div class="row g-2">
-                    @php($productionReferenceDocuments = $directProduction ? ($project->quotation?->documents ?? collect()) : $fabricationDocuments)
+                    @php($productionReferenceDocuments = $directProduction ? ($project->quotation?->documents?->where('category', 'quotation_support') ?? collect()) : $fabricationDocuments)
                     @forelse($productionReferenceDocuments as $document)
-                        <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ asset('storage/'.$document->file_path) }}"><i class="bi bi-download me-1"></i>Download</a></div></div>
+                        <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ route('documents.preview', $document) }}"><i class="bi bi-eye me-1"></i>Preview</a></div></div>
                     @empty
                         <div class="col-12"><x-empty :text="$directProduction ? 'Tidak ada dokumen tambahan. Gunakan spesifikasi item penawaran sebagai acuan produksi.' : 'Gambar fabrikasi belum diunggah.'" /></div>
                     @endforelse
@@ -128,20 +130,34 @@
 
             <div class="workflow-grid">
                 <section class="workflow-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Laporan Produksi</h3><small class="text-muted-2">Status dan Checklist Produksi</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
+                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Progress Desain & Produksi</h3><small class="text-muted-2">Perkiraan progres serta foto/dokumen pekerjaan</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
                     @if($canProduction)
                     <form method="POST" action="{{ route('project-workflow.production', $project) }}" enctype="multipart/form-data">@csrf @method('PUT')
                         <label class="form-label">Status Produksi</label>
                         <select class="form-select mb-3" name="production_status" required>@foreach(\App\Models\ProjectWorkflow::productionStatuses() as $value => $label)<option value="{{ $value }}" @selected($workflow->production_status === $value)>{{ $label }}</option>@endforeach</select>
+                        <label class="form-label d-flex justify-content-between align-items-center"><span>Perkiraan Progress</span><output class="progress-range-value" id="productionProgressValue">{{ old('production_progress', $workflow->production_progress ?? 0) }}%</output></label>
+                        <input class="form-range mb-3" id="productionProgress" type="range" name="production_progress" min="0" max="100" step="5" value="{{ old('production_progress', $workflow->production_progress ?? 0) }}">
+                        <label class="form-label">Catatan Progress</label><textarea name="production_note" class="form-control mb-3" rows="2" placeholder="Contoh: rangka selesai, masuk proses finishing.">{{ old('production_note', $workflow->production_note) }}</textarea>
+                        <label class="form-label">Foto / Dokumen Progress</label><input class="form-control mb-2" type="file" name="progress_files[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
+                        <div class="form-text mb-3">Maksimal 5 file, masing-masing 20 MB.</div>
                         <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="production_report_completed" value="1" id="productionComplete" @checked($workflow->production_report_completed)><label class="form-check-label fw-semibold" for="productionComplete">Laporan produksi lengkap</label></div>
                         <label class="form-label">Checklist Produksi (PDF)</label><input class="form-control mb-3" type="file" name="production_report" accept="application/pdf,.pdf">
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Produksi</button>
                     </form>
                     @else
+                        <div class="d-flex justify-content-between align-items-center mb-2"><span>Progress terakhir</span><strong>{{ $workflow->production_progress ?? 0 }}%</strong></div><div class="prog mb-3"><span style="width:{{ $workflow->production_progress ?? 0 }}%"></span></div>
+                        @if($workflow->production_note)<p class="small mb-3">{{ $workflow->production_note }}</p>@endif
                         <div class="d-flex align-items-center gap-2 mb-3"><i class="bi {{ $workflow->production_report_completed ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }}"></i><span>{{ $workflow->production_report_completed ? 'Laporan lengkap' : 'Laporan belum lengkap' }}</span></div>
                     @endif
                     @if($workflow->production_report_path)
                         <div class="attachment-box mt-3"><div class="small fw-semibold text-truncate">{{ $workflow->production_report_name }}</div><div class="mt-2"><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'production']) }}" class="btn btn-sm btn-soft">Lihat</a> <a href="{{ route('project-workflow.attachment', [$project, 'production', 'download' => 1]) }}" class="btn btn-sm btn-soft">Unduh</a></div></div>
+                    @endif
+                    @if($productionProgressDocuments->isNotEmpty())
+                        <div class="mt-3"><div class="small fw-bold mb-2">Dokumentasi Progress</div>
+                        @foreach($productionProgressDocuments as $document)
+                            <div class="attachment-box mb-2"><div class="small fw-semibold text-truncate">{{ $document->name }}.{{ $document->file_type }}</div><div class="small text-muted-2">{{ $document->uploader?->name ?? '-' }} · {{ $document->created_at?->format('d/m/Y H:i') }}</div><a target="_blank" href="{{ route('documents.preview', $document) }}" class="btn btn-sm btn-soft mt-2">Preview</a> <a href="{{ route('documents.download', $document) }}" class="btn btn-sm btn-soft mt-2">Unduh</a></div>
+                        @endforeach
+                        </div>
                     @endif
                 </section>
 
@@ -296,6 +312,9 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const progress = document.getElementById('productionProgress');
+    const output = document.getElementById('productionProgressValue');
+    if (progress && output) progress.addEventListener('input', () => output.value = progress.value + '%');
     if (!location.hash) return;
     const trigger = document.querySelector('[data-bs-target="' + location.hash + '"]');
     if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();

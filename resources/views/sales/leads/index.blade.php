@@ -112,7 +112,7 @@
                         <section class="info-card">
                             <h6>Ringkasan Lead</h6>
                             <div class="kv"><div class="k">Prioritas</div><div class="v"><span class="status-soft {{ $selected->priority==='high'?'st-red':($selected->priority==='low'?'st-green':'st-yellow') }}">{{ ucfirst($selected->priority) }}</span></div></div>
-                            <div class="kv"><div class="k">Estimasi</div><div class="v">{{ \App\Support\Format::rupiahShort($selected->est_value_min) }} - {{ \App\Support\Format::rupiahShort($selected->est_value_max) }}</div></div>
+                            @if(auth()->user()->canViewPrices())<div class="kv"><div class="k">Estimasi</div><div class="v">{{ \App\Support\Format::rupiahShort($selected->est_value_min) }} - {{ \App\Support\Format::rupiahShort($selected->est_value_max) }}</div></div>@endif
                             <div class="kv"><div class="k">Tahap</div><div class="v">{{ $stageLabel($selected->stage) }}</div></div>
                         </section>
                     </div>

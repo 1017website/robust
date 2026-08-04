@@ -9,6 +9,7 @@ use App\Models\Document;
 use App\Models\Lead;
 use App\Models\Project;
 use App\Models\Quotation;
+use App\Services\SpreadsheetPreview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -175,12 +176,7 @@ class DocumentController extends Controller
 
     public function download(Document $document)
     {
-        abort_unless(
-            Auth::user()->isDrafter()
-                || Document::query()->visibleTo(Auth::user())->whereKey($document->getKey())->exists(),
-            403,
-            'Anda tidak memiliki akses ke dokumen ini.'
-        );
+        $this->authorizeDocumentView($document);
         abort_unless(
             $document->file_path && Storage::disk('public')->exists($document->file_path),
             404,
@@ -196,6 +192,36 @@ class DocumentController extends Controller
             : $baseName;
 
         return Storage::disk('public')->download($document->file_path, $filename);
+    }
+
+    public function preview(Document $document, SpreadsheetPreview $spreadsheetPreview)
+    {
+        $this->authorizeDocumentView($document);
+        abort_unless(
+            $document->file_path && Storage::disk('public')->exists($document->file_path),
+            404,
+            'File dokumen tidak ditemukan.'
+        );
+
+        $extension = strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION) ?: (string) $document->file_type);
+        $absolutePath = Storage::disk('public')->path($document->file_path);
+
+        if (in_array($extension, ['pdf', 'jpg', 'jpeg', 'png', 'webp'], true)) {
+            return response()->file($absolutePath, [
+                'Content-Type' => Storage::disk('public')->mimeType($document->file_path),
+                'Content-Disposition' => 'inline; filename="'.basename($absolutePath).'"',
+            ]);
+        }
+
+        $preview = null;
+        $previewError = null;
+        try {
+            $preview = $spreadsheetPreview->rows($absolutePath);
+        } catch (\RuntimeException $exception) {
+            $previewError = $exception->getMessage();
+        }
+
+        return view('shared.documents.preview', compact('document', 'preview', 'previewError'));
     }
 
     protected function documentableTypes(): array
@@ -264,5 +290,26 @@ class DocumentController extends Controller
         $document->loadMissing('documentable');
 
         return $document->documentable && $this->canAccessDocumentable($document->documentable);
+    }
+
+    protected function authorizeDocumentView(Document $document): void
+    {
+        $user = Auth::user();
+        $visible = $user->isDrafter()
+            || Document::query()->visibleTo($user)->whereKey($document->getKey())->exists();
+
+        // File penawaran utama dapat memuat harga. Role monitoring (termasuk
+        // SPV, produksi, QC, delivery, dan administrasi) hanya melihat metadata.
+        if ($document->category === 'quotation_file' && ! $user->canViewPrices()) {
+            $visible = false;
+        }
+
+        // SPV hanya memonitor siapa yang membuat penawaran. Lampiran tetap
+        // ditampilkan sebagai metadata karena isinya dapat memuat nominal.
+        if ($user->isSalesSpv() && $document->documentable_type === Quotation::class) {
+            $visible = false;
+        }
+
+        abort_unless($visible, 403, 'Anda tidak memiliki akses ke dokumen ini.');
     }
 }

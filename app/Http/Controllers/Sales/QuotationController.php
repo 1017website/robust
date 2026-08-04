@@ -19,6 +19,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class QuotationController extends Controller
 {
@@ -54,7 +55,7 @@ class QuotationController extends Controller
 
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
-        $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        $itemMasters = $this->safeItemMasters();
 
         return view('sales.quotations.create', compact('designRequest', 'customers', 'completedDR', 'itemMasters'));
     }
@@ -65,10 +66,9 @@ class QuotationController extends Controller
         $designRequest = $this->resolveDesignRequest($data['design_request_id'] ?? null);
         $link = $this->resolveLeadAndCustomer($data, $designRequest);
 
-        $action = $request->input('action');
-        $submitApproval = in_array($action, ['send', 'submit_approval'], true);
+        $publish = $request->input('action') !== 'draft';
 
-        $quotation = DB::transaction(function () use ($data, $submitApproval, $designRequest, $link) {
+        $quotation = DB::transaction(function () use ($data, $publish, $designRequest, $link) {
             $quotation = Quotation::create([
                 'code' => CodeGenerator::next(Quotation::class, 'Q', 4, true),
                 'design_request_id' => $designRequest?->id,
@@ -83,6 +83,7 @@ class QuotationController extends Controller
                 'valid_until' => $data['valid_until'],
                 'priority' => $data['priority'],
                 'currency' => $data['currency'],
+                'creation_mode' => $data['quotation_mode'],
                 'internal_note' => $data['internal_note'] ?? null,
                 'customer_note' => $data['customer_note'] ?? null,
                 'discount_type' => $data['discount_type'],
@@ -91,13 +92,14 @@ class QuotationController extends Controller
                 'tax_percent' => $data['tax_percent'],
                 'target_margin' => 0,
                 'additional_costs' => array_values($data['additional_costs'] ?? []),
-                'status' => $submitApproval ? 'waiting_approval' : 'draft',
-                'submitted_for_approval_at' => $submitApproval ? now() : null,
+                'status' => $publish ? 'ready' : 'draft',
+                'submitted_for_approval_at' => null,
                 'created_by' => Auth::id(),
             ]);
 
-            $this->syncItems($quotation, $data['items']);
+            $this->syncItems($quotation, $data['quotation_mode'] === 'builder' ? ($data['items'] ?? []) : []);
             $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
+            $this->storeUploadedQuotationFile($quotation, $data['quotation_file'] ?? null);
             $quotation->load('items', 'designRequest');
             QuotationCalculator::recalculate($quotation)->save();
 
@@ -107,18 +109,18 @@ class QuotationController extends Controller
 
             $this->recordHistory(
                 $quotation,
-                $submitApproval ? 'submitted' : 'created',
+                $publish ? 'published' : 'created',
                 null,
                 $quotation->status,
-                $submitApproval ? 'Penawaran dibuat dan langsung diajukan ke SPV.' : 'Penawaran disimpan sebagai draft.'
+                $publish ? 'Penawaran dibuat oleh '.Auth::user()->name.' dan siap dikirim tanpa approval SPV.' : 'Penawaran disimpan sebagai draft.'
             );
 
             return $quotation;
         });
 
         Logger::record('created', "Penawaran {$quotation->code} dibuat", $quotation);
-        $message = $submitApproval
-            ? 'Penawaran berhasil dibuat dan diajukan ke SPV untuk approval.'
+        $message = $publish
+            ? 'Penawaran berhasil dibuat dan siap dikirim. SPV dapat melihat pencatatannya tanpa proses approval.'
             : 'Penawaran berhasil disimpan sebagai draft.';
 
         return redirect()->route('sales.quotations.show', $quotation)->with('success', $message);
@@ -138,14 +140,14 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         if (! $quotation->canBeEdited()) {
-            return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran hanya bisa diedit saat Draft, Revisi, atau Ditolak SPV.');
+            return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran ini sudah diproses customer dan tidak dapat diedit.');
         }
 
         $quotation->load('items', 'designRequest', 'documents.uploader');
         $designRequest = $quotation->designRequest;
         $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
-        $itemMasters = ItemMaster::where('is_active', true)->orderBy('category')->orderBy('name')->get();
+        $itemMasters = $this->safeItemMasters();
 
         return view('sales.quotations.edit', compact('quotation', 'designRequest', 'customers', 'completedDR', 'itemMasters'));
     }
@@ -155,17 +157,16 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         if (! $quotation->canBeEdited()) {
-            return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran hanya bisa diedit saat Draft, Revisi, atau Ditolak SPV.');
+            return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran yang sudah diproses customer tidak dapat diedit.');
         }
 
-        $data = $this->validatedData($request);
+        $data = $this->validatedData($request, $quotation);
         $designRequest = $this->resolveDesignRequest($data['design_request_id'] ?? null);
         $link = $this->resolveLeadAndCustomer($data, $designRequest);
         $oldStatus = $quotation->status;
-        $action = $request->input('action');
-        $submitApproval = in_array($action, ['send', 'submit_approval'], true);
+        $publish = $request->input('action') !== 'draft';
 
-        DB::transaction(function () use ($quotation, $data, $designRequest, $link, $oldStatus, $submitApproval) {
+        DB::transaction(function () use ($quotation, $data, $designRequest, $link, $oldStatus, $publish) {
             $quotation->update([
                 'design_request_id' => $designRequest?->id,
                 'lead_id' => $link['lead_id'],
@@ -178,6 +179,7 @@ class QuotationController extends Controller
                 'valid_until' => $data['valid_until'],
                 'priority' => $data['priority'],
                 'currency' => $data['currency'],
+                'creation_mode' => $data['quotation_mode'],
                 'internal_note' => $data['internal_note'] ?? null,
                 'customer_note' => $data['customer_note'] ?? null,
                 'discount_type' => $data['discount_type'],
@@ -186,8 +188,8 @@ class QuotationController extends Controller
                 'tax_percent' => $data['tax_percent'],
                 'target_margin' => 0,
                 'additional_costs' => array_values($data['additional_costs'] ?? []),
-                'status' => $submitApproval ? 'waiting_approval' : 'draft',
-                'submitted_for_approval_at' => $submitApproval ? now() : $quotation->submitted_for_approval_at,
+                'status' => $publish ? 'ready' : 'draft',
+                'submitted_for_approval_at' => null,
                 'approved_by' => null,
                 'approved_at' => null,
                 'approval_note' => null,
@@ -197,8 +199,9 @@ class QuotationController extends Controller
                 'revision_note' => null,
             ]);
 
-            $this->syncItems($quotation, $data['items']);
+            $this->syncItems($quotation, $data['quotation_mode'] === 'builder' ? ($data['items'] ?? []) : []);
             $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
+            $this->storeUploadedQuotationFile($quotation, $data['quotation_file'] ?? null);
             $quotation->load('items', 'designRequest');
             QuotationCalculator::recalculate($quotation)->save();
 
@@ -208,30 +211,30 @@ class QuotationController extends Controller
 
             $this->recordHistory(
                 $quotation,
-                $submitApproval ? 'submitted' : 'updated',
+                $publish ? 'published' : 'updated',
                 $oldStatus,
                 $quotation->status,
-                $submitApproval ? 'Penawaran direvisi dan diajukan ulang ke SPV.' : 'Penawaran diperbarui sebagai draft.'
+                $publish ? 'Penawaran diperbarui oleh '.Auth::user()->name.' dan siap dikirim tanpa approval SPV.' : 'Penawaran diperbarui sebagai draft.'
             );
         });
 
         Logger::record('updated', "Penawaran {$quotation->code} diperbarui", $quotation);
 
-        return redirect()->route('sales.quotations.show', $quotation)->with('success', $submitApproval ? 'Revisi penawaran berhasil diajukan ulang ke SPV.' : 'Penawaran berhasil diperbarui.');
+        return redirect()->route('sales.quotations.show', $quotation)->with('success', $publish ? 'Penawaran berhasil diperbarui dan siap dikirim.' : 'Penawaran berhasil diperbarui.');
     }
 
     public function submitApproval(Quotation $quotation)
     {
         $this->ensureOwner($quotation);
 
-        if (! $quotation->canBeSubmittedForApproval()) {
-            return back()->with('error', 'Penawaran ini tidak bisa diajukan approval pada status saat ini.');
+        if ($quotation->status !== 'draft') {
+            return back()->with('error', 'Hanya draft yang dapat disiapkan untuk dikirim.');
         }
 
         $oldStatus = $quotation->status;
         $quotation->update([
-            'status' => 'waiting_approval',
-            'submitted_for_approval_at' => now(),
+            'status' => 'ready',
+            'submitted_for_approval_at' => null,
             'approved_by' => null,
             'approved_at' => null,
             'approval_note' => null,
@@ -241,10 +244,10 @@ class QuotationController extends Controller
             'revision_note' => null,
         ]);
 
-        $this->recordHistory($quotation, 'submitted', $oldStatus, 'waiting_approval', 'Penawaran diajukan ke SPV.');
-        Logger::record('submitted', "Penawaran {$quotation->code} diajukan approval SPV", $quotation);
+        $this->recordHistory($quotation, 'published', $oldStatus, 'ready', 'Penawaran disiapkan oleh '.Auth::user()->name.'. SPV hanya menerima informasi pencatatan.');
+        Logger::record('published', "Penawaran {$quotation->code} siap dikirim", $quotation);
 
-        return back()->with('success', 'Penawaran berhasil diajukan ke SPV.');
+        return back()->with('success', 'Penawaran siap dikirim tanpa approval SPV.');
     }
 
     public function downloadPdf(Quotation $quotation, SimpleQuotationPdf $pdf)
@@ -252,7 +255,7 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         if (! $quotation->canDownloadPdf()) {
-            return back()->with('error', 'PDF penawaran hanya bisa didownload setelah disetujui SPV.');
+            return back()->with('error', 'PDF hanya tersedia untuk penawaran yang dibuat di sistem dan sudah siap dikirim.');
         }
 
         $quotation->load('items', 'sales', 'approvedBy');
@@ -269,7 +272,7 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         if (! $quotation->canDownloadPdf()) {
-            return back()->with('error', 'Excel penawaran hanya bisa didownload setelah disetujui SPV.');
+            return back()->with('error', 'Excel hanya tersedia untuk penawaran yang dibuat di sistem dan sudah siap dikirim.');
         }
 
         return $excel->download($quotation);
@@ -279,8 +282,8 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        if (! $quotation->canDownloadPdf()) {
-            return back()->with('error', 'Penawaran harus disetujui SPV sebelum dikirim ke customer.');
+        if (! in_array($quotation->status, ['ready', 'sent_to_customer'], true)) {
+            return back()->with('error', 'Penawaran belum siap dikirim ke customer.');
         }
 
         $oldStatus = $quotation->status;
@@ -299,7 +302,7 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        if (! in_array($quotation->status, ['approved', 'sent_to_customer', 'negotiation', 'sent'], true)) {
+        if (! in_array($quotation->status, ['ready', 'sent_to_customer', 'negotiation', 'sent'], true)) {
             return back()->with('error', 'Penawaran belum bisa ditandai customer setuju.');
         }
 
@@ -322,7 +325,7 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        if (! in_array($quotation->status, ['approved', 'sent_to_customer', 'negotiation', 'sent'], true)) {
+        if (! in_array($quotation->status, ['ready', 'sent_to_customer', 'negotiation', 'sent'], true)) {
             return back()->with('error', 'Penawaran belum bisa ditandai customer tidak setuju.');
         }
 
@@ -341,8 +344,17 @@ class QuotationController extends Controller
         return back()->with('success', 'Penawaran ditandai tidak disetujui customer.');
     }
 
-    protected function validatedData(Request $request): array
+    protected function validatedData(Request $request, ?Quotation $quotation = null): array
     {
+        $request->merge(['quotation_mode' => $request->input('quotation_mode', 'builder')]);
+        if ($request->input('quotation_mode') === 'upload') {
+            $request->merge([
+                'discount_type' => $request->input('discount_type', 'percent'),
+                'discount_value' => $request->input('discount_value', 0),
+                'tax_percent' => $request->input('tax_percent', 0),
+            ]);
+        }
+
         return $request->validate([
             'design_request_id' => ['nullable', 'exists:design_requests,id,deleted_at,NULL'],
             'customer_id' => ['nullable', 'exists:customers,id,deleted_at,NULL'],
@@ -354,6 +366,11 @@ class QuotationController extends Controller
             'valid_until' => ['required', 'date', 'after_or_equal:quote_date'],
             'priority' => ['required', 'in:low,medium,high'],
             'currency' => ['required', 'string', 'max:10'],
+            'quotation_mode' => ['required', Rule::in(['builder', 'upload'])],
+            'quotation_file' => [
+                Rule::requiredIf(fn () => $request->input('quotation_mode') === 'upload' && ! $quotation?->uploadedFile()),
+                'nullable', 'file', 'mimes:pdf,xls,xlsx,csv,doc,docx,jpg,jpeg,png', 'max:20480',
+            ],
             'internal_note' => ['nullable', 'string', 'max:1000'],
             'customer_note' => ['nullable', 'string', 'max:500'],
             'documents' => ['nullable', 'array', 'max:5'],
@@ -365,7 +382,7 @@ class QuotationController extends Controller
             'additional_costs' => ['nullable', 'array'],
             'additional_costs.*.label' => ['nullable', 'string', 'max:100'],
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['required_if:quotation_mode,builder', 'nullable', 'array', 'min:1'],
             'items.*.id' => ['nullable', 'integer', 'exists:quotation_items,id'],
             'items.*.source_design_request_item_id' => ['nullable', 'integer', 'exists:design_request_items,id'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
@@ -376,8 +393,7 @@ class QuotationController extends Controller
             'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
-            'items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['required_if:quotation_mode,builder', 'nullable', 'numeric', 'min:0'],
             'items.*.margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'items.*.is_optional' => ['nullable', 'boolean'],
         ]);
@@ -423,10 +439,9 @@ class QuotationController extends Controller
             }
 
             $qty = (float) $item['qty'];
-            $costPrice = (float) ($item['cost_price'] ?? $item['unit_price'] ?? 0);
-            $unitPrice = array_key_exists('unit_price', $item)
-                ? (float) $item['unit_price']
-                : QuotationCalculator::sellingPrice($costPrice, (float) ($item['margin'] ?? 0));
+            $itemMaster = ! empty($item['item_master_id']) ? ItemMaster::find($item['item_master_id']) : null;
+            $costPrice = (float) ($sourceItem?->unit_price ?? $existing?->cost_price ?? $itemMaster?->default_cost_price ?? 0);
+            $unitPrice = (float) ($item['unit_price'] ?? 0);
             $margin = $unitPrice > 0
                 ? min(max((($unitPrice - $costPrice) / $unitPrice) * 100, 0), 99.99)
                 : 0;
@@ -479,6 +494,35 @@ class QuotationController extends Controller
                 'uploaded_by' => Auth::id(),
             ]);
         }
+    }
+
+    protected function storeUploadedQuotationFile(Quotation $quotation, ?UploadedFile $file): void
+    {
+        if (! $file) {
+            return;
+        }
+
+        $current = $quotation->documents()->where('category', 'quotation_file')->where('is_current', true)->first();
+        $revisionNumber = (int) ($quotation->documents()->where('category', 'quotation_file')->max('revision_number') ?: 0) + 1;
+        $path = $file->store("quotation-files/{$quotation->id}", 'public');
+
+        if ($current) {
+            $current->update(['is_current' => false]);
+        }
+
+        $quotation->documents()->create([
+            'parent_document_id' => $current?->parent_document_id ?: $current?->id,
+            'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
+            'category' => 'quotation_file',
+            'description' => 'File penawaran utama yang diunggah oleh sales.',
+            'file_path' => $path,
+            'file_type' => strtolower($file->getClientOriginalExtension()),
+            'file_size' => $file->getSize(),
+            'version' => 'v'.$revisionNumber.'.0',
+            'revision_number' => $revisionNumber,
+            'is_current' => true,
+            'uploaded_by' => Auth::id(),
+        ]);
     }
 
     protected function snapshotQuotationImage(
@@ -535,6 +579,14 @@ class QuotationController extends Controller
     {
         return Customer::query()
             ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+    }
+
+    protected function safeItemMasters()
+    {
+        return ItemMaster::where('is_active', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get(['id', 'code', 'category', 'name', 'variant', 'unit', 'specification']);
     }
 
     protected function accessibleCompletedDesignRequests()

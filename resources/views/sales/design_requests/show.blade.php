@@ -94,6 +94,7 @@
                             <x-quotation-item-card
                                 :item="$item"
                                 :show-cost="false"
+                                :show-price="auth()->user()->canViewPrices()"
                                 price-label="Harga Satuan"
                             />
                         @endforeach
@@ -209,7 +210,7 @@
                 <div class="small text-muted-2">Status terakhir: {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? $designRequest->status }}</div>
             </div>
 
-            @if($designRequest->cost_total)
+            @if(auth()->user()->canViewPrices() && $designRequest->cost_total)
                 <div class="info-card mb-3">
                     <h6><i class="bi bi-cash-stack me-1 text-warning"></i>Estimasi Biaya</h6>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Material</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_material) }}</span></div>

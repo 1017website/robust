@@ -28,9 +28,13 @@ class ProjectWorkspaceController extends Controller
             ->where('category', 'fabrication_drawing')
             ->sortByDesc('created_at')
             ->values();
-        $showPrices = $request->user()->isSales() || $request->user()->isSalesAdmin();
+        $showPrices = $request->user()->canViewPrices();
+        $productionProgressDocuments = $project->documents
+            ->where('category', 'production_progress')
+            ->sortByDesc('created_at')
+            ->values();
         $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'qcChecklistDefinition', 'showPrices'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
     }
 }

@@ -24,7 +24,7 @@
                             <option value="{{ $quotation->id }}" selected>{{ $quotation->code }} — {{ $quotation->customer_name }} — {{ $quotation->project_name }}</option>
                         @endif
                     </select>
-                    <div class="form-text">Data yang tampil adalah penawaran yang sudah approved/dikirim/customer setuju dan belum pernah dibuatkan Request PO.</div>
+                    <div class="form-text">Data yang tampil adalah penawaran yang sudah siap/dikirim/customer setuju dan belum pernah dibuatkan Request PO.</div>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-4"><label class="form-label small fw-semibold">Nomor Proyek *</label><input name="project_number" value="{{ old('project_number') }}" class="form-control" placeholder="Isi manual" required></div>

@@ -3,6 +3,7 @@
 @section('content')
 @php
     $isSalesAdminLayout = auth()->user()->isAdminLevel();
+    $showPrices = auth()->user()->canViewPrices();
     $selectedActivity = $selectedActivity ?? $activities->first();
     $typeClass = fn($t) => match($t) {'meeting'=>'blue','call'=>'green','survey_lokasi'=>'orange','presentasi'=>'purple','follow_up'=>'orange','whatsapp'=>'green','email'=>'red','penawaran'=>'blue', default=>'blue'};
     $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
@@ -48,7 +49,7 @@
                                 <div class="fw-bold">{{ $cust->name }}</div>
                                 <div class="small text-muted-2">{{ $cust->primaryPic?->name ?? $cust->sales?->name ?? '-' }}</div>
                                 <div class="kanban-meta mt-2">
-                                    <span>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span>
+                                    @if($showPrices)<span>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span>@endif
                                     <span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span>
                                 </div>
                             </a>
@@ -175,7 +176,7 @@
             <div class="sales-chip-row mb-3"><span class="sales-chip active">Pipeline</span><span class="sales-chip">Activity List</span><a class="sales-chip" href="{{ route('calendar.index') }}">Calendar</a><span class="sales-chip">Tracking Harian</span></div>
             <div class="sales-kanban mb-3">
                 @foreach($pipeline as $stage => $data)
-                    <div class="kanban-col"><div class="kh {{ $stageClass($stage) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer</span></div>@forelse($data['customers']->take(4) as $cust)<div class="kanban-card"><div class="fw-bold">{{ $cust->name }}</div><div class="small text-muted-2">{{ $cust->primaryPic?->name ?? '-' }}</div><div class="kanban-meta mt-2"><span>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span><span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span></div></div>@empty<div class="small text-muted-2">Belum ada customer</div>@endforelse<a href="{{ route('sales.customers.index',['status'=>$stage]) }}" class="btn btn-link w-100 fw-bold small">Lihat Semua</a></div>
+                    <div class="kanban-col"><div class="kh {{ $stageClass($stage) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer</span></div>@forelse($data['customers']->take(4) as $cust)<div class="kanban-card"><div class="fw-bold">{{ $cust->name }}</div><div class="small text-muted-2">{{ $cust->primaryPic?->name ?? '-' }}</div><div class="kanban-meta mt-2">@if($showPrices)<span>{{ \App\Support\Format::rupiahShort($cust->quotations()->sum('grand_total')) }}</span>@endif<span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span></div></div>@empty<div class="small text-muted-2">Belum ada customer</div>@endforelse<a href="{{ route('sales.customers.index',['status'=>$stage]) }}" class="btn btn-link w-100 fw-bold small">Lihat Semua</a></div>
                 @endforeach
             </div>
             <div class="card-r p-0 overflow-hidden">

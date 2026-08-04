@@ -23,7 +23,7 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Design Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['design_overdue'] }}</div><div class="text-muted-2 small">Design request melewati deadline dan belum completed.</div></div></div>
-    <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Approval Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['approval_overdue'] }}</div><div class="text-muted-2 small">Penawaran menunggu SPV lebih dari 2 hari.</div></div></div>
+    <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>Draft Penawaran Terlambat</h2></div><div class="display-6 fw-semibold">{{ $sla['quotation_draft_overdue'] }}</div><div class="text-muted-2 small">Draft belum disiapkan lebih dari 2 hari.</div></div></div>
     <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Request PO Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['po_overdue'] }}</div><div class="text-muted-2 small">Request PO belum selesai lebih dari 3 hari.</div></div></div>
 </div>
 
@@ -70,7 +70,7 @@
             <div class="card-head"><h2>Penawaran Aktif</h2></div>
             <div class="table-wrap">
                 <table class="table-r">
-                    <thead><tr><th>Kode</th><th>Customer</th><th>Project</th><th>Sales</th><th>Nilai</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Kode</th><th>Customer</th><th>Project</th><th>Sales</th>@if($showPrices)<th>Nilai</th>@endif<th>Status</th></tr></thead>
                     <tbody>
                     @forelse($quotationPipeline as $q)
                         <tr>
@@ -78,11 +78,11 @@
                             <td>{{ $q->customer_name }}</td>
                             <td>{{ $q->project_name }}</td>
                             <td>{{ $q->sales?->name ?: '—' }}</td>
-                            <td class="fw-num">{{ \App\Support\Format::rupiah($q->grand_total) }}</td>
+                            @if($showPrices)<td class="fw-num">{{ \App\Support\Format::rupiah($q->grand_total) }}</td>@endif
                             <td><x-status-badge :status="$q->status" :label="$q->statusLabel()" /></td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><x-empty text="Belum ada penawaran aktif." /></td></tr>
+                        <tr><td colspan="{{ $showPrices ? 6 : 5 }}"><x-empty text="Belum ada penawaran aktif." /></td></tr>
                     @endforelse
                     </tbody>
                 </table>

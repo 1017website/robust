@@ -19,6 +19,7 @@
 @section('content')
 @php
     $canEditAdministration = auth()->user()->isAdminLevel();
+    $showPrices = auth()->user()->canViewPrices();
 @endphp
 <x-page-header title="Project Monitoring Dashboard" subtitle="Monitoring administrasi, invoice, produksi, QC, dan delivery dalam satu tampilan." />
 
@@ -28,7 +29,7 @@
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Produksi Selesai</small><strong>{{ $stats['production_finished'] }}</strong></div></div>
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>QC Selesai</small><strong>{{ $stats['qc_complete'] }}</strong></div></div>
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>DO/BA Kembali</small><strong>{{ $stats['delivery_complete'] }}</strong></div></div>
-    <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Belum Tertagih</small><strong>{{ \App\Support\Format::rupiahShort($stats['receivable']) }}</strong></div></div>
+    @if($showPrices)<div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Belum Tertagih</small><strong>{{ \App\Support\Format::rupiahShort($stats['receivable']) }}</strong></div></div>@endif
 </div>
 
 <div class="card-r">
@@ -42,9 +43,9 @@
     <div class="table-wrap">
         <table class="table-r monitoring-table">
             <thead><tr>
-                <th class="sticky-project">Project</th><th>Customer</th><th>Lokasi</th><th>Target / Kontrak</th><th>Nilai Subtotal</th><th>PPN</th><th>Install</th>
-                @for($i = 1; $i <= 3; $i++)<th>INV {{ $i }}</th><th>Jatuh Tempo {{ $i }}</th>@endfor
-                <th>Total Bayar</th><th>Saldo</th><th>Production</th><th>QC</th><th>Comment</th><th>Kirim</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>KP</th><th>Bukti Potong PPh</th><th>Comment / Follow-up</th><th>PIC</th><th>Aksi</th>
+                <th class="sticky-project">Project</th><th>Customer</th><th>Lokasi</th><th>Target / Kontrak</th>@if($showPrices)<th>Nilai Subtotal</th><th>PPN</th><th>Install</th>@endif
+                @for($i = 1; $i <= 3; $i++)@if($showPrices)<th>INV {{ $i }}</th>@endif<th>Jatuh Tempo {{ $i }}</th>@endfor
+                @if($showPrices)<th>Total Bayar</th><th>Saldo</th>@endif<th>Production</th><th>QC</th><th>Comment</th><th>Kirim</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>KP</th><th>Bukti Potong PPh</th><th>Comment / Follow-up</th><th>PIC</th><th>Aksi</th>
             </tr></thead>
             <tbody>
             @forelse($projects as $project)
@@ -56,12 +57,12 @@
                 <tr>
                     <td class="sticky-project"><div class="fw-bold">{{ $project->code }}</div><div>{{ $project->name }}</div></td>
                     <td>{{ $project->customer?->name ?? '-' }}</td><td>{{ $project->location ?: '-' }}</td><td>{{ $project->target_date?->format('d-m-y') ?? '-' }}</td>
-                    <td class="fw-num">{{ \App\Support\Format::rupiah($project->project_value, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($project->tax_amount, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->installation_amount ?? 0, false) }}</td>
+                    @if($showPrices)<td class="fw-num">{{ \App\Support\Format::rupiah($project->project_value, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($project->tax_amount, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->installation_amount ?? 0, false) }}</td>@endif
                     @for($i = 0; $i < 3; $i++)
                         @php($term = $terms->get($i))
-                        <td class="fw-num">{{ $term ? \App\Support\Format::rupiah($term->amount, false) : '-' }}</td><td>{{ $term?->due_date?->format('d-m-y') ?? '-' }}</td>
+                        @if($showPrices)<td class="fw-num">{{ $term ? \App\Support\Format::rupiah($term->amount, false) : '-' }}</td>@endif<td>{{ $term?->due_date?->format('d-m-y') ?? '-' }}</td>
                     @endfor
-                    <td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->paid_total ?? 0, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->balance() ?? $project->total_value, false) }}</td>
+                    @if($showPrices)<td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->paid_total ?? 0, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->balance() ?? $project->total_value, false) }}</td>@endif
                     <td><x-status-badge :status="$workflow?->production_status ?? 'stock'" :label="\App\Models\ProjectWorkflow::productionStatuses()[$workflow?->production_status ?? 'stock']" /></td>
                     <td class="text-center monitor-check"><i class="bi {{ $workflow?->qc_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
                     <td>

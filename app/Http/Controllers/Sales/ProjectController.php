@@ -102,10 +102,14 @@ class ProjectController extends Controller
             ->where('category', 'fabrication_drawing')
             ->sortByDesc('created_at')
             ->values();
-        $showPrices = Auth::user()->isSales() || Auth::user()->isSalesAdmin();
+        $showPrices = Auth::user()->canViewPrices();
+        $productionProgressDocuments = $project->documents
+            ->where('category', 'production_progress')
+            ->sortByDesc('created_at')
+            ->values();
         $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'qcChecklistDefinition', 'showPrices'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
     }
 
     protected function eligibleQuotationQuery(): Builder

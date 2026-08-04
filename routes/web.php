@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
     Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])->name('documents.preview');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
 
     // Workspace project lintas divisi: seluruh informasi, workflow, dan histori design.
@@ -142,7 +143,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Request PO terintegrasi langsung dari penawaran; sales dapat membuat tanpa input ulang.
-    Route::middleware('role:administrator,sales_admin,sales,sales_spv')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:administrator,sales_admin,sales')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/request-po', [PurchaseOrderRequestController::class, 'index'])->name('purchase-order-requests.index');
         Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
         Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
@@ -166,7 +167,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/request-masuk/{praLead}/accept', [RequestMasukController::class, 'accept'])->name('request-masuk.accept');
         Route::post('/request-masuk/{praLead}/reject', [RequestMasukController::class, 'reject'])->name('request-masuk.reject');
 
-        Route::resource('leads', LeadController::class);
+        Route::resource('leads', LeadController::class)->only(['index']);
 
         Route::get('/design-requests', [SalesDesignRequestController::class, 'index'])->name('design-requests.index');
         Route::get('/design-requests/create', [SalesDesignRequestController::class, 'create'])->name('design-requests.create');
@@ -174,20 +175,26 @@ Route::middleware('auth')->group(function () {
         Route::get('/design-requests/{designRequest}', [SalesDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::post('/design-requests/{designRequest}/revision', [SalesDesignRequestController::class, 'requestRevision'])->name('design-requests.revision');
 
+        Route::middleware('role:sales')->group(function () {
+        Route::resource('leads', LeadController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
         Route::get('/quotations', [QuotationController::class, 'index'])->name('quotations.index');
         Route::get('/quotations/create', [QuotationController::class, 'create'])->name('quotations.create');
         Route::post('/quotations', [QuotationController::class, 'store'])->name('quotations.store');
         Route::get('/quotations/{quotation}/edit', [QuotationController::class, 'edit'])->name('quotations.edit');
         Route::put('/quotations/{quotation}', [QuotationController::class, 'update'])->name('quotations.update');
         Route::get('/quotations/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
+        Route::post('/quotations/{quotation}/ready', [QuotationController::class, 'submitApproval'])->name('quotations.ready');
         Route::post('/quotations/{quotation}/submit-approval', [QuotationController::class, 'submitApproval'])->name('quotations.submit-approval');
         Route::get('/quotations/{quotation}/pdf', [QuotationController::class, 'downloadPdf'])->name('quotations.pdf');
         Route::get('/quotations/{quotation}/excel', [QuotationController::class, 'downloadExcel'])->name('quotations.excel');
         Route::post('/quotations/{quotation}/sent-to-customer', [QuotationController::class, 'markSentToCustomer'])->name('quotations.sent-to-customer');
         Route::post('/quotations/{quotation}/won', [QuotationController::class, 'markWon'])->name('quotations.won');
         Route::post('/quotations/{quotation}/lost', [QuotationController::class, 'markLost'])->name('quotations.lost');
+        Route::resource('projects', ProjectController::class)->only(['create', 'store']);
+        });
 
-        Route::resource('projects', ProjectController::class)->only(['index', 'create', 'store', 'show']);
+        Route::get('/leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
+        Route::resource('projects', ProjectController::class)->only(['index', 'show']);
     });
 
     // Customer read access untuk sales, admin, dan SPV.
@@ -210,10 +217,6 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrator,sales_spv')->prefix('spv')->name('spv.')->group(function () {
         Route::get('/quotation-approvals', [QuotationApprovalController::class, 'index'])->name('quotation-approvals.index');
         Route::get('/quotation-approvals/{quotation}', [QuotationApprovalController::class, 'show'])->name('quotation-approvals.show');
-        Route::get('/quotation-approvals/{quotation}/excel', [QuotationApprovalController::class, 'downloadExcel'])->name('quotation-approvals.excel');
-        Route::post('/quotation-approvals/{quotation}/approve', [QuotationApprovalController::class, 'approve'])->name('quotation-approvals.approve');
-        Route::post('/quotation-approvals/{quotation}/revision', [QuotationApprovalController::class, 'revision'])->name('quotation-approvals.revision');
-        Route::post('/quotation-approvals/{quotation}/reject', [QuotationApprovalController::class, 'reject'])->name('quotation-approvals.reject');
     });
 
     // ---------- Drafter ----------

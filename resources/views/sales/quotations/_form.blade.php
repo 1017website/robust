@@ -14,11 +14,7 @@
                 'quotation_image_path' => $i->quotation_image_path,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
-                'cost_price' => (float) $i->cost_price > 0
-                    ? $i->cost_price
-                    : (float) $i->unit_price * (1 - ((float) $i->margin / 100)),
                 'unit_price' => $i->unit_price,
-                'margin' => $i->margin,
                 'is_optional' => $i->is_optional,
             ])->values()->all();
         } elseif ($designRequest) {
@@ -32,7 +28,6 @@
                 'quotation_image_path' => $i->quotation_image_path,
                 'qty' => $i->qty,
                 'unit' => $i->unit,
-                'cost_price' => $i->unit_price,
                 'unit_price' => 0,
                 'is_optional' => $i->is_optional,
             ])->values()->all();
@@ -46,11 +41,12 @@
     $picValue = old('pic_name', $quotation?->pic_name ?? $designRequest?->pic_name);
     $projectValue = old('project_name', $quotation?->project_name ?? $designRequest?->project_name);
     $customerIdValue = old('customer_id', $quotation?->customer_id ?? $designRequest?->customer_id);
+    $quotationMode = old('quotation_mode', $quotation?->creation_mode ?? request('mode', 'builder'));
 @endphp
 
 <div class="steps" id="steps">
     <div class="step active" data-step="1"><div class="n">1</div><div class="lbl">Info Dasar</div></div>
-    <div class="step" data-step="2"><div class="n">2</div><div class="lbl">Item & Harga</div></div>
+    <div class="step" data-step="2"><div class="n">2</div><div class="lbl">Item Penawaran</div></div>
     <div class="step" data-step="3"><div class="n">3</div><div class="lbl">Harga</div></div>
     <div class="step" data-step="4"><div class="n">4</div><div class="lbl">Review</div></div>
 </div>
@@ -95,7 +91,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="form-text">Pilih Design Request yang sudah diselesaikan Produksi untuk memuat customer, proyek, item, gambar, spesifikasi, dan HPP secara otomatis.</div>
+                        <div class="form-text">Pilih Design Request yang sudah diselesaikan Produksi untuk memuat customer, proyek, item, gambar, dan spesifikasi secara otomatis.</div>
                     </div>
                 @endunless
                 <div class="col-md-6">
@@ -129,6 +125,21 @@
                 <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
                 <div class="col-12">
+                    <label class="form-label small fw-semibold">Cara Membuat Penawaran *</label>
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="border rounded-3 p-3 w-100 h-100 d-flex gap-2 align-items-start"><input class="form-check-input quotation-mode" type="radio" name="quotation_mode" value="builder" @checked($quotationMode === 'builder')><span><strong>Buat Penawaran</strong><small class="d-block text-muted-2">Isi item dan harga langsung di sistem.</small></span></label></div>
+                        <div class="col-md-6"><label class="border rounded-3 p-3 w-100 h-100 d-flex gap-2 align-items-start"><input class="form-check-input quotation-mode" type="radio" name="quotation_mode" value="upload" @checked($quotationMode === 'upload')><span><strong>Upload Penawaran</strong><small class="d-block text-muted-2">Upload Excel/PDF yang sudah dibuat untuk dokumentasi dan preview.</small></span></label></div>
+                    </div>
+                    <div id="quotationFileBox" class="mt-3 {{ $quotationMode === 'upload' ? '' : 'd-none' }}">
+                        <label class="form-label small fw-semibold">File Penawaran {{ $quotation?->uploadedFile() ? '(ganti bila perlu)' : '*' }}</label>
+                        <input id="quotationFile" type="file" name="quotation_file" class="form-control" accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,.jpg,.jpeg,.png" @required($quotationMode === 'upload' && ! $quotation?->uploadedFile())>
+                        <div class="form-text">XLSX/CSV akan tampil sebagai tabel; PDF dan gambar tampil langsung. Maksimal 20 MB.</div>
+                        @if($quotation?->uploadedFile())
+                            <a class="btn btn-soft btn-sm mt-2" target="_blank" href="{{ route('documents.preview', $quotation->uploadedFile()) }}"><i class="bi bi-eye me-1"></i>Preview file tersimpan</a>
+                        @endif
+                    </div>
+                </div>
+                <div class="col-12">
                     <label class="form-label small fw-semibold">Dokumen Pendukung Penawaran</label>
                     <input type="file" name="documents[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
                     <div class="form-text">Opsional. Maksimal 5 file per penyimpanan, masing-masing 10 MB. Format: PDF, Word, Excel, JPG, atau PNG.</div>
@@ -142,9 +153,9 @@
                                         {{ $document->name }}.{{ $document->file_type }}
                                         <span class="text-muted-2">({{ $document->humanSize() }})</span>
                                     </div>
-                                    <a href="{{ route('documents.download', $document) }}" class="btn btn-soft btn-sm">
-                                        <i class="bi bi-download"></i>
-                                        <span class="visually-hidden">Download {{ $document->name }}</span>
+                                    <a href="{{ route('documents.preview', $document) }}" target="_blank" class="btn btn-soft btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                        <span class="visually-hidden">Preview {{ $document->name }}</span>
                                     </a>
                                 </div>
                             @endforeach
@@ -161,7 +172,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:130px">HPP</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -191,17 +202,11 @@
                 <div class="card-r">
                     <div class="card-head"><h2>Ringkasan Harga</h2></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Subtotal</span><span class="fw-num" id="sumSubtotal">Rp 0</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Total HPP</span><span class="fw-num" id="sumCost">Rp 0</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Margin Penjualan</span><span class="fw-num text-success" id="sumMargin">Rp 0 (0%)</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Diskon</span><span class="fw-num text-danger" id="sumDiscount">- Rp 0</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">PPN</span><span class="fw-num" id="sumTax">Rp 0</span></div>
                     <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Biaya Tambahan</span><span class="fw-num" id="sumAdd">Rp 0</span></div>
                     <hr>
                     <div class="d-flex justify-content-between"><strong>Grand Total</strong><strong class="fw-num" id="sumGrand">Rp 0</strong></div>
-                    @if($designRequest?->cost_total)
-                        <hr>
-                        <div class="d-flex justify-content-between small"><span class="text-muted-2">Estimasi Cost Produksi</span><span class="fw-num">{{ \App\Support\Format::rupiah($designRequest->cost_total) }}</span></div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -217,7 +222,7 @@
             <button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
             <div class="d-flex gap-2">
                 <button type="submit" name="action" value="draft" class="btn btn-soft">{{ $submitDraftLabel }}</button>
-                <button type="submit" name="action" value="submit_approval" class="btn btn-primary"><i class="bi bi-send-check me-1"></i>{{ $submitApprovalLabel }}</button>
+                <button type="submit" name="action" value="publish" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>{{ $submitApprovalLabel }}</button>
             </div>
         </div>
     </div>
@@ -247,6 +252,7 @@ const itemsData = @json($itemsSource);
 const itemMasters = @json($itemMasters ?? []);
 const costsData = @json(array_values($costsSource ?? []));
 const storageBase = @json(asset('storage'));
+const hasStoredQuotationFile = @json((bool) $quotation?->uploadedFile());
 let step = 1, itemIdx = 0, costIdx = 0;
 let activeSpecificationInput = null;
 const rupiah = n => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n||0));
@@ -297,15 +303,25 @@ function showStep(s){
     if(s===3) recalc();
     if(s===4) buildReview();
 }
-document.querySelectorAll('.next-step').forEach(b=>b.onclick=()=>{ if(validateStep()) showStep(Math.min(step+1,4)); });
-document.querySelectorAll('.prev-step').forEach(b=>b.onclick=()=>showStep(Math.max(step-1,1)));
+function currentQuotationMode(){ return document.querySelector('[name="quotation_mode"]:checked')?.value || 'builder'; }
+function syncQuotationMode(){
+    const upload=currentQuotationMode()==='upload';
+    document.getElementById('quotationFileBox').classList.toggle('d-none',!upload);
+    const file=document.getElementById('quotationFile');
+    file.required=upload && !hasStoredQuotationFile;
+    document.querySelectorAll('[data-pane="2"] input,[data-pane="2"] select,[data-pane="2"] textarea,[data-pane="3"] input,[data-pane="3"] select,[data-pane="3"] textarea').forEach(el=>el.disabled=upload);
+    document.querySelectorAll('.step[data-step="2"],.step[data-step="3"]').forEach(el=>el.classList.toggle('d-none',upload));
+}
+document.querySelectorAll('.quotation-mode').forEach(input=>input.addEventListener('change',syncQuotationMode));
+document.querySelectorAll('.next-step').forEach(b=>b.onclick=()=>{ if(validateStep()) showStep(currentQuotationMode()==='upload' && step===1 ? 4 : Math.min(step+1,4)); });
+document.querySelectorAll('.prev-step').forEach(b=>b.onclick=()=>showStep(currentQuotationMode()==='upload' && step===4 ? 1 : Math.max(step-1,1)));
 
 function validateStep(){
     if(step===1){
         const req = document.querySelectorAll('[data-pane="1"] [required]');
         for(const el of req){ if(!el.value){ el.focus(); el.classList.add('is-invalid'); return false; } el.classList.remove('is-invalid'); }
     }
-    if(step===2 && document.querySelectorAll('#itemTable tbody tr').length===0){ alert('Tambahkan minimal 1 item.'); return false; }
+    if(step===2 && currentQuotationMode()==='builder' && document.querySelectorAll('#itemTable tbody tr').length===0){ alert('Tambahkan minimal 1 item.'); return false; }
     return true;
 }
 
@@ -334,8 +350,7 @@ function addItem(data={}){
         </td>
         <td><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty class="form-control form-control-sm it-qty" value="${data.qty||1}"></td>
         <td><input name="items[${i}][unit]" class="form-control form-control-sm" value="${esc(data.unit || 'Unit')}"></td>
-        <td><input name="items[${i}][cost_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-cost" value="${data.cost_price ?? data.unit_price ?? 0}"></td>
-        <td><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-price" value="${data.unit_price ?? 0}" required aria-label="Harga jual per unit"><small class="it-profit-display d-block text-success mt-1">Laba/unit Rp 0</small></td>
+        <td><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah class="form-control form-control-sm it-price" value="${data.unit_price ?? 0}" required aria-label="Harga jual per unit"></td>
         <td class="fw-num it-total">Rp 0</td>
         <td><button type="button" class="btn btn-sm btn-soft text-danger it-del"><i class="bi bi-x"></i></button></td>`;
     document.querySelector('#itemTable tbody').appendChild(tr);
@@ -365,26 +380,18 @@ function addItem(data={}){
         tr.querySelector('[name$="[specification]"]').value = master.specification || '';
         renderSpecificationSummary(tr);
         tr.querySelector('[name$="[unit]"]').value = master.unit || 'Unit';
-        tr.querySelector('.it-cost').value = master.default_cost_price || 0;
-        tr.querySelector('.it-price').value = master.default_cost_price || 0;
         bindNumberInputs(tr); rowTotal(tr); recalc();
     });
-    tr.querySelectorAll('.it-qty,.it-cost,.it-price').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
+    tr.querySelectorAll('.it-qty,.it-price').forEach(el=>el.addEventListener('input',()=>{ rowTotal(tr); recalc(); }));
     tr.querySelector('[name$="[is_optional]"]').addEventListener('change', recalc);
     tr.querySelector('.it-del').onclick=()=>{ tr.remove(); recalc(); };
     rowTotal(tr);
 }
 function rowTotal(tr){
-    const q=numberValue(tr.querySelector('.it-qty')), cost=numberValue(tr.querySelector('.it-cost'));
+    const q=numberValue(tr.querySelector('.it-qty'));
     const p=numberValue(tr.querySelector('.it-price'));
-    const profit=p-cost;
-    const margin=p>0?(profit/p*100):0;
-    const profitDisplay=tr.querySelector('.it-profit-display');
-    profitDisplay.textContent=`Laba/unit ${rupiah(profit)}`;
-    profitDisplay.classList.toggle('text-success',profit>=0);
-    profitDisplay.classList.toggle('text-danger',profit<0);
     tr.querySelector('.it-total').textContent = rupiah(q*p);
-    return {qty:q,cost,margin,price:p,total:q*p,totalCost:q*cost,optional:tr.querySelector('[name$="[is_optional]"]').checked};
+    return {qty:q,price:p,total:q*p,optional:tr.querySelector('[name$="[is_optional]"]').checked};
 }
 document.getElementById('addItem').onclick=()=>addItem();
 if(itemsData.length){ itemsData.forEach(addItem); } else { addItem(); }
@@ -432,16 +439,13 @@ designRequestSelect?.addEventListener('change', function(){
 });
 
 function recalc(){
-    let sub=0, totalCost=0;
+    let sub=0;
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
         const row=rowTotal(tr);
         if(!row.optional){
             sub += row.total;
-            totalCost += row.totalCost;
         }
     });
-    const marginAmount=Math.max(0,sub-totalCost);
-    const marginPercent=sub>0?(marginAmount/sub*100):0;
     const dType=document.getElementById('discType').value, dVal=numberValue(document.getElementById('discValue'));
     let disc = dType==='percent' ? sub*dVal/100 : dVal; disc=Math.min(disc,sub);
     const afterDisc = sub-disc;
@@ -449,8 +453,6 @@ function recalc(){
     let add=0; document.querySelectorAll('.cost-amt').forEach(el=>add+=numberValue(el));
     const grand = afterDisc+tax+add;
     document.getElementById('sumSubtotal').textContent=rupiah(sub);
-    document.getElementById('sumCost').textContent=rupiah(totalCost);
-    document.getElementById('sumMargin').textContent=`${rupiah(marginAmount)} (${new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(marginPercent)}%)`;
     document.getElementById('sumDiscount').textContent='- '+rupiah(disc);
     document.getElementById('sumTax').textContent=rupiah(tax);
     document.getElementById('sumAdd').textContent=rupiah(add);
@@ -459,6 +461,11 @@ function recalc(){
 
 function buildReview(){
     recalc();
+    if(currentQuotationMode()==='upload'){
+        const file=document.getElementById('quotationFile')?.files?.[0];
+        document.getElementById('reviewBox').innerHTML=`<div class="alert alert-info mb-0"><strong>Penawaran upload</strong><br>${file ? esc(file.name) : 'Menggunakan file penawaran yang sudah tersimpan.'}<br><small>File dapat dipreview dari halaman detail setelah disimpan.</small></div>`;
+        return;
+    }
     const g=v=>document.querySelector(`[name="${v}"]`)?.value||'-';
     let rows='';
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
@@ -475,8 +482,6 @@ function buildReview(){
         <table class="table-r"><thead><tr><th>Item</th><th>Qty</th><th>Harga</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="d-flex justify-content-end mt-3"><div style="min-width:240px">
             <div class="d-flex justify-content-between"><span class="text-muted-2">Subtotal</span><span class="fw-num">${document.getElementById('sumSubtotal').textContent}</span></div>
-            <div class="d-flex justify-content-between"><span class="text-muted-2">Total HPP</span><span class="fw-num">${document.getElementById('sumCost').textContent}</span></div>
-            <div class="d-flex justify-content-between"><span class="text-muted-2">Margin</span><span class="fw-num text-success">${document.getElementById('sumMargin').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Diskon</span><span class="fw-num">${document.getElementById('sumDiscount').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">PPN</span><span class="fw-num">${document.getElementById('sumTax').textContent}</span></div>
             <div class="d-flex justify-content-between"><span class="text-muted-2">Biaya Tambahan</span><span class="fw-num">${document.getElementById('sumAdd').textContent}</span></div>
@@ -484,5 +489,6 @@ function buildReview(){
         </div></div>`;
 }
 recalc();
+syncQuotationMode();
 </script>
 @endpush
