@@ -2,7 +2,7 @@
 @section('title', 'Detail Request PO')
 @section('content')
 @php($progress = $requestPo->checklistProgress())
-<x-page-header :title="$requestPo->code" :subtitle="($requestPo->quotation?->customer_name ?: 'Customer').' · '.($requestPo->quotation?->project_name ?: 'Project')">
+<x-page-header :title="$requestPo->code" :subtitle="($requestPo->customer_name ?: ($requestPo->quotation?->customer_name ?: 'Customer')).' · '.($requestPo->quotation?->project_name ?: 'Project')">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
     @if($requestPo->quotation?->project)<a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}" class="btn btn-soft btn-sm"><i class="bi bi-kanban me-1"></i>Project Operasional</a>@endif
@@ -13,13 +13,13 @@
 <div class="row g-3">
     <div class="col-lg-8">
         <div class="card-r">
-            <div class="card-head"><h2>Data Penawaran</h2><x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div>
+            <div class="card-head"><h2>Data Order</h2><div class="d-flex gap-2 align-items-center">@if($requestPo->quotation?->isExternal())<span class="badge text-bg-info">PO Existing / Non-CRM</span>@endif<x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div></div>
             <div class="row g-3 small">
                 <div class="col-md-3"><div class="text-muted-2">Nomor Proyek</div><div class="fw-semibold">{{ $requestPo->project_number ?: '—' }}</div></div>
                 <div class="col-md-3"><div class="text-muted-2">Area / Lokasi</div><div class="fw-semibold">{{ $requestPo->customer_area ?: '—' }}</div></div>
                 <div class="col-md-3"><div class="text-muted-2">Divisi Customer</div><div class="fw-semibold">{{ $requestPo->customer_division ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">No Penawaran</div><div class="fw-semibold">{{ $requestPo->quotation?->code ?: '—' }}</div></div>
-                <div class="col-md-4"><div class="text-muted-2">Customer</div><div class="fw-semibold">{{ $requestPo->quotation?->customer_name ?: '—' }}</div></div>
+                <div class="col-md-4"><div class="text-muted-2">Customer</div><div class="fw-semibold">{{ $requestPo->customer_name ?: ($requestPo->quotation?->customer_name ?: '—') }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">Sales</div><div class="fw-semibold">{{ $requestPo->quotation?->sales?->name ?: '—' }}</div></div>
                 <div class="col-md-8"><div class="text-muted-2">Project</div><div class="fw-semibold">{{ $requestPo->quotation?->project_name ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">Nilai Penawaran</div><div class="fw-semibold fw-num">{{ \App\Support\Format::rupiah($requestPo->quotation?->grand_total ?? 0) }}</div></div>

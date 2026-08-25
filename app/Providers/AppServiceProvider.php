@@ -125,7 +125,7 @@ class AppServiceProvider extends ServiceProvider
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingDelivery, 'Project siap dikirim', 'QC selesai. Atur jadwal, unggah POD, dan konfirmasi penerimaan customer.', route('drafter.projects.index'), 'bi-truck', 'text-primary');
                 }
 
-                if (in_array($user->role, ['administrator', 'sales_admin', 'sales_spv', 'sales', 'administration'], true)) {
+                if (in_array($user->role, ['administrator', 'sales_spv', 'sales', 'administration'], true)) {
                     $overdueActivities = Activity::query()
                         ->when($user->isSales(), fn ($query) => $query->where('sales_id', $user->id))
                         ->whereDate('activity_date', '<', today())

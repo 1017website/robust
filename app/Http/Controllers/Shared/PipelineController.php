@@ -20,7 +20,7 @@ class PipelineController extends Controller
         $salesId = Auth::id();
 
         $salesScope = fn (Builder $q, string $column = 'sales_id') => $isSales ? $q->where($column, $salesId) : $q;
-        $canOpenAdmin = in_array($user->role, ['administrator', 'sales_admin'], true);
+        $canOpenAdmin = $user->isAdminLevel();
         $canOpenSales = $user->role === 'sales';
         $canOpenSpv = in_array($user->role, ['administrator', 'sales_spv'], true);
 

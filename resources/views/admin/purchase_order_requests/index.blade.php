@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Request PO')
 @section('content')
-<x-page-header title="Request PO" subtitle="Monitoring request PO dari penawaran approved menuju input PO di Accurate">
+<x-page-header title="Request PO" subtitle="Monitoring Request PO dari penawaran CRM maupun order existing menuju Accurate">
     <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Request PO Baru</a>
 </x-page-header>
 
@@ -24,8 +24,8 @@
                 <tr>
                     <td class="fw-semibold">{{ $r->code }}</td>
                     <td>{{ $r->project_number ?: '—' }}</td>
-                    <td>{{ $r->quotation?->code ?: '—' }}</td>
-                    <td>{{ $r->quotation?->customer_name ?: '—' }}</td>
+                    <td>{{ $r->quotation?->code ?: '—' }} @if($r->quotation?->isExternal())<span class="badge text-bg-info ms-1">Non-CRM</span>@endif</td>
+                    <td>{{ $r->customer_name ?: ($r->quotation?->customer_name ?: '—') }}</td>
                     <td>{{ $r->quotation?->project_name ?: '—' }}</td>
                     <td>{{ $r->quotation?->sales?->name ?: '—' }}</td>
                     <td class="fw-semibold">{{ $r->accurate_po_number ?: '—' }}</td>

@@ -318,7 +318,7 @@ class QuotationController extends Controller
         $this->recordHistory($quotation, 'customer_accepted', $oldStatus, 'customer_accepted', $request->input('note'));
         Logger::record('customer_accepted', "Penawaran {$quotation->code} disetujui customer", $quotation);
 
-        return back()->with('success', 'Penawaran ditandai customer setuju. Sales Admin sudah bisa membuat Request PO.');
+        return back()->with('success', 'Penawaran ditandai customer setuju. Request PO sudah dapat dibuat.');
     }
 
     public function markLost(Request $request, Quotation $quotation)

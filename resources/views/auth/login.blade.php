@@ -54,7 +54,7 @@
             <div class="small text-muted mb-2">Akun demo:</div>
             <div class="small text-muted-2" style="line-height:1.8">
                 <div><strong>Administrator:</strong> superadmin@robust.test</div>
-                <div><strong>Sales Admin:</strong> admin@robust.test</div>
+                <div><strong>Sales:</strong> admin@robust.test</div>
                 <div><strong>Sales:</strong> sales@robust.test</div>
                 <div><strong>SPV Sales:</strong> spv@robust.test</div>
                 <div><strong>Drafter:</strong> drafter@robust.test</div>

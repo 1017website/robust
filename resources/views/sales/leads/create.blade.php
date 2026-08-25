@@ -5,7 +5,7 @@
 @php
     $defaultScopes = ['Wall Bench', 'Fume Hood', 'Storage Cabinet', 'Sink Area', 'Meja Praktikum'];
     $scopeItems = old('scope_items', $defaultScopes);
-    $cityOptions = ['Jakarta','Bandung','Surabaya','Semarang','Yogyakarta','Malang','Denpasar','Medan','Makassar','Balikpapan','Lainnya'];
+    $cityOptions = ['Jakarta','Bandung','Surabaya','Semarang','Yogyakarta','Malang','Denpasar','Medan','Makassar','Balikpapan'];
 @endphp
 <div class="sales-ui lead-layout-page">
     <form method="POST" action="{{ route('sales.leads.store') }}" enctype="multipart/form-data" class="lead-form-shell">
@@ -67,12 +67,13 @@
                     <div class="row g-3 mt-0">
                         <div class="col-md-6">
                             <label class="form-label lead-label">Kota <span>*</span></label>
-                            <select name="city" class="form-select lead-control" required>
-                                <option value="">Pilih kota</option>
+                            <input name="city" list="indonesianCityOptions" value="{{ old('city') }}" class="form-control lead-control" required placeholder="Pilih atau ketik nama kota/kabupaten">
+                            <datalist id="indonesianCityOptions">
                                 @foreach($cityOptions as $city)
-                                    <option value="{{ $city }}" @selected(old('city')==$city)>{{ $city }}</option>
+                                    <option value="{{ $city }}"></option>
                                 @endforeach
-                            </select>
+                            </datalist>
+                            <div class="form-text">Nama kota/kabupaten dapat diketik manual jika belum ada di saran.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label lead-label">Tipe Instansi <span>*</span></label>

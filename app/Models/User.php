@@ -29,6 +29,7 @@ class User extends Authenticatable
     }
 
     public function isAdministrator(): bool { return $this->role === 'administrator'; }
+    /** @deprecated Dipertahankan hanya sampai migration role lama dijalankan. */
     public function isSalesAdmin(): bool { return $this->role === 'sales_admin'; }
     public function isSales(): bool { return $this->role === 'sales'; }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
@@ -38,13 +39,13 @@ class User extends Authenticatable
     public function isAdministration(): bool { return $this->role === 'administration'; }
     public function isSalesSpv(): bool { return $this->role === 'sales_spv'; }
 
-    /** Harga komersial hanya dapat dilihat administrator, sales admin, dan sales pemilik. */
+    /** Harga komersial hanya dapat dilihat administrator dan sales pemilik. */
     public function canViewPrices(): bool
     {
         return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
     }
 
-    /** True untuk administrator maupun sales_admin (level admin ke atas). */
+    /** True untuk Administrator; sales_admin hanya kompatibilitas data lama. */
     public function isAdminLevel(): bool
     {
         return in_array($this->role, ['administrator', 'sales_admin'], true);
@@ -54,7 +55,7 @@ class User extends Authenticatable
     {
         return match ($this->role) {
             'administrator' => 'Administrator',
-            'sales_admin' => 'Sales Admin',
+            'sales_admin' => 'Administrator (Legacy)',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Drafter',
@@ -71,7 +72,6 @@ class User extends Authenticatable
     {
         return [
             'administrator' => 'Administrator',
-            'sales_admin' => 'Sales Admin',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Drafter',

@@ -4,7 +4,7 @@
 @section('content')
 @php
     $scopeItems = old('scope_items', $lead->scope_items ?: []);
-    $cityOptions = ['Jakarta','Bandung','Surabaya','Semarang','Yogyakarta','Malang','Denpasar','Medan','Makassar','Balikpapan','Lainnya'];
+    $cityOptions = ['Jakarta','Bandung','Surabaya','Semarang','Yogyakarta','Malang','Denpasar','Medan','Makassar','Balikpapan'];
     $selectedCity = old('city', $lead->city);
 @endphp
 <div class="sales-ui lead-layout-page">
@@ -68,15 +68,13 @@
                     <div class="row g-3 mt-0">
                         <div class="col-md-6">
                             <label class="form-label lead-label">Kota <span>*</span></label>
-                            <select name="city" class="form-select lead-control" required>
-                                <option value="">Pilih kota</option>
-                                @if($selectedCity && !in_array($selectedCity, $cityOptions))
-                                    <option value="{{ $selectedCity }}" selected>{{ $selectedCity }}</option>
-                                @endif
+                            <input name="city" list="indonesianCityOptions" value="{{ $selectedCity }}" class="form-control lead-control" required placeholder="Pilih atau ketik nama kota/kabupaten">
+                            <datalist id="indonesianCityOptions">
                                 @foreach($cityOptions as $city)
-                                    <option value="{{ $city }}" @selected($selectedCity==$city)>{{ $city }}</option>
+                                    <option value="{{ $city }}"></option>
                                 @endforeach
-                            </select>
+                            </datalist>
+                            <div class="form-text">Nama kota/kabupaten dapat diketik manual jika belum ada di saran.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label lead-label">Tipe Instansi <span>*</span></label>

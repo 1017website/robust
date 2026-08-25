@@ -4,7 +4,9 @@
 @php
     $selected = $selectedRequest;
     $sourceClass = fn($source) => match(strtolower($source ?? '')) {
-        'whatsapp' => 'st-green', 'website' => 'st-blue', 'email' => 'st-red', 'referensi' => 'st-purple', default => 'st-gray'
+        'distributor' => 'st-blue', 'supplier' => 'st-orange', 'loops_lab_nusantara' => 'st-purple',
+        'robust_multilab_solusindo' => 'st-green', 'robust_indonesia_sinar_lab' => 'st-red', 'mec' => 'st-blue',
+        default => 'st-gray'
     };
     $previewUrl = fn($id) => route('sales.request-masuk.index', array_merge(request()->query(), ['request' => $id])).'#detail-request';
 @endphp
@@ -14,7 +16,7 @@
             <div class="sales-page-head">
                 <div>
                     <h1 class="page-title mb-1">Request Masuk</h1>
-                    <div class="page-subtitle">Daftar prospek baru yang dikirim oleh Sales Admin. Silakan tinjau dan terima untuk menjadi lead Anda.</div>
+                    <div class="page-subtitle">Daftar prospek baru yang dikirim oleh Administrator. Silakan tinjau dan terima untuk menjadi lead Anda.</div>
                 </div>
             </div>
 
@@ -87,7 +89,7 @@
                             <div class="fw-bold mb-2">{{ $selected->lab_type ?: 'Jenis kebutuhan belum diisi' }}</div>
                             <div class="small text-muted-2">{{ $selected->initial_need ?: 'Belum ada deskripsi kebutuhan.' }}</div>
                         </div></div>
-                        <div class="col-12"><div class="info-card h-100"><h6>Catatan Sales Admin</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
+                        <div class="col-12"><div class="info-card h-100"><h6>Catatan Administrator</h6><div class="p-3 rounded-3 bg-warning-subtle small">{{ $selected->admin_note ?: 'Belum ada catatan.' }}</div></div></div>
                         @if(auth()->user()->canViewPrices())<div class="col-12"><div class="info-card h-100"><h6>Estimasi Nilai Proyek <i class="bi bi-info-circle text-muted" title="Rentang perkiraan nilai proyek berdasarkan kebutuhan awal, bukan harga penawaran final."></i></h6><div class="small text-muted-2 mb-2">Rentang awal, bukan harga penawaran final</div><div class="estimate-range"><span><small>Minimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_min ?? 0) }}</strong></span><i class="bi bi-arrow-right"></i><span><small>Maksimum</small><strong>{{ \App\Support\Format::rupiah($selected->est_value_max ?? 0) }}</strong></span></div></div></div>@endif
                     </div>
 

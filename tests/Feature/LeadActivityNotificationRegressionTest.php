@@ -24,7 +24,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
             ->post(route('admin.pra-leads.store'), [
                 'instansi' => 'Prospek Tanpa WhatsApp',
                 'pic_name' => 'PIC Prospek',
-                'source' => 'website',
+                'source' => 'distributor',
                 'priority' => 'medium',
                 'action' => 'save',
             ])
@@ -38,13 +38,15 @@ class LeadActivityNotificationRegressionTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'sales_admin']);
         $sources = [
-            'loops_lab_nusantara' => 'Loops Lab Nusantara',
-            'loops_robust' => 'Loops Robust',
-            'website_robust_indonesia' => 'Website Robust Indonesia',
+            'distributor' => 'Distributor',
+            'supplier' => 'Supplier',
+            'loops_lab_nusantara' => 'Loops LabNusantara',
+            'robust_multilab_solusindo' => 'Robust Multilab Solusindo',
+            'robust_indonesia_sinar_lab' => 'Robust Indonesia - Sinar Lab',
             'mec' => 'MEC',
         ];
 
-        $this->assertSame($sources, array_intersect_key(PraLead::sources(), $sources));
+        $this->assertSame($sources, PraLead::sources());
 
         $response = $this->actingAs($admin)->get(route('admin.pra-leads.index'));
         foreach ($sources as $label) {
@@ -78,7 +80,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
             'division' => 'Research and Development',
             'pic_name' => 'PIC Divisi',
             'phone' => '081234567890',
-            'source' => 'website',
+            'source' => 'distributor',
             'priority' => 'medium',
             'assigned_sales_id' => $sales->id,
             'action' => 'send',
@@ -129,7 +131,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
             'instansi' => 'Request Badge Test',
             'pic_name' => 'PIC Badge',
             'phone' => '081200000001',
-            'source' => 'website',
+            'source' => 'distributor',
             'priority' => 'medium',
             'status' => 'waiting_acceptance',
             'assigned_sales_id' => $sales->id,

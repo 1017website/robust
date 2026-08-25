@@ -74,7 +74,7 @@ class LiveWorkflowAuditTest extends TestCase
             'pic_position' => 'Kepala Laboratorium',
             'phone' => '081234560726',
             'email' => 'ahmad.audit@example.test',
-            'source' => 'website',
+            'source' => 'distributor',
             'lab_type' => 'Laboratorium Kimia',
             'location' => 'Bandung',
             'initial_need' => 'Wall bench dan fume hood untuk laboratorium kimia.',

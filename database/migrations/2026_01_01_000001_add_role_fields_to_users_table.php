@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'role')) {
-                $table->string('role')->default('sales')->after('password'); // sales_admin, sales, drafter
+                $table->string('role')->default('sales')->after('password');
             }
             if (! Schema::hasColumn('users', 'job_title')) {
                 $table->string('job_title')->nullable()->after('role');

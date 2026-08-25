@@ -18,7 +18,7 @@
     </form>
     <div class="table-wrap"><table class="table-r"><thead><tr><th>Kode</th><th>Customer</th><th>Proyek</th><th>Dibuat oleh Sales</th><th>Waktu Dibuat</th><th>Jenis</th><th>Status</th><th></th></tr></thead><tbody>
     @forelse($quotations as $quotation)
-        <tr><td class="fw-semibold">{{ $quotation->code }}</td><td>{{ $quotation->customer_name }}</td><td>{{ $quotation->project_name }}</td><td>{{ $quotation->sales?->name ?? '—' }}</td><td>{{ $quotation->created_at?->format('d M Y H:i') }}</td><td>{{ $quotation->isUploaded() ? 'Upload file' : 'Dibuat di sistem' }}</td><td><x-status-badge :status="$quotation->status" :label="$quotation->statusLabel()" /></td><td><a href="{{ route('spv.quotation-approvals.show',$quotation) }}" class="btn btn-sm btn-soft">Lihat Catatan</a></td></tr>
+        <tr><td class="fw-semibold">{{ $quotation->code }}</td><td>{{ $quotation->customer_name }}</td><td>{{ $quotation->project_name }}</td><td>{{ $quotation->sales?->name ?? '—' }}</td><td>{{ $quotation->created_at?->format('d M Y H:i') }}</td><td>{{ $quotation->creationModeLabel() }}</td><td><x-status-badge :status="$quotation->status" :label="$quotation->statusLabel()" /></td><td><a href="{{ route('spv.quotation-approvals.show',$quotation) }}" class="btn btn-sm btn-soft">Lihat Catatan</a></td></tr>
     @empty
         <tr><td colspan="8"><x-empty text="Belum ada penawaran yang dibuat sales." /></td></tr>
     @endforelse

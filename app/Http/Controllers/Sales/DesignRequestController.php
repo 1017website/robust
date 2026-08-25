@@ -119,7 +119,7 @@ class DesignRequestController extends Controller
             }))],
             'production_note' => ['nullable', 'string', 'max:300'],
             'attachments' => ['nullable', 'array', 'max:5'],
-            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:10240'],
+            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:81920'],
             'sales_id' => [
                 Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
                 'nullable',
@@ -145,7 +145,7 @@ class DesignRequestController extends Controller
         if ($customer) {
             $data['customer_id'] = $customer->id;
             $data['customer_name'] = $customer->name;
-            $data['pic_name'] = $data['pic_name'] ?: $customer->primaryPic?->name;
+            $data['pic_name'] = ($data['pic_name'] ?? null) ?: $customer->primaryPic?->name;
         }
 
         $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
@@ -180,9 +180,17 @@ class DesignRequestController extends Controller
         }
         Logger::record('created', "Design Request {$designRequest->code} dibuat", $designRequest);
 
+        $message = 'Design Request berhasil disimpan dan drafter sudah ditugaskan.';
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'redirect' => route('sales.design-requests.index'),
+            ], 201);
+        }
+
         return redirect()
             ->route('sales.design-requests.index')
-            ->with('success', 'Design Request berhasil disimpan dan drafter sudah ditugaskan.');
+            ->with('success', $message);
     }
 
     public function show(DesignRequest $designRequest)

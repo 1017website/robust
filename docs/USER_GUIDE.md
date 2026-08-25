@@ -5,9 +5,9 @@ Panduan penggunaan untuk pengelolaan proses penjualan Laboratory Furniture & Equ
 | Informasi | Keterangan |
 |---|---|
 | Aplikasi | ROBUST Sales CRM |
-| Pengguna | Administrator, Sales Admin, Sales, SPV Sales, Produksi/Drafter |
+| Pengguna | Administrator, Sales, SPV Sales, Produksi/Drafter |
 | Bahasa panduan | Indonesia |
-| Terakhir diperbarui | 17 Juli 2026 |
+| Terakhir diperbarui | 25 Agustus 2026 |
 
 > **Catatan:** Tombol dan menu yang tampil mengikuti role akun. Jika sebuah menu tidak terlihat, kemungkinan akun Anda tidak memiliki hak akses ke modul tersebut.
 
@@ -17,7 +17,7 @@ ROBUST Sales CRM membantu tim mencatat dan memantau satu alur kerja yang saling 
 
 ```mermaid
 flowchart LR
-    A["Sales Admin<br/>membuat Pra Lead"] --> B["Sales<br/>menerima Request"]
+    A["Administrator<br/>membuat Pra Lead"] --> B["Sales<br/>menerima Request"]
     B --> C["Lead dan Customer<br/>dibuat otomatis"]
     C --> D["Sales<br/>membuat Design Request"]
     D --> E["Drafter<br/>desain dan costing"]
@@ -46,7 +46,7 @@ Untuk lingkungan demo, akun berikut tersedia dengan password `password`:
 | Role | Email |
 |---|---|
 | Administrator | `superadmin@robust.test` |
-| Sales Admin | `admin@robust.test` |
+| Sales | `admin@robust.test` |
 | Sales | `sales@robust.test` |
 | Sales kedua | `sales2@robust.test` |
 | SPV Sales | `spv@robust.test` |
@@ -72,9 +72,8 @@ Klik nama pengguna di kanan atas, lalu pilih **Logout**. Pada akun Sales dan Dra
 
 | Role | Tanggung jawab utama |
 |---|---|
-| Administrator | Mengelola konfigurasi, user, pra lead, assignment, monitoring, dan dapat menangani approval penawaran. |
-| Sales Admin | Mencatat pra lead, memilih Sales, memantau beban kerja, mengelola customer, user non-Administrator, dan Request PO. |
-| Sales | Menerima request, mengelola lead/customer/aktivitas, membuat Design Request dan penawaran, mencatat respons customer, serta membuat project. |
+| Administrator | Mengelola konfigurasi, user, pra lead, assignment, monitoring, proses Accurate, dan dapat menangani approval penawaran. |
+| Sales | Menerima request, mengelola lead/customer/aktivitas, membuat Design Request dan penawaran, mencatat respons customer, serta membuat Project dan Request PO. |
 | SPV Sales | Memeriksa penawaran dan memilih Approve, Minta Revisi, atau Tolak. |
 | Produksi/Drafter | Mengerjakan Design Request, mengisi spesifikasi, costing, item hasil, dokumen, dan mengirim hasil final ke Sales. |
 
@@ -83,22 +82,21 @@ Klik nama pengguna di kanan atas, lalu pilih **Logout**. Pada akun Sales dan Dra
 - Sales hanya dapat mengakses data penjualan yang menjadi tanggung jawabnya.
 - Drafter hanya dapat mengerjakan Design Request yang ditugaskan kepadanya.
 - SPV Sales dapat membaca customer dan memproses antrean approval penawaran.
-- Sales Admin tidak dapat membuat, mengubah, atau menghapus akun Administrator.
 - Hanya Administrator yang dapat membuka **System Settings**.
 
 ## 4. Tutorial Alur Utama dari Awal sampai Selesai
 
 Bagian ini adalah jalur yang paling disarankan untuk penggunaan sehari-hari.
 
-### Tahap 1 — Sales Admin membuat dan mengirim Pra Lead
+### Tahap 1 — Administrator membuat dan mengirim Pra Lead
 
-1. Login sebagai **Sales Admin** atau **Administrator**.
+1. Login sebagai **Administrator**.
 2. Buka menu **Pra Leads**.
 3. Klik **Tambah Pra Lead**.
 4. Isi sekurang-kurangnya:
    - Instansi/customer.
    - Nama PIC.
-   - Sumber prospek, misalnya Website, WhatsApp, Referensi, Telepon, atau Email.
+   - Sumber prospek: Distributor, Supplier, Loops LabNusantara, Robust Multilab Solusindo, Robust Indonesia - Sinar Lab, atau MEC.
    - Kebutuhan awal.
    - Prioritas.
 5. Lengkapi data pendukung jika tersedia: jabatan PIC, telepon, email, jenis lab, lokasi, estimasi nilai, dan catatan Admin.
@@ -132,7 +130,7 @@ Bagian ini adalah jalur yang paling disarankan untuk penggunaan sehari-hari.
 
 - Alasan penolakan wajib diisi.
 - Status berubah menjadi **Ditolak Sales**.
-- Sales Admin dapat memperbaiki assignment atau data, kemudian mengirimnya kembali.
+- Administrator dapat memperbaiki assignment atau data, kemudian mengirimnya kembali.
 
 ### Tahap 3 — Sales melengkapi Lead dan Customer
 
@@ -312,14 +310,16 @@ Project dibuat dari penawaran yang telah dimenangkan/customer setuju.
 
 **Hasil:** nilai project, pajak, customer, dan total ditarik dari penawaran terkait.
 
-### Tahap 11 — Sales Admin membuat Request PO
+### Tahap 11 — Sales atau Administrator membuat Request PO
 
 Disarankan membuat Request PO setelah penawaran disetujui customer dan data order telah lengkap.
 
-1. Login sebagai **Sales Admin** atau **Administrator**.
+1. Login sebagai **Sales** atau **Administrator**.
 2. Buka menu **Request PO**.
 3. Klik **Request PO Baru**.
-4. Pilih penawaran yang memenuhi syarat dan belum pernah dibuatkan Request PO.
+4. Pilih sumber Request PO:
+   - **Penawaran CRM** untuk penawaran yang memenuhi syarat dan belum memiliki Request PO.
+   - **PO Existing / Non-CRM** untuk order yang penawarannya dibuat di luar CRM; isi nama project, nomor referensi (opsional), nilai PO, dan Sales penanggung jawab.
 5. Isi nomor PO customer dan unggah buktinya jika tersedia.
 6. Lengkapi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, serta estimasi tanggal pengiriman.
 7. Periksa checklist kelengkapan:
@@ -331,7 +331,7 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
    - Termin pembayaran sudah jelas.
    - Data siap diinput ke Accurate.
 8. Klik **Simpan/Buat Request PO**.
-9. Setelah diproses di Accurate, buka detail Request PO dan ubah status:
+9. Administrator membuka detail Request PO setelah diproses di Accurate dan mengubah status:
    - Diajukan ke Accurate.
    - Diproses di Accurate.
    - PO Accurate Dibuat.
@@ -342,7 +342,7 @@ File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/X
 
 ## 5. Panduan Fitur per Role
 
-### 5.1 Sales Admin dan Administrator
+### 5.1 Administrator
 
 #### Memantau Pipeline
 
@@ -520,7 +520,7 @@ Gunakan **Reports** untuk memantau performa penjualan atau produksi. Pada lapora
 
 ## 8. Checklist Operasional Harian
 
-### Sales Admin
+### Administrator
 
 - Periksa Pra Lead baru.
 - Pastikan setiap Pra Lead memiliki Sales yang sesuai.
@@ -581,7 +581,7 @@ Gunakan **Reports** untuk memantau performa penjualan atau produksi. Pada lapora
 
 Gunakan data demo dan lakukan latihan berikut secara berurutan:
 
-1. Sales Admin membuat satu Pra Lead dan mengirimkannya ke `sales@robust.test`.
+1. Administrator membuat satu Pra Lead dan mengirimkannya ke `sales@robust.test`.
 2. Sales menerima request dan memastikan Lead serta Customer terbentuk.
 3. Sales membuat satu aktivitas Follow Up.
 4. Sales membuat Design Request dan menugaskannya ke `drafter@robust.test`.
@@ -592,7 +592,6 @@ Gunakan data demo dan lakukan latihan berikut secara berurutan:
 9. SPV melakukan Approve.
 10. Sales mengunduh PDF, menandai sudah dikirim, lalu mencatat Customer Setuju.
 11. Sales membuat Project.
-12. Sales Admin membuat Request PO dan mengubah status hingga PO Accurate Dibuat.
+12. Sales membuat Request PO; Administrator mengubah status hingga PO Accurate Dibuat.
 
 Jika seluruh langkah berhasil, pengguna sudah memahami alur inti ROBUST Sales CRM.
-

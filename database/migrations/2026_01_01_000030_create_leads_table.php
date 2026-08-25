@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('location')->nullable();
             $table->string('city')->nullable();
             $table->string('instansi_type')->nullable();
-            $table->string('source')->default('whatsapp');
+            $table->string('source')->default('distributor');
             $table->string('reference')->nullable();
             $table->string('lab_name')->nullable();          // nama laboratorium / proyek
             $table->text('need_description')->nullable();

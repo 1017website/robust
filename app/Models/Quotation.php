@@ -123,6 +123,20 @@ class Quotation extends Model
         return $this->creation_mode === 'upload';
     }
 
+    public function isExternal(): bool
+    {
+        return $this->creation_mode === 'external';
+    }
+
+    public function creationModeLabel(): string
+    {
+        return match ($this->creation_mode) {
+            'upload' => 'Upload file',
+            'external' => 'Penawaran eksternal / Non-CRM',
+            default => 'Dibuat di sistem',
+        };
+    }
+
     public function uploadedFile(): ?Document
     {
         return $this->documents

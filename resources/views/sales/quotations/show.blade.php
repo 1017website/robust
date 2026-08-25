@@ -81,7 +81,7 @@
             <div class="card-head"><h2>Pencatatan Penawaran</h2></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Status</span><span class="fw-semibold">{{ $quotation->statusLabel() }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Dibuat oleh</span><span class="fw-semibold">{{ $quotation->sales?->name ?: '—' }}</span></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Jenis</span><span class="fw-semibold">{{ $quotation->isUploaded() ? 'Upload file' : 'Dibuat di sistem' }}</span></div>
+            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Jenis</span><span class="fw-semibold">{{ $quotation->creationModeLabel() }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Dibuat</span><span class="fw-semibold">{{ $quotation->created_at?->format('d M Y H:i') }}</span></div>
         </div>
         <div class="card-r">

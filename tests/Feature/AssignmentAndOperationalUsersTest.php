@@ -31,7 +31,7 @@ class AssignmentAndOperationalUsersTest extends TestCase
             'location' => 'Bandung',
             'city' => 'Bandung',
             'instansi_type' => 'Industri',
-            'source' => 'website',
+            'source' => 'distributor',
             'lab_name' => 'Lab Ownership',
             'priority' => 'medium',
             'stage' => 'lead',

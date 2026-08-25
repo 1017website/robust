@@ -205,7 +205,7 @@
                 <div class="col-md-6"><label class="form-label small fw-semibold">Sumber <span class="text-danger">*</span></label>
                     <select name="source" class="form-select" required>
                         @foreach($sourceLabels as $src => $label)
-                            <option value="{{ $src }}" @selected(old('source','whatsapp')===$src)>{{ $label }}</option>
+                            <option value="{{ $src }}" @selected(old('source','distributor')===$src)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setField('pic_position', btn.dataset.picPosition);
             setField('phone', btn.dataset.phone);
             setField('email', btn.dataset.email);
-            setField('source', btn.dataset.source || 'whatsapp');
+            setField('source', btn.dataset.source || 'distributor');
             setField('lab_type', btn.dataset.labType);
             setField('location', btn.dataset.location);
             setField('initial_need', btn.dataset.initialNeed);

@@ -36,16 +36,12 @@ class PraLead extends Model
     public static function sources(): array
     {
         return [
-            'whatsapp' => 'WhatsApp',
-            'website' => 'Website',
-            'referensi' => 'Referensi',
-            'telepon' => 'Telepon',
-            'email' => 'Email',
-            'loops_lab_nusantara' => 'Loops Lab Nusantara',
-            'loops_robust' => 'Loops Robust',
-            'website_robust_indonesia' => 'Website Robust Indonesia',
+            'distributor' => 'Distributor',
+            'supplier' => 'Supplier',
+            'loops_lab_nusantara' => 'Loops LabNusantara',
+            'robust_multilab_solusindo' => 'Robust Multilab Solusindo',
+            'robust_indonesia_sinar_lab' => 'Robust Indonesia - Sinar Lab',
             'mec' => 'MEC',
-            'lainnya' => 'Lainnya',
         ];
     }
 }

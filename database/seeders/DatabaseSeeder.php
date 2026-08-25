@@ -31,8 +31,8 @@ class DatabaseSeeder extends Seeder
         ]);
         $admin = User::create([
             'name' => 'Budi Santoso', 'email' => 'admin@robust.test',
-            'password' => Hash::make('password'), 'role' => 'sales_admin',
-            'job_title' => 'Sales Admin', 'phone' => '081200000001', 'is_active' => true,
+            'password' => Hash::make('password'), 'role' => 'sales',
+            'job_title' => 'Sales Coordinator', 'phone' => '081200000001', 'is_active' => true,
         ]);
         $sales = User::create([
             'name' => 'Rizky Pratama', 'email' => 'sales@robust.test',
@@ -90,7 +90,7 @@ class DatabaseSeeder extends Seeder
         PraLead::create([
             'code' => 'PL-0001', 'instansi' => 'Politeknik Negeri Malang', 'pic_name' => 'Agus Hermawan',
             'pic_position' => 'Kepala Jurusan', 'phone' => '081299988877', 'email' => 'agus@polinema.ac.id',
-            'source' => 'website', 'lab_type' => 'Lab Kimia Dasar', 'location' => 'Malang',
+            'source' => 'distributor', 'lab_type' => 'Lab Kimia Dasar', 'location' => 'Malang',
             'initial_need' => 'Pengadaan meja lab dan fume hood untuk lab kimia baru.',
             'est_value_min' => 150000000, 'est_value_max' => 250000000, 'priority' => 'high',
             'status' => 'waiting_acceptance', 'assigned_sales_id' => $sales->id, 'created_by' => $admin->id,
@@ -98,7 +98,7 @@ class DatabaseSeeder extends Seeder
         ]);
         PraLead::create([
             'code' => 'PL-0002', 'instansi' => 'SMA Negeri 5 Surabaya', 'pic_name' => 'Sri Wahyuni',
-            'pic_position' => 'Wakil Kepala Sekolah', 'phone' => '081277766655', 'source' => 'referensi',
+            'pic_position' => 'Wakil Kepala Sekolah', 'phone' => '081277766655', 'source' => 'distributor',
             'lab_type' => 'Lab IPA', 'location' => 'Surabaya', 'initial_need' => 'Renovasi lab IPA terpadu.',
             'est_value_min' => 80000000, 'est_value_max' => 120000000, 'priority' => 'medium',
             'status' => 'waiting_acceptance', 'assigned_sales_id' => $sales->id, 'created_by' => $admin->id,
@@ -106,7 +106,7 @@ class DatabaseSeeder extends Seeder
         ]);
         PraLead::create([
             'code' => 'PL-0003', 'instansi' => 'PT Kimia Farma', 'pic_name' => 'Bambang Sutejo',
-            'pic_position' => 'Manager QC', 'phone' => '081244433322', 'source' => 'whatsapp',
+            'pic_position' => 'Manager QC', 'phone' => '081244433322', 'source' => 'supplier',
             'lab_type' => 'Lab QC', 'location' => 'Jakarta', 'initial_need' => 'Lab QC dengan fume hood industri.',
             'est_value_min' => 300000000, 'priority' => 'high', 'status' => 'draft', 'created_by' => $admin->id,
         ]);
@@ -116,7 +116,7 @@ class DatabaseSeeder extends Seeder
             'code' => 'LD-0001', 'instansi' => 'Institut Teknologi Bandung', 'pic_name' => 'Prof. Hendra Wijaya',
             'pic_position' => 'Ketua Departemen', 'phone' => '081255566677', 'email' => 'hendra@itb.ac.id',
             'location' => 'Jl. Ganesha No. 10', 'city' => 'Bandung', 'instansi_type' => 'Universitas',
-            'source' => 'website', 'lab_name' => 'Lab Riset Material', 'customer_id' => $c2->id,
+            'source' => 'supplier', 'lab_name' => 'Lab Riset Material', 'customer_id' => $c2->id,
             'need_description' => 'Pembangunan lab riset material dengan island bench dan fume hood.',
             'scope_items' => ['Island Bench', 'Fume Hood', 'Wall Cabinet', 'Sink Unit'],
             'est_value_min' => 400000000, 'est_value_max' => 550000000, 'priority' => 'high',

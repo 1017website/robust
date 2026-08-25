@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
+use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Services\OperationalDocumentPdf;
@@ -12,6 +13,7 @@ use App\Services\ProjectProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class PurchaseOrderRequestController extends Controller
 {
@@ -48,27 +50,56 @@ class PurchaseOrderRequestController extends Controller
             ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest('approved_at')
             ->get();
+        $salesList = User::assignableSales();
 
-        return view('admin.purchase_order_requests.create', compact('quotation', 'quotations'));
+        return view('admin.purchase_order_requests.create', compact('quotation', 'quotations', 'salesList'));
     }
 
     public function store(Request $request)
     {
         $data = $this->validatedData($request, true);
 
-        $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
-        abort_if(Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id(), 403);
-        if (! $quotation->canCreatePurchaseOrderRequest()) {
-            return back()->withInput()->with('error', 'Request PO hanya bisa dibuat dari penawaran yang sudah approved / dikirim / disetujui customer dan belum pernah dibuatkan Request PO.');
-        }
-
         if ($request->hasFile('customer_po_file')) {
             $data['customer_po_file'] = $request->file('customer_po_file')->store('purchase-order-requests', 'public');
         }
 
         $checklist = $this->normalizedChecklist($data['checklist'] ?? []);
+        $isExternal = $data['purchase_source'] === 'external';
+        $quotation = null;
 
-        $poRequest = DB::transaction(function () use ($quotation, $data, $checklist) {
+        if (! $isExternal) {
+            $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
+            abort_if(Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id(), 403);
+            if (! $quotation->canCreatePurchaseOrderRequest()) {
+                return back()->withInput()->with('error', 'Request PO hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request PO.');
+            }
+        }
+
+        [$poRequest, $quotation] = DB::transaction(function () use ($data, $checklist, $isExternal, $quotation) {
+            if ($isExternal) {
+                $salesId = Auth::user()->isSales() ? Auth::id() : $data['external_sales_id'];
+                $externalReference = trim((string) ($data['external_quotation_number'] ?? ''));
+                $quotation = Quotation::create([
+                    'code' => CodeGenerator::next(Quotation::class, 'EXTQ', 4, true),
+                    'customer_name' => $data['customer_name'],
+                    'pic_name' => $data['delivery_pic_name'] ?? null,
+                    'project_name' => $data['external_project_name'],
+                    'sales_id' => $salesId,
+                    'delivery_method' => 'hardcopy',
+                    'quote_date' => $data['request_date'],
+                    'priority' => 'medium',
+                    'currency' => 'IDR',
+                    'creation_mode' => 'external',
+                    'internal_note' => 'Penawaran dibuat di luar CRM'.($externalReference !== '' ? '. Nomor referensi: '.$externalReference : '.'),
+                    'subtotal' => $data['external_order_value'],
+                    'tax_percent' => 0,
+                    'tax_amount' => 0,
+                    'grand_total' => $data['external_order_value'],
+                    'status' => 'request_po_created',
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
             $poRequest = PurchaseOrderRequest::create([
                 'code' => CodeGenerator::next(PurchaseOrderRequest::class, 'RPO', 4, true),
                 'quotation_id' => $quotation->id,
@@ -94,11 +125,19 @@ class PurchaseOrderRequestController extends Controller
                 'status' => 'submitted',
             ]);
 
-            $quotation->update(['status' => 'request_po_created']);
-            return $poRequest;
+            if ($quotation->status !== 'request_po_created') {
+                $quotation->update(['status' => 'request_po_created']);
+            }
+            return [$poRequest, $quotation];
         });
 
-        Logger::record('created', "Request PO {$poRequest->code} dibuat dari penawaran {$quotation->code}", $poRequest);
+        Logger::record(
+            'created',
+            $isExternal
+                ? "Request PO {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
+                : "Request PO {$poRequest->code} dibuat dari penawaran {$quotation->code}",
+            $poRequest
+        );
 
         return redirect()->route('admin.purchase-order-requests.show', $poRequest)->with('success', 'Request PO berhasil dibuat. Lanjutkan proses PO di Accurate.');
     }
@@ -128,7 +167,7 @@ class PurchaseOrderRequestController extends Controller
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
-        abort_unless(Auth::user()->isAdminLevel(), 403, 'Update proses Request PO hanya untuk Sales Admin.');
+        abort_unless(Auth::user()->isAdminLevel(), 403, 'Update proses Request PO hanya untuk Administrator.');
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::statuses()))],
             'accurate_po_number' => ['nullable', 'required_if:status,po_created', 'string', 'max:100'],
@@ -184,7 +223,12 @@ class PurchaseOrderRequestController extends Controller
 
     protected function validatedData(Request $request, bool $creating = false): array
     {
+        if ($creating && ! $request->filled('purchase_source')) {
+            $request->merge(['purchase_source' => 'crm']);
+        }
+
         $rules = [
+            'purchase_source' => ['required', Rule::in(['crm', 'external'])],
             'project_number' => ['required', 'string', 'max:100'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_area' => ['nullable', 'string', 'max:255'],
@@ -201,10 +245,27 @@ class PurchaseOrderRequestController extends Controller
             'expected_delivery_date' => ['nullable', 'date'],
             'checklist' => ['nullable', 'array'],
             'admin_note' => ['nullable', 'string', 'max:1500'],
+            'external_project_name' => ['nullable', 'required_if:purchase_source,external', 'string', 'max:255'],
+            'external_quotation_number' => ['nullable', 'string', 'max:100'],
+            'external_order_value' => ['nullable', 'required_if:purchase_source,external', 'numeric', 'min:0.01'],
+            'external_sales_id' => [
+                Rule::requiredIf(fn () => $request->input('purchase_source') === 'external' && ! Auth::user()->isSales()),
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
         ];
 
         if ($creating) {
-            $rules['quotation_id'] = ['required', 'exists:quotations,id', 'unique:purchase_order_requests,quotation_id'];
+            $rules['quotation_id'] = [
+                Rule::excludeIf(fn () => $request->input('purchase_source') === 'external'),
+                Rule::requiredIf(fn () => $request->input('purchase_source') === 'crm'),
+                'nullable',
+                'exists:quotations,id',
+                'unique:purchase_order_requests,quotation_id',
+            ];
         }
 
         return $request->validate($rules);

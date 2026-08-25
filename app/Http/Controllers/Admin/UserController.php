@@ -37,7 +37,7 @@ class UserController extends Controller
             'total' => $statsScope()->count(),
             'active' => $statsScope()->where('is_active', true)->count(),
             'inactive' => $statsScope()->where('is_active', false)->count(),
-            'admin' => $statsScope()->whereIn('role', ['administrator', 'sales_admin'])->count(),
+            'admin' => $statsScope()->where('role', 'administrator')->count(),
         ];
 
         return view('admin.users.index', compact('users', 'stats', 'allowedRoles'));

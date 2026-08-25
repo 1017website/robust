@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Dashboard Sales Admin')
+@section('title', 'Dashboard Administrator')
 @section('content')
 @php
     $allPra = max(1, $stats['pra_leads'] ?? 0);

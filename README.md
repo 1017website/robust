@@ -8,7 +8,7 @@ Frontend menggunakan Bootstrap 5 via CDN (tanpa build step), cocok untuk shared 
 - [User Guide Bahasa Indonesia](docs/USER_GUIDE.md) — tutorial penggunaan per role dari Pra Lead sampai Project dan Request PO.
 
 ## Role
-- **Sales Admin** — kelola pra lead, distribusi ke sales, monitoring workload & acceptance rate
+- **Administrator** — kelola pra lead, distribusi ke sales, user, dan proses Accurate
 - **Sales** — request masuk, lead, design request, quotation (wizard 4 langkah), customer, project
 - **Drafter / Produksi** — kerjakan design request, input biaya & item hasil, submit final ke sales
 
@@ -43,7 +43,8 @@ php artisan serve
 ## Akun Demo (password: `password`)
 | Role        | Email               |
 |-------------|---------------------|
-| Sales Admin | admin@robust.test   |
+| Administrator | superadmin@robust.test |
+| Sales       | admin@robust.test   |
 | Sales       | sales@robust.test   |
 | Sales 2     | sales2@robust.test  |
 | Drafter     | drafter@robust.test |
@@ -56,6 +57,7 @@ php artisan serve
 3. Buat database via cPanel MySQL, isi kredensial di `.env`.
 4. Jalankan migrasi via terminal cPanel atau gunakan paket "artisan runner" berbasis browser bila SSH tidak tersedia.
 5. Pastikan folder `storage` dan `bootstrap/cache` writable (755/775).
+6. Untuk lampiran Design Request hingga 80 MB/file, pastikan konfigurasi PHP membaca `.user.ini` dan web server mengizinkan request minimal 410 MB (misalnya `client_max_body_size 410M` pada Nginx).
 
 ## Struktur Modul
 - `app/Http/Controllers/{Auth,Admin,Sales,Drafter,Shared}` — controller per peran

@@ -24,7 +24,7 @@
                     <td class="fw-semibold">{{ $q->code }}</td>
                     <td>{{ $q->customer_name }}</td>
                     <td>{{ $q->project_name }}</td>
-                    <td>{{ $q->isUploaded() ? 'Upload file' : 'Dibuat di sistem' }}</td>
+                    <td>{{ $q->creationModeLabel() }}</td>
                     <td>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
                     <td class="fw-num fw-semibold">{{ $q->isUploaded() ? 'Lihat file' : \App\Support\Format::rupiah($q->grand_total) }}</td>
                     <td><x-status-badge :status="$q->status" :label="$q->statusLabel()" /></td>

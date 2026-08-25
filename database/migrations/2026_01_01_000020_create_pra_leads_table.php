@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('pic_position')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
-            $table->string('source')->default('whatsapp');   // whatsapp, website, referensi, telepon, email, lainnya
+            $table->string('source')->default('distributor');
             $table->string('lab_type')->nullable();          // jenis laboratorium
             $table->string('location')->nullable();          // lokasi project / kota
             $table->text('initial_need')->nullable();        // kebutuhan awal
