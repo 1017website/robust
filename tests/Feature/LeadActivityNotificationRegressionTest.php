@@ -17,7 +17,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
 
     public function test_pra_lead_whatsapp_is_required(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
 
         $this->actingAs($admin)
             ->from(route('admin.pra-leads.index'))
@@ -36,7 +36,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
 
     public function test_new_marketing_sources_are_available_and_accepted_for_pra_leads(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $sources = [
             'distributor' => 'Distributor',
             'supplier' => 'Supplier',
@@ -72,7 +72,7 @@ class LeadActivityNotificationRegressionTest extends TestCase
 
     public function test_division_flows_from_pra_lead_to_lead_and_customer(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $sales = User::factory()->create(['role' => 'sales']);
 
         $this->actingAs($admin)->post(route('admin.pra-leads.store'), [

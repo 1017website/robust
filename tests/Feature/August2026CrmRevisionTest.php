@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\PurchaseOrderRequest;
+use App\Models\Quotation;
 use App\Models\User;
+use App\Support\IndonesianRegions;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -20,6 +24,86 @@ class August2026CrmRevisionTest extends TestCase
     {
         $this->assertArrayNotHasKey('sales_admin', User::roles());
         $this->assertSame('Sales', User::roles()['sales']);
+    }
+
+    public function test_sales_inherits_the_former_sales_admin_capabilities(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $this->assertFalse(method_exists($sales, 'isSalesAdmin'));
+        $this->assertArrayNotHasKey('sales_admin', User::roles());
+        $this->assertTrue($sales->canManageBackOffice());
+        $this->assertTrue($sales->canManageProjectAdministration());
+        // isAdminLevel tetap khusus Administrator: dipakai untuk hak lihat lintas sales.
+        $this->assertFalse($sales->isAdminLevel());
+
+        $this->actingAs($sales)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Administrator (Legacy)');
+
+        foreach ([
+            'pipeline.index',
+            'admin.pra-leads.index',
+            'admin.assignment.index',
+            'admin.invoices.index',
+            'admin.users.index',
+            'administration.project-monitoring.index',
+            'admin.purchase-order-requests.index',
+        ] as $route) {
+            $this->actingAs($sales)->get(route($route))->assertOk();
+        }
+
+        // Yang tetap khusus Administrator.
+        $this->actingAs($sales)->get(route('admin.system-settings.index'))->assertForbidden();
+        $this->actingAs($sales)->get(route('admin.item-masters.index'))->assertForbidden();
+
+        // Role operasional lain tetap tidak mendapat kewenangan ini.
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $this->assertFalse($drafter->canManageBackOffice());
+        $this->actingAs($drafter)->get(route('admin.pra-leads.index'))->assertForbidden();
+    }
+
+    public function test_administration_role_can_fill_project_administration_columns(): void
+    {
+        $administration = User::factory()->create(['role' => 'administration']);
+        $sales = User::factory()->create(['role' => 'sales']);
+        $project = Project::create([
+            'code' => 'PRJ-ADM-ACCESS',
+            'name' => 'Project Akses Administration',
+            'project_manager_id' => $sales->id,
+            'status' => 'ongoing',
+            'total_value' => 15000000,
+        ]);
+
+        $this->actingAs($administration)->get(route('administration.project-monitoring.index'))
+            ->assertOk()
+            ->assertSee('name="administration_comment"', false);
+
+        $this->actingAs($administration)->put(route('administration.project-monitoring.update', $project), [
+            'administration_comment' => 'Bukti potong sudah diterima.',
+            'withholding_tax_receipt_completed' => 1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('project_workflows', [
+            'project_id' => $project->id,
+            'administration_comment' => 'Bukti potong sudah diterima.',
+            'withholding_tax_receipt_completed' => 1,
+            'administration_updated_by' => $administration->id,
+        ]);
+    }
+
+    public function test_manage_user_exposes_a_delete_action_for_every_account(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $target = User::factory()->create(['role' => 'sales']);
+
+        $this->actingAs($administrator)->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSee(route('admin.users.destroy', $target), false)
+            ->assertSee('bi-trash', false);
+
+        $this->actingAs($administrator)->delete(route('admin.users.destroy', $target))->assertRedirect();
+        $this->assertSoftDeleted('users', ['id' => $target->id]);
     }
 
     public function test_external_purchase_order_creates_a_connected_non_crm_record(): void
@@ -60,6 +144,190 @@ class August2026CrmRevisionTest extends TestCase
         $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
         $this->assertSame('Renovasi Lab Non-CRM', $project->name);
         $this->assertSame(88000000.0, (float) $project->total_value);
+    }
+
+    public function test_request_po_required_fields_are_starred(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()
+            ->assertSee('Nomor Proyek <span class="text-danger">*</span>', false)
+            ->assertSee('Nama Customer <span class="text-danger">*</span>', false)
+            ->assertSee('Tanggal Request <span class="text-danger">*</span>', false)
+            ->assertSee('Kolom bertanda');
+    }
+
+    public function test_request_po_checklist_items_can_be_deleted_and_added(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        // Form baru menampilkan checklist bawaan lengkap dengan ikon hapus per item.
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()
+            ->assertSee('Checklist Kelengkapan')
+            ->assertSee('data-checklist-remove', false)
+            ->assertSee('data-checklist-add', false)
+            ->assertSee('Penawaran final sudah siap dikirim');
+
+        // Simpan Request PO hanya dengan sebagian item, plus satu item buatan sendiri.
+        $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'external',
+            'external_project_name' => 'Order Checklist Kustom',
+            'external_order_value' => 12000000,
+            'project_number' => 'PRJ-CHECKLIST-001',
+            'customer_name' => 'PT Checklist Kustom',
+            'request_date' => now()->toDateString(),
+            'checklist_present' => 1,
+            'checklist' => [
+                ['key' => 'customer_po', 'label' => 'PO customer / bukti order sudah dilampirkan', 'checked' => 1],
+                ['key' => '', 'label' => 'Berita acara serah terima sudah disiapkan', 'checked' => 0],
+            ],
+        ])->assertRedirect();
+
+        $requestPo = PurchaseOrderRequest::where('project_number', 'PRJ-CHECKLIST-001')->firstOrFail();
+        $items = $requestPo->checklistItems();
+
+        $this->assertCount(2, $items);
+        $this->assertSame(['customer_po', 'berita_acara_serah_terima_sudah_disiapkan'], array_column($items, 'key'));
+        $this->assertTrue($items[0]['checked']);
+        $this->assertFalse($items[1]['checked']);
+        $this->assertSame(['done' => 1, 'total' => 2, 'percent' => 50, 'complete' => false], $requestPo->checklistProgress());
+
+        // Item yang tidak diperlukan dihapus lewat form checklist tersendiri —
+        // tersedia untuk setiap akun yang berhak atas Request PO ini.
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.show', $requestPo))
+            ->assertOk()
+            ->assertSee('Checklist Kelengkapan')
+            ->assertSee('data-checklist-remove', false);
+
+        $this->actingAs($sales)->put(route('admin.purchase-order-requests.checklist', $requestPo), [
+            'checklist_present' => 1,
+            'checklist' => [
+                ['key' => 'customer_po', 'label' => 'PO customer / bukti order sudah dilampirkan', 'checked' => 1],
+            ],
+        ])->assertRedirect();
+
+        $requestPo->refresh();
+        $this->assertCount(1, $requestPo->checklistItems());
+        $this->assertTrue($requestPo->isChecklistComplete());
+        $this->assertNotNull($requestPo->checklist_completed_at);
+
+        // Seluruh item boleh dihapus sampai habis.
+        $this->actingAs($administrator)->put(route('admin.purchase-order-requests.checklist', $requestPo), [
+            'checklist_present' => 1,
+        ])->assertRedirect();
+
+        $requestPo->refresh();
+        $this->assertSame([], $requestPo->checklistItems());
+        $this->assertFalse($requestPo->isChecklistComplete());
+        $this->assertNull($requestPo->checklist_completed_at);
+
+        // Sales lain tidak boleh mengubah checklist Request PO milik orang.
+        $otherSales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($otherSales)->put(route('admin.purchase-order-requests.checklist', $requestPo), [
+            'checklist_present' => 1,
+        ])->assertForbidden();
+    }
+
+    public function test_legacy_checklist_data_is_still_readable(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $requestPo = PurchaseOrderRequest::create([
+            'code' => 'RPO-LEGACY-CHECKLIST',
+            'project_number' => 'PRJ-LEGACY-CHK',
+            'customer_name' => 'PT Data Lama',
+            'requested_by' => $sales->id,
+            'request_date' => today(),
+            'status' => 'submitted',
+            'checklist' => ['quotation_approved' => true, 'customer_po' => false],
+        ]);
+
+        $items = $requestPo->checklistItems();
+
+        $this->assertCount(2, $items);
+        $this->assertSame('Penawaran final sudah siap dikirim', $items[0]['label']);
+        $this->assertTrue($items[0]['checked']);
+        $this->assertFalse($items[1]['checked']);
+        $this->assertSame(50, $requestPo->checklistProgress()['percent']);
+    }
+
+    public function test_request_po_can_be_saved_as_a_pending_draft_and_submitted_later(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        // Draf boleh disimpan meskipun data belum lengkap.
+        $this->actingAs($administrator)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'external',
+            'external_project_name' => 'Order Menunggu Data',
+            'customer_name' => 'PT Draft Pending',
+            'action' => 'draft',
+        ])->assertRedirect();
+
+        $draft = PurchaseOrderRequest::where('customer_name', 'PT Draft Pending')->firstOrFail();
+        $this->assertTrue($draft->isDraft());
+        $this->assertNull($draft->quotation_id);
+        $this->assertNull($draft->project_number);
+        $this->assertFalse($draft->canCreateInvoice());
+        $this->assertArrayHasKey('draft', PurchaseOrderRequest::statuses());
+        $this->assertArrayNotHasKey('draft', PurchaseOrderRequest::processStatuses());
+
+        // Draf belum boleh diproses ke Accurate atau diekspor.
+        $this->actingAs($administrator)->put(route('admin.purchase-order-requests.update', $draft), [
+            'status' => 'processing_accurate',
+        ])->assertForbidden();
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.pdf', $draft))->assertForbidden();
+
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.show', $draft))
+            ->assertOk()
+            ->assertSee('Draf Belum Diajukan')
+            ->assertDontSee('Update Accurate');
+
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.edit', $draft))
+            ->assertOk()
+            ->assertSee('Simpan Draf (Pending)');
+
+        // Setelah dilengkapi, draf yang sama diajukan tanpa membuat record baru.
+        $this->actingAs($administrator)->put(route('admin.purchase-order-requests.draft', $draft), [
+            'purchase_source' => 'external',
+            'external_project_name' => 'Order Menunggu Data',
+            'external_order_value' => 45000000,
+            'external_sales_id' => $sales->id,
+            'project_number' => 'PRJ-DRAFT-0001',
+            'customer_name' => 'PT Draft Pending',
+            'request_date' => now()->toDateString(),
+            'action' => 'submit',
+        ])->assertRedirect(route('admin.purchase-order-requests.show', $draft));
+
+        $draft->refresh();
+        $this->assertSame('submitted', $draft->status);
+        $this->assertSame('PRJ-DRAFT-0001', $draft->project_number);
+        $this->assertNotNull($draft->quotation_id);
+        $this->assertSame(45000000.0, (float) $draft->quotation->grand_total);
+        $this->assertSame(1, PurchaseOrderRequest::where('customer_name', 'PT Draft Pending')->count());
+
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.show', $draft))
+            ->assertOk()
+            ->assertSee('Update Accurate')
+            ->assertDontSee('Draf Belum Diajukan');
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.index'))
+            ->assertOk()
+            ->assertSee('PRJ-DRAFT-0001');
+
+        // Request PO yang sudah diajukan tidak lagi bisa diubah lewat jalur draf.
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.edit', $draft))->assertForbidden();
+    }
+
+    public function test_request_po_submission_still_requires_the_starred_fields(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+
+        $this->actingAs($administrator)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'crm',
+            'action' => 'submit',
+        ])->assertSessionHasErrors(['quotation_id', 'project_number', 'customer_name']);
     }
 
     public function test_lead_accepts_a_manually_typed_city_and_only_revised_sources(): void
@@ -104,6 +372,160 @@ class August2026CrmRevisionTest extends TestCase
             'lab_name' => 'Lab Pengujian',
             'priority' => 'medium',
         ])->assertSessionHasErrors('source');
+    }
+
+    public function test_city_suggestions_cover_every_indonesian_city_and_regency(): void
+    {
+        $cities = IndonesianRegions::cities();
+
+        $this->assertCount(38, IndonesianRegions::provinces());
+        $this->assertCount(514, $cities);
+        $this->assertSame('Jawa Barat', $cities['Bandung']);
+        $this->assertSame('Jawa Barat', $cities['Kabupaten Bandung']);
+        $this->assertSame('Papua Pegunungan', $cities['Kabupaten Jayawijaya']);
+
+        $sales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($sales)->get(route('sales.leads.create'))
+            ->assertOk()
+            ->assertSee('<option value="Sorong" label="Papua Barat Daya">', false)
+            ->assertSee('<option value="Kabupaten Sumba Tengah" label="Nusa Tenggara Timur">', false)
+            ->assertSee('<option value="Balikpapan" label="Kalimantan Timur">', false);
+
+        $lead = Lead::create([
+            'code' => 'LEAD-CITY-'.str()->random(4),
+            'instansi' => 'Lead Saran Kota',
+            'pic_name' => 'PIC Saran Kota',
+            'phone' => '081234500000',
+            'location' => 'Balikpapan',
+            'city' => 'Balikpapan',
+            'instansi_type' => 'Industri',
+            'source' => 'distributor',
+            'lab_name' => 'Lab Saran Kota',
+            'priority' => 'medium',
+            'sales_id' => $sales->id,
+            'status' => 'aktif',
+            'stage' => 'lead',
+        ]);
+
+        $this->actingAs($sales)->get(route('sales.leads.edit', $lead))
+            ->assertOk()
+            ->assertSee('<option value="Kabupaten Bandung" label="Jawa Barat">', false);
+        $this->actingAs($sales)->get(route('sales.customers.create'))
+            ->assertOk()
+            ->assertSee('<option value="Kabupaten Bandung" label="Jawa Barat">', false);
+    }
+
+    public function test_lead_instansi_type_includes_bumn_and_bumd(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $this->assertContains('BUMN', Lead::instansiTypes());
+        $this->assertContains('BUMD', Lead::instansiTypes());
+        $this->assertContains('BUMN', Customer::categories());
+        $this->assertContains('BUMD', Customer::categories());
+
+        $this->actingAs($sales)->get(route('sales.leads.create'))
+            ->assertOk()
+            ->assertSee('>BUMN<', false)
+            ->assertSee('>BUMD<', false);
+
+        $this->actingAs($sales)->post(route('sales.leads.store'), [
+            'instansi' => 'Perusahaan Daerah Air Minum',
+            'pic_name' => 'PIC BUMD',
+            'phone' => '081234567891',
+            'location' => 'Surabaya',
+            'city' => 'Surabaya',
+            'instansi_type' => 'BUMD',
+            'source' => 'distributor',
+            'lab_name' => 'Lab Kualitas Air',
+            'priority' => 'medium',
+        ])->assertRedirect(route('sales.leads.create'));
+
+        $this->assertDatabaseHas('leads', [
+            'instansi' => 'Perusahaan Daerah Air Minum',
+            'instansi_type' => 'BUMD',
+        ]);
+    }
+
+    public function test_design_request_number_can_be_filled_manually(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+
+        $payload = fn (array $override = []) => array_merge([
+            'customer_name' => 'Customer Nomor Manual',
+            'project_name' => 'Project Nomor Manual',
+            'request_date' => now()->toDateString(),
+            'deadline' => now()->addDay()->toDateString(),
+            'priority' => 'normal',
+            'short_description' => 'Pengujian penomoran manual Design Request.',
+            'detail_need' => 'Membutuhkan desain laboratorium dengan nomor internal sendiri.',
+            'production_pic_id' => $drafter->id,
+            'action' => 'save',
+        ], $override);
+
+        $this->actingAs($sales)->get(route('sales.design-requests.create'))
+            ->assertOk()
+            ->assertSee('Nomor Design Request')
+            ->assertSee('name="code"', false);
+
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), $payload([
+            'code' => 'RBS/DR/VIII/2026-014',
+        ]))->assertRedirect(route('sales.design-requests.index'));
+
+        $this->assertDatabaseHas('design_requests', [
+            'code' => 'RBS/DR/VIII/2026-014',
+            'project_name' => 'Project Nomor Manual',
+        ]);
+
+        // Nomor yang sama tidak boleh dipakai dua kali.
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), $payload([
+            'code' => 'RBS/DR/VIII/2026-014',
+            'project_name' => 'Project Nomor Duplikat',
+        ]))->assertSessionHasErrors('code');
+
+        // Dikosongkan tetap mendapat nomor otomatis.
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), $payload([
+            'project_name' => 'Project Nomor Otomatis',
+        ]))->assertRedirect(route('sales.design-requests.index'));
+
+        $auto = DesignRequest::where('project_name', 'Project Nomor Otomatis')->firstOrFail();
+        $this->assertMatchesRegularExpression('/^DR-\d{3,}$/', $auto->code);
+    }
+
+    public function test_automatic_design_request_number_skips_codes_already_taken_manually(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+
+        // Nomor otomatis berikutnya dipakai lebih dulu secara manual.
+        $reserved = 'DR-'.str_pad((string) (DesignRequest::withTrashed()->count() + 1), 3, '0', STR_PAD_LEFT);
+
+        $payload = fn (array $override) => array_merge([
+            'customer_name' => 'Customer Tabrakan Nomor',
+            'request_date' => now()->toDateString(),
+            'deadline' => now()->addDay()->toDateString(),
+            'priority' => 'normal',
+            'short_description' => 'Pengujian tabrakan penomoran otomatis.',
+            'detail_need' => 'Nomor manual dan otomatis tidak boleh bertabrakan.',
+            'production_pic_id' => $drafter->id,
+            'action' => 'save',
+        ], $override);
+
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), $payload([
+            'code' => $reserved,
+            'project_name' => 'Project Nomor Direbut',
+        ]))->assertRedirect(route('sales.design-requests.index'));
+
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), $payload([
+            'project_name' => 'Project Nomor Otomatis Setelahnya',
+        ]))->assertRedirect(route('sales.design-requests.index'));
+
+        $auto = DesignRequest::where('project_name', 'Project Nomor Otomatis Setelahnya')->firstOrFail();
+        $this->assertNotSame($reserved, $auto->code);
+        $this->assertSame(1, DesignRequest::withTrashed()->where('code', $auto->code)->count());
     }
 
     public function test_design_request_accepts_an_eighty_megabyte_attachment(): void
@@ -172,5 +594,46 @@ class August2026CrmRevisionTest extends TestCase
             'project_name' => 'Project Upload XHR',
             'status' => 'assigned',
         ]);
+    }
+
+    public function test_quotation_sourced_request_po_draft_reserves_the_quotation_without_locking_its_status(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+        $quotation = Quotation::create([
+            'code' => 'Q-DRAFT-RESERVE',
+            'customer_name' => 'PT Reserve Draft',
+            'project_name' => 'Lab Reserve Draft',
+            'sales_id' => $sales->id,
+            'quote_date' => now()->toDateString(),
+            'currency' => 'IDR',
+            'subtotal' => 10000000,
+            'grand_total' => 10000000,
+            'status' => 'sent_to_customer',
+            'created_by' => $sales->id,
+        ]);
+
+        $this->actingAs($administrator)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'crm',
+            'quotation_id' => $quotation->id,
+            'customer_name' => 'PT Reserve Draft',
+            'action' => 'draft',
+        ])->assertRedirect();
+
+        $draft = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->assertTrue($draft->isDraft());
+        $this->assertSame('sent_to_customer', $quotation->fresh()->status);
+
+        $this->actingAs($administrator)->put(route('admin.purchase-order-requests.draft', $draft), [
+            'purchase_source' => 'crm',
+            'quotation_id' => $quotation->id,
+            'project_number' => 'PRJ-RESERVE-0001',
+            'customer_name' => 'PT Reserve Draft',
+            'request_date' => now()->toDateString(),
+            'action' => 'submit',
+        ])->assertRedirect();
+
+        $this->assertSame('submitted', $draft->fresh()->status);
+        $this->assertSame('request_po_created', $quotation->fresh()->status);
     }
 }

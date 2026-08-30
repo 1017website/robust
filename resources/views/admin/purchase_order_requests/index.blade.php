@@ -30,7 +30,12 @@
                     <td>{{ $r->quotation?->sales?->name ?: '—' }}</td>
                     <td class="fw-semibold">{{ $r->accurate_po_number ?: '—' }}</td>
                     <td><x-status-badge :status="$r->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$r->status] ?? $r->status" /></td>
-                    <td><a href="{{ route('admin.purchase-order-requests.show',$r) }}" class="btn btn-sm btn-soft">Detail</a></td>
+                    <td class="text-end">
+                        @if($r->isDraft())
+                            <a href="{{ route('admin.purchase-order-requests.edit',$r) }}" class="btn btn-sm btn-soft" title="Lanjutkan draf"><i class="bi bi-pencil-square"></i></a>
+                        @endif
+                        <a href="{{ route('admin.purchase-order-requests.show',$r) }}" class="btn btn-sm btn-soft">Detail</a>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="9"><x-empty text="Belum ada Request PO." /></td></tr>

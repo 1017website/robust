@@ -4,7 +4,6 @@
 @section('content')
 @php
     $scopeItems = old('scope_items', $lead->scope_items ?: []);
-    $cityOptions = ['Jakarta','Bandung','Surabaya','Semarang','Yogyakarta','Malang','Denpasar','Medan','Makassar','Balikpapan'];
     $selectedCity = old('city', $lead->city);
 @endphp
 <div class="sales-ui lead-layout-page">
@@ -69,18 +68,14 @@
                         <div class="col-md-6">
                             <label class="form-label lead-label">Kota <span>*</span></label>
                             <input name="city" list="indonesianCityOptions" value="{{ $selectedCity }}" class="form-control lead-control" required placeholder="Pilih atau ketik nama kota/kabupaten">
-                            <datalist id="indonesianCityOptions">
-                                @foreach($cityOptions as $city)
-                                    <option value="{{ $city }}"></option>
-                                @endforeach
-                            </datalist>
-                            <div class="form-text">Nama kota/kabupaten dapat diketik manual jika belum ada di saran.</div>
+                            <x-city-datalist />
+                            <div class="form-text">Seluruh kota &amp; kabupaten di Indonesia tersedia sebagai saran; nama lain tetap dapat diketik manual.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label lead-label">Tipe Instansi <span>*</span></label>
                             <select name="instansi_type" class="form-select lead-control" required>
                                 <option value="">Pilih tipe instansi</option>
-                                @foreach(['Universitas','Sekolah','Rumah Sakit','Industri','Pemerintah','Laboratorium Swasta','Distributor','Kontraktor','Lainnya'] as $type)
+                                @foreach(\App\Models\Lead::instansiTypes() as $type)
                                     <option value="{{ $type }}" @selected(old('instansi_type', $lead->instansi_type)==$type)>{{ $type }}</option>
                                 @endforeach
                             </select>

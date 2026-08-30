@@ -21,7 +21,6 @@ class DashboardController extends Controller
 
         return match ($user->role) {
             'administrator' => $this->adminDashboard(),
-            'sales_admin' => $this->adminDashboard(),
             'sales_spv' => $this->spvDashboard(),
             'drafter' => $this->drafterDashboard(),
             'production' => redirect()->route('drafter.projects.index'),

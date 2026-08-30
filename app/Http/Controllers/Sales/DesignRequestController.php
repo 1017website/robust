@@ -91,6 +91,8 @@ class DesignRequestController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            // Nomor boleh diisi manual mengikuti penomoran internal; kosongkan untuk nomor otomatis.
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('design_requests', 'code')],
             'lead_id' => ['nullable', Rule::exists('leads', 'id')->where(fn ($query) => $this->scopeLeadExistsRule($query))],
             'customer_id' => ['nullable', Rule::exists('customers', 'id')->where(fn ($query) => $this->scopeCustomerExistsRule($query))],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
@@ -154,7 +156,8 @@ class DesignRequestController extends Controller
         }
         unset($data['scope_other']);
         $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
-        $data['code'] = CodeGenerator::next(DesignRequest::class, 'DR', 3);
+        $manualCode = trim((string) ($data['code'] ?? ''));
+        $data['code'] = $manualCode !== '' ? $manualCode : $this->nextAvailableCode();
         $lead = $this->leadQuery()->find($data['lead_id'] ?? null);
         $data['sales_id'] = Auth::user()->isSales() ? Auth::id() : ($lead?->sales_id ?: $data['sales_id']);
         $data['created_by'] = Auth::id();
@@ -270,6 +273,26 @@ class DesignRequestController extends Controller
         Logger::record('revision_requested', "Revisi Design Request {$designRequest->code} diminta Sales", $designRequest);
 
         return back()->with('success', 'Request revisi dikirim. Drafter perlu mengunggah revisi drawing/dokumen sebelum Produksi mengisi ulang spesifikasi dan HPP.');
+    }
+
+    /**
+     * Nomor otomatis berikutnya yang belum terpakai.
+     *
+     * CodeGenerator menomori berdasarkan jumlah baris, sehingga nomor manual yang
+     * kebetulan memakai pola yang sama (misalnya "DR-004") bisa bertabrakan. Lompati
+     * nomor yang sudah dipakai — termasuk oleh data yang sudah dihapus — agar unique
+     * index pada kolom code tidak pernah gagal.
+     */
+    protected function nextAvailableCode(): string
+    {
+        $code = CodeGenerator::next(DesignRequest::class, 'DR', 3);
+        $sequence = (int) preg_replace('/\D/', '', $code);
+
+        while (DesignRequest::withTrashed()->where('code', $code)->exists()) {
+            $code = sprintf('DR-%s', str_pad((string) ++$sequence, 3, '0', STR_PAD_LEFT));
+        }
+
+        return $code;
     }
 
     protected function designRequestQuery()

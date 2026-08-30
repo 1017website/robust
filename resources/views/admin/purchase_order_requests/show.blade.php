@@ -4,10 +4,14 @@
 @php($progress = $requestPo->checklistProgress())
 <x-page-header :title="$requestPo->code" :subtitle="($requestPo->customer_name ?: ($requestPo->quotation?->customer_name ?: 'Customer')).' · '.($requestPo->quotation?->project_name ?: 'Project')">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
-    <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
+    @if($requestPo->isDraft())
+        <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Lanjutkan &amp; Ajukan</a>
+    @else
+        <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
+    @endif
     @if($requestPo->quotation?->project)<a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}" class="btn btn-soft btn-sm"><i class="bi bi-kanban me-1"></i>Project Operasional</a>@endif
-    @if(auth()->user()->isAdminLevel() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
-    @if(auth()->user()->isAdminLevel() && $requestPo->invoice)<a href="{{ route('admin.invoices.show',$requestPo->invoice) }}" class="btn btn-soft btn-sm">Lihat Invoice</a>@endif
+    @if(auth()->user()->canManageBackOffice() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
+    @if(auth()->user()->canManageBackOffice() && $requestPo->invoice)<a href="{{ route('admin.invoices.show',$requestPo->invoice) }}" class="btn btn-soft btn-sm">Lihat Invoice</a>@endif
 </x-page-header>
 
 <div class="row g-3">
@@ -26,6 +30,7 @@
             </div>
         </div>
 
+        @unless($requestPo->isDraft())
         <div class="card-r">
             <div class="card-head"><h2>Data Input Accurate</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
@@ -44,18 +49,20 @@
                     <div class="col-md-6"><label class="form-label small fw-semibold">Estimasi Tanggal Kirim</label><input type="date" name="expected_delivery_date" value="{{ old('expected_delivery_date', $requestPo->expected_delivery_date?->format('Y-m-d')) }}" class="form-control"></div>
                 </div>
 
-                <hr>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <strong>Checklist Kelengkapan</strong>
-                    <span class="pill">{{ $progress['done'] }}/{{ $progress['total'] }} selesai</span>
-                </div>
-                @foreach(\App\Models\PurchaseOrderRequest::checklistItems() as $key => $label)
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="checklist[{{ $key }}]" value="1" id="chk_{{ $key }}" @checked(old('checklist.'.$key, $requestPo->checklist[$key] ?? false))>
-                        <label class="form-check-label small" for="chk_{{ $key }}">{{ $label }}</label>
-                    </div>
-                @endforeach
-                <button class="btn btn-primary mt-2"><i class="bi bi-save me-1"></i>Simpan Data & Checklist</button>
+                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Data Accurate</button>
+            </form>
+        </div>
+        @endunless
+
+        <div class="card-r">
+            <div class="card-head">
+                <h2>Checklist Kelengkapan</h2>
+                <span class="pill">{{ $progress['done'] }}/{{ $progress['total'] }} selesai</span>
+            </div>
+            <form method="POST" action="{{ route('admin.purchase-order-requests.checklist', $requestPo) }}">
+                @csrf @method('PUT')
+                <x-checklist-editor :items="$requestPo->checklistItems()" id-prefix="chk_show" />
+                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Checklist</button>
             </form>
         </div>
 
@@ -76,16 +83,20 @@
         </div>
     </div>
     <div class="col-lg-4">
-        @if(auth()->user()->isAdminLevel() && !$requestPo->invoice && $requestPo->quotation?->project && !$requestPo->canCreateInvoice())
+        @if(auth()->user()->canManageBackOffice() && !$requestPo->invoice && $requestPo->quotation?->project && !$requestPo->canCreateInvoice())
         <div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>Invoice tersedia setelah Delivery mengunggah POD dan menandai penerimaan customer selesai.</div>
         @endif
+        @if($requestPo->isDraft())
+        <div class="card-r">
+            <div class="card-head"><h2>Draf Belum Diajukan</h2></div>
+            <p class="small text-muted-2 mb-3">Request PO ini masih tersimpan sebagai draf. Data belum diteruskan ke Accurate dan belum bisa diproses menjadi Project atau Invoice.</p>
+            <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary w-100"><i class="bi bi-pencil-square me-1"></i>Lanjutkan Pengisian</a>
+        </div>
+        @else
         <div class="card-r">
             <div class="card-head"><h2>Update Accurate</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
                 @csrf @method('PUT')
-                @foreach(($requestPo->checklist ?? []) as $key => $checked)
-                    @if($checked)<input type="hidden" name="checklist[{{ $key }}]" value="1">@endif
-                @endforeach
                 <input type="hidden" name="delivery_address" value="{{ $requestPo->delivery_address }}">
                 <input type="hidden" name="delivery_pic_name" value="{{ $requestPo->delivery_pic_name }}">
                 <input type="hidden" name="delivery_pic_phone" value="{{ $requestPo->delivery_pic_phone }}">
@@ -96,7 +107,7 @@
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Status *</label>
                     <select name="status" class="form-select" required>
-                        @foreach(\App\Models\PurchaseOrderRequest::statuses() as $k=>$v)
+                        @foreach(\App\Models\PurchaseOrderRequest::processStatuses() as $k=>$v)
                             <option value="{{ $k }}" @selected($requestPo->status === $k)>{{ $v }}</option>
                         @endforeach
                     </select>
@@ -107,6 +118,7 @@
                 <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Update Status Accurate</button>
             </form>
         </div>
+        @endif
         <div class="card-r">
             <div class="card-head"><h2>Progress Checklist</h2></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Kelengkapan</span><strong>{{ $progress['percent'] }}%</strong></div>

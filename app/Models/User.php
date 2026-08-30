@@ -29,8 +29,6 @@ class User extends Authenticatable
     }
 
     public function isAdministrator(): bool { return $this->role === 'administrator'; }
-    /** @deprecated Dipertahankan hanya sampai migration role lama dijalankan. */
-    public function isSalesAdmin(): bool { return $this->role === 'sales_admin'; }
     public function isSales(): bool { return $this->role === 'sales'; }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
     public function isProduction(): bool { return $this->role === 'production'; }
@@ -42,20 +40,40 @@ class User extends Authenticatable
     /** Harga komersial hanya dapat dilihat administrator dan sales pemilik. */
     public function canViewPrices(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
+        return in_array($this->role, ['administrator', 'sales'], true);
     }
 
-    /** True untuk Administrator; sales_admin hanya kompatibilitas data lama. */
+    /**
+     * True hanya untuk Administrator (super admin).
+     *
+     * Dipakai untuk hak "melihat seluruh data lintas sales", bukan untuk pekerjaan
+     * back office. Untuk itu gunakan canManageBackOffice().
+     */
     public function isAdminLevel(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin'], true);
+        return $this->role === 'administrator';
+    }
+
+    /**
+     * Pekerjaan back office eks Sales Admin: Pra Lead, Assignment, proses Accurate
+     * pada Request PO, dan Invoice. Setelah role Sales Admin dihapus, kewenangan ini
+     * dipegang Administrator dan Sales.
+     */
+    public function canManageBackOffice(): bool
+    {
+        return in_array($this->role, ['administrator', 'sales'], true);
+    }
+
+    /** Kolom administrasi (comment, KP, bukti potong PPh) pada Project Monitoring. */
+    public function canManageProjectAdministration(): bool
+    {
+        return in_array($this->role, ['administrator', 'sales', 'administration'], true);
     }
 
     public function roleLabel(): string
     {
         return match ($this->role) {
             'administrator' => 'Administrator',
-            'sales_admin' => 'Administrator (Legacy)',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Drafter',

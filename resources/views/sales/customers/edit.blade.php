@@ -16,7 +16,7 @@
                     <div class="col-md-6"><label class="form-label small fw-semibold">Email</label><input name="email" type="email" value="{{ old('email',$customer->email) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Telepon</label><input name="phone" value="{{ old('phone',$customer->phone) }}" class="form-control"></div>
                     <div class="col-md-8"><label class="form-label small fw-semibold">Alamat</label><textarea name="address" rows="3" class="form-control">{{ old('address',$customer->address) }}</textarea></div>
-                    <div class="col-md-4"><label class="form-label small fw-semibold">Kota</label><input name="city" value="{{ old('city',$customer->city) }}" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Kota</label><input name="city" list="indonesianCityOptions" value="{{ old('city',$customer->city) }}" class="form-control" placeholder="Pilih atau ketik nama kota/kabupaten"><x-city-datalist /></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Area / Lokasi Customer</label><input name="area" value="{{ old('area',$customer->area) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Divisi Customer</label><input name="division" value="{{ old('division',$customer->division) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Nama PIC Utama</label><input name="pic_name" value="{{ old('pic_name',$customer->primaryPic?->name) }}" class="form-control"></div>

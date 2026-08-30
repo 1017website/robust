@@ -92,21 +92,24 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $page .= $this->addressPanel($y, $requestPo);
         $y -= 108;
 
-        $page .= $this->sectionTitle($y, 'CHECKLIST KELENGKAPAN', '03');
-        $y -= 22;
-        $checklistHeight = 28 + count(PurchaseOrderRequest::checklistItems()) * 18;
-        if ($y - $checklistHeight < 58) {
-            $pages[] = $page;
-            [$page, $y] = $this->documentHeader(
-                'REQUEST PURCHASE ORDER',
-                $requestPo->code,
-                'Checklist dan item penawaran - lanjutan',
-                PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
-                true,
-            );
+        $checklistItems = $requestPo->checklistItems();
+        if ($checklistItems !== []) {
+            $page .= $this->sectionTitle($y, 'CHECKLIST KELENGKAPAN', '03');
+            $y -= 22;
+            $checklistHeight = 28 + count($checklistItems) * 18;
+            if ($y - $checklistHeight < 58) {
+                $pages[] = $page;
+                [$page, $y] = $this->documentHeader(
+                    'REQUEST PURCHASE ORDER',
+                    $requestPo->code,
+                    'Checklist dan item penawaran - lanjutan',
+                    PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
+                    true,
+                );
+            }
+            $page .= $this->checklistPanel($y, $requestPo, $checklistItems);
+            $y -= $checklistHeight + 18;
         }
-        $page .= $this->checklistPanel($y, $requestPo);
-        $y -= $checklistHeight + 18;
 
         if ($y < 170) {
             $pages[] = $page;
@@ -119,7 +122,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             );
         }
 
-        $page .= $this->sectionTitle($y, 'ITEM PENAWARAN', '04');
+        $page .= $this->sectionTitle($y, 'ITEM PENAWARAN', $checklistItems !== [] ? '04' : '03');
         $y -= 22;
         $page .= $this->requestItemHeader($y);
         $y -= 24;
@@ -403,9 +406,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         return $content;
     }
 
-    private function checklistPanel(float $top, PurchaseOrderRequest $requestPo): string
+    /** @param  array<int, array{key: string, label: string, checked: bool}>  $items */
+    private function checklistPanel(float $top, PurchaseOrderRequest $requestPo, array $items): string
     {
-        $items = PurchaseOrderRequest::checklistItems();
         $height = 28 + count($items) * 18;
         $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.985, 0.988, 0.993]);
         $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.82, 0.86, 0.91], 0.7);
@@ -414,15 +417,15 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $content .= $this->rect(self::LEFT + 170, $top - 20, self::CONTENT_WIDTH - 184, 6, [0.89, 0.92, 0.96]);
         $content .= $this->rect(self::LEFT + 170, $top - 20, (self::CONTENT_WIDTH - 184) * $progress['percent'] / 100, 6, [0.055, 0.45, 0.92]);
 
-        foreach (array_values($items) as $index => $label) {
-            $checked = ! empty(($requestPo->checklist ?? [])[array_keys($items)[$index]]);
+        foreach (array_values($items) as $index => $item) {
+            $checked = (bool) $item['checked'];
             $rowY = $top - 42 - $index * 18;
             $color = $checked ? [0.05, 0.55, 0.31] : [0.67, 0.72, 0.80];
             $content .= $this->rect(self::LEFT + 14, $rowY - 1, 9, 9, $checked ? [0.86, 0.97, 0.90] : [0.94, 0.95, 0.97], $color);
             if ($checked) {
                 $content .= $this->text(self::LEFT + 18.5, $rowY + 1, 'v', 6.5, true, $color, 'center');
             }
-            $content .= $this->text(self::LEFT + 30, $rowY, $label, 7.2, $checked, $checked ? [0.08, 0.27, 0.19] : [0.42, 0.48, 0.57]);
+            $content .= $this->text(self::LEFT + 30, $rowY, $this->truncate((string) $item['label'], 78), 7.2, $checked, $checked ? [0.08, 0.27, 0.19] : [0.42, 0.48, 0.57]);
         }
 
         return $content;

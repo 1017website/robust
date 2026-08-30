@@ -53,6 +53,8 @@ class Customer extends Model
             'Farmasi',
             'Kesehatan',
             'Pemerintah',
+            'BUMN',
+            'BUMD',
             'Distributor',
             'Kontraktor',
             'Lainnya',

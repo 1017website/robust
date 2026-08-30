@@ -40,15 +40,13 @@ class CrmFlowTest extends TestCase
                 'activities.index', 'calendar.index', 'documents.index', 'reports.index',
                 'admin.users.index', 'admin.system-settings.index',
             ],
-            'sales_admin' => [
-                'dashboard', 'pipeline.index', 'admin.pra-leads.index', 'admin.assignment.index',
-                'admin.purchase-order-requests.index', 'sales.customers.index', 'activities.index',
-                'calendar.index', 'reports.index', 'admin.users.index',
-            ],
             'sales' => [
-                'dashboard', 'sales.request-masuk.index', 'sales.leads.index',
-                'sales.design-requests.index', 'sales.quotations.index', 'sales.customers.index',
-                'sales.projects.index', 'activities.index', 'calendar.index', 'reports.index', 'profile.edit',
+                'dashboard', 'pipeline.index', 'admin.pra-leads.index', 'admin.assignment.index',
+                'sales.request-masuk.index', 'sales.leads.index', 'sales.design-requests.index',
+                'sales.quotations.index', 'admin.purchase-order-requests.index', 'admin.invoices.index',
+                'sales.customers.index', 'sales.projects.index', 'administration.project-monitoring.index',
+                'activities.index', 'calendar.index', 'documents.index', 'reports.index',
+                'admin.users.index', 'profile.edit',
             ],
             'sales_spv' => [
                 'dashboard', 'sales.request-masuk.index', 'sales.leads.index',
@@ -643,7 +641,7 @@ class CrmFlowTest extends TestCase
     public function test_add_activity_buttons_are_only_visible_to_sales(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
-        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $administratorUser = User::factory()->create(['role' => 'administrator']);
         $salesSpv = User::factory()->create(['role' => 'sales_spv']);
 
         $this->actingAs($sales)->get(route('activities.index'))
@@ -653,7 +651,7 @@ class CrmFlowTest extends TestCase
             ->assertSuccessful()
             ->assertSeeText('Tambah Activity');
 
-        foreach ([$salesAdmin, $salesSpv] as $nonSalesUser) {
+        foreach ([$administratorUser, $salesSpv] as $nonSalesUser) {
             $this->actingAs($nonSalesUser)->get(route('activities.index'))
                 ->assertSuccessful()
                 ->assertDontSeeText('Tambah Activity');
@@ -663,10 +661,10 @@ class CrmFlowTest extends TestCase
         }
     }
 
-    public function test_sales_admin_can_update_project_monitoring_administration_fields(): void
+    public function test_administrator_sales_and_administration_can_update_project_monitoring_fields(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
-        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $administratorUser = User::factory()->create(['role' => 'administrator']);
         $administration = User::factory()->create(['role' => 'administration']);
         $project = Project::create([
             'code' => 'PRJ-MONITORING-ADMIN',
@@ -676,7 +674,7 @@ class CrmFlowTest extends TestCase
             'total_value' => 25000000,
         ]);
 
-        $this->actingAs($salesAdmin)->put(route('administration.project-monitoring.update', $project), [
+        $this->actingAs($administratorUser)->put(route('administration.project-monitoring.update', $project), [
             'administration_comment' => 'Tunggu pembayaran sebelum kirim.',
             'payment_confirmation_completed' => 1,
             'withholding_tax_receipt_completed' => 1,
@@ -687,10 +685,10 @@ class CrmFlowTest extends TestCase
             'administration_comment' => 'Tunggu pembayaran sebelum kirim.',
             'payment_confirmation_completed' => 1,
             'withholding_tax_receipt_completed' => 1,
-            'administration_updated_by' => $salesAdmin->id,
+            'administration_updated_by' => $administratorUser->id,
         ]);
 
-        $this->actingAs($salesAdmin)->get(route('administration.project-monitoring.index'))
+        $this->actingAs($administratorUser)->get(route('administration.project-monitoring.index'))
             ->assertSuccessful()
             ->assertSeeInOrder(['>Comment</th>', '>Kirim</th>'], false)
             ->assertSeeText('KP')
@@ -699,13 +697,28 @@ class CrmFlowTest extends TestCase
             ->assertSee('name="payment_confirmation_completed"', false)
             ->assertSee('name="withholding_tax_receipt_completed"', false);
 
-        $this->actingAs($administration)->get(route('administration.project-monitoring.index'))
-            ->assertSuccessful()
-            ->assertSeeText('Tunggu pembayaran sebelum kirim.')
-            ->assertDontSee('name="administration_comment"', false)
-            ->assertDontSeeText('Simpan');
+        // Administration dan Sales kini ikut boleh mengisi kolom administrasi.
+        foreach ([$administration, $sales] as $editor) {
+            $this->actingAs($editor)->get(route('administration.project-monitoring.index'))
+                ->assertSuccessful()
+                ->assertSeeText('Tunggu pembayaran sebelum kirim.')
+                ->assertSee('name="administration_comment"', false);
+        }
 
         $this->actingAs($administration)->put(route('administration.project-monitoring.update', $project), [
+            'administration_comment' => 'Diperbarui oleh Administration.',
+            'payment_confirmation_completed' => 1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('project_workflows', [
+            'project_id' => $project->id,
+            'administration_comment' => 'Diperbarui oleh Administration.',
+            'administration_updated_by' => $administration->id,
+        ]);
+
+        // Role operasional lain tetap tidak boleh menyentuh kolom ini.
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $this->actingAs($drafter)->put(route('administration.project-monitoring.update', $project), [
             'administration_comment' => 'Tidak boleh diperbarui.',
         ])->assertForbidden();
     }
@@ -823,7 +836,7 @@ class CrmFlowTest extends TestCase
 
     public function test_assignment_export_returns_real_excel_workbook(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $sales = User::factory()->create(['role' => 'sales', 'name' => 'Sales Export Test', 'is_active' => true]);
         Lead::create([
             'code' => 'LEAD-EXPORT-'.str()->random(4),
@@ -888,36 +901,10 @@ class CrmFlowTest extends TestCase
             ->assertDontSee('Ownership File Kedua');
     }
 
-    public function test_sales_admin_cannot_manage_administrator_accounts(): void
-    {
-        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
-        $administrator = User::factory()->create(['role' => 'administrator']);
-
-        $this->actingAs($salesAdmin)->get(route('admin.users.index'))
-            ->assertSuccessful()
-            ->assertDontSee($administrator->email);
-
-        $this->actingAs($salesAdmin)->put(route('admin.users.update', $administrator), [
-            'name' => $administrator->name,
-            'email' => $administrator->email,
-            'role' => 'sales_admin',
-            'is_active' => 1,
-        ])->assertForbidden();
-
-        $this->actingAs($salesAdmin)->post(route('admin.users.store'), [
-            'name' => 'Administrator Tidak Sah',
-            'email' => 'invalid-admin-'.str()->random(5).'@example.test',
-            'role' => 'administrator',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'is_active' => 1,
-        ])->assertSessionHasErrors('role');
-    }
-
-    public function test_master_item_is_managed_by_production_not_sales_admin(): void
+    public function test_master_item_is_managed_by_production_not_sales(): void
     {
         $production = User::factory()->create(['role' => 'production']);
-        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $salesUser = User::factory()->create(['role' => 'sales']);
         $administrator = User::factory()->create(['role' => 'administrator']);
 
         $this->actingAs($production)->get(route('admin.item-masters.index'))
@@ -945,11 +932,12 @@ class CrmFlowTest extends TestCase
             'name' => 'Wall Bench Produksi',
         ]);
 
-        $this->actingAs($salesAdmin)->get(route('admin.item-masters.index'))
+        $this->actingAs($salesUser)->get(route('admin.item-masters.index'))
             ->assertForbidden();
-        $this->actingAs($salesAdmin)->get(route('dashboard'))
+        $this->actingAs($salesUser)->get(route('dashboard'))
             ->assertOk()
             ->assertDontSee('Master Item');
+        $this->actingAs($administrator)->get(route('admin.item-masters.index'))->assertOk();
 
         $this->actingAs($administrator)->get(route('admin.item-masters.index'))
             ->assertOk();
@@ -963,7 +951,7 @@ class CrmFlowTest extends TestCase
         $qc = User::factory()->create(['role' => 'qc']);
         $delivery = User::factory()->create(['role' => 'delivery']);
         $spv = User::factory()->create(['role' => 'sales_spv']);
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $customer = Customer::create([
             'name' => 'Customer End To End',
             'pipeline_stage' => 'follow_up',
@@ -1075,11 +1063,6 @@ class CrmFlowTest extends TestCase
             'customer_division' => 'Laboratorium',
             'request_date' => now()->format('Y-m-d'),
             'customer_po_number' => 'PO-CUSTOMER-TEST',
-            'checklist' => [
-                'quotation_approved' => 1,
-                'customer_po' => 1,
-                'customer_data' => 1,
-            ],
         ])->assertRedirect();
 
         $poRequest = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
@@ -1087,7 +1070,6 @@ class CrmFlowTest extends TestCase
             'status' => 'po_created',
             'accurate_po_number' => 'ACC-PO-TEST',
             'accurate_po_date' => now()->format('Y-m-d'),
-            'checklist' => collect(PurchaseOrderRequest::checklistItems())->mapWithKeys(fn ($label, $key) => [$key => 1])->all(),
         ])->assertRedirect();
 
         $this->assertSame('po_created', $poRequest->fresh()->status);
@@ -1464,7 +1446,7 @@ class CrmFlowTest extends TestCase
 
     public function test_pra_lead_assignment_and_acceptance_does_not_duplicate_lead(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $sales = User::factory()->create(['role' => 'sales']);
 
         $payload = [
@@ -1627,7 +1609,7 @@ class CrmFlowTest extends TestCase
         Storage::fake('public');
 
         $sales = User::factory()->create(['role' => 'sales']);
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $production = User::factory()->create(['role' => 'production']);
         $customer = Customer::create([
             'name' => 'Customer Produksi Langsung',
@@ -1732,7 +1714,7 @@ class CrmFlowTest extends TestCase
     public function test_customer_index_updates_the_detail_panel_for_non_superadmin_roles(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
-        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $administratorUser = User::factory()->create(['role' => 'administrator']);
         $salesSpv = User::factory()->create(['role' => 'sales_spv']);
         $firstCustomer = Customer::create([
             'name' => 'Customer Detail Pertama',
@@ -1745,7 +1727,7 @@ class CrmFlowTest extends TestCase
             'sales_id' => $sales->id,
         ]);
 
-        foreach ([$sales, $salesAdmin, $salesSpv] as $user) {
+        foreach ([$sales, $administratorUser, $salesSpv] as $user) {
             $response = $this->actingAs($user)->get(route('sales.customers.index', [
                 'customer' => $selectedCustomer->id,
             ]));

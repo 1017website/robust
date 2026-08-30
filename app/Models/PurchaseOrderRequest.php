@@ -29,9 +29,14 @@ class PurchaseOrderRequest extends Model
         return $this->hasOne(Invoice::class);
     }
 
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
     public function canCreateInvoice(): bool
     {
-        if ($this->status === 'cancelled' || $this->invoice()->exists()) {
+        if (in_array($this->status, ['draft', 'cancelled'], true) || $this->invoice()->exists()) {
             return false;
         }
 
@@ -48,7 +53,8 @@ class PurchaseOrderRequest extends Model
 
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
-    public static function checklistItems(): array
+    /** Item bawaan yang muncul saat Request PO baru dibuat. */
+    public static function defaultChecklistItems(): array
     {
         return [
             'quotation_approved' => 'Penawaran final sudah siap dikirim',
@@ -61,16 +67,63 @@ class PurchaseOrderRequest extends Model
         ];
     }
 
+    /**
+     * Checklist milik Request PO ini.
+     *
+     * Item disimpan per Request PO sehingga setiap akun dapat menghapus item yang
+     * tidak diperlukan atau menambah item sendiri tanpa mengubah Request PO lain.
+     * Data lama yang masih berbentuk {key: bool} tetap terbaca.
+     *
+     * @return array<int, array{key: string, label: string, checked: bool}>
+     */
+    public function checklistItems(): array
+    {
+        $stored = $this->checklist;
+
+        if ($stored === null) {
+            return collect(self::defaultChecklistItems())
+                ->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'checked' => false])
+                ->values()
+                ->all();
+        }
+
+        $defaults = self::defaultChecklistItems();
+        $items = [];
+
+        foreach ($stored as $key => $value) {
+            if (is_array($value)) {
+                // Bentuk baru: daftar item lengkap dengan label sendiri.
+                $label = trim((string) ($value['label'] ?? ''));
+                $itemKey = (string) ($value['key'] ?? $key);
+                if ($label === '') {
+                    $label = $defaults[$itemKey] ?? \Illuminate\Support\Str::headline($itemKey);
+                }
+                $items[] = ['key' => $itemKey, 'label' => $label, 'checked' => (bool) ($value['checked'] ?? false)];
+
+                continue;
+            }
+
+            // Bentuk lama: {key: bool}.
+            $items[] = [
+                'key' => (string) $key,
+                'label' => $defaults[$key] ?? \Illuminate\Support\Str::headline((string) $key),
+                'checked' => (bool) $value,
+            ];
+        }
+
+        return $items;
+    }
+
     public function checklistProgress(): array
     {
-        $values = $this->checklist ?? [];
-        $total = count(self::checklistItems());
-        $done = collect(self::checklistItems())->keys()->filter(fn ($key) => ! empty($values[$key]))->count();
+        $items = $this->checklistItems();
+        $total = count($items);
+        $done = collect($items)->filter(fn ($item) => $item['checked'])->count();
 
         return [
             'done' => $done,
             'total' => $total,
-            'percent' => $total > 0 ? round($done / $total * 100) : 0,
+            'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
             'complete' => $total > 0 && $done === $total,
         ];
     }
@@ -80,7 +133,14 @@ class PurchaseOrderRequest extends Model
         return $this->checklistProgress()['complete'];
     }
 
+    /** Seluruh status termasuk draf yang belum diajukan. */
     public static function statuses(): array
+    {
+        return ['draft' => 'Draft'] + self::processStatuses();
+    }
+
+    /** Status proses setelah Request PO diajukan (dipakai pada form update Accurate). */
+    public static function processStatuses(): array
     {
         return [
             'submitted' => 'Diajukan ke Accurate',

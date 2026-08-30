@@ -34,6 +34,7 @@ class OperationalPdfExportTest extends TestCase
         $this->assertStringContainsString('REQUEST PURCHASE ORDER', $response->getContent());
         $this->assertStringContainsString('ROBUST', $response->getContent());
         $this->assertStringContainsString('WALL BENCH - STEEL STRUCTURE', $response->getContent());
+        $this->assertStringContainsString('PENGIRIMAN & BILLING', $response->getContent());
         $this->assertStringContainsString('CHECKLIST KELENGKAPAN', $response->getContent());
 
         $this->actingAs($otherSales)
@@ -66,10 +67,16 @@ class OperationalPdfExportTest extends TestCase
         $this->assertStringContainsString('RINGKASAN TAGIHAN', $response->getContent());
         $this->assertStringContainsString('TERMIN PEMBAYARAN', $response->getContent());
 
+        // Sales kini mewarisi kewenangan back office eks Sales Admin.
         $this->actingAs($sales)
             ->get(route('admin.invoices.pdf', $invoice))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($otherSales)
+            ->get(route('admin.invoices.pdf', $invoice))
+            ->assertOk();
+
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $this->actingAs($drafter)
             ->get(route('admin.invoices.pdf', $invoice))
             ->assertForbidden();
     }
@@ -78,7 +85,7 @@ class OperationalPdfExportTest extends TestCase
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $otherSales = User::factory()->create(['role' => 'sales']);
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'administrator']);
         $customer = Customer::create([
             'code' => 'CUST-PDF-MODERN',
             'name' => 'PT Customer PDF Modern',
@@ -145,10 +152,6 @@ SPEC,
             'npwp_number' => '01.234.567.8-999.000',
             'payment_term' => '100% setelah invoice',
             'expected_delivery_date' => today()->addMonth(),
-            'checklist' => collect(PurchaseOrderRequest::checklistItems())
-                ->mapWithKeys(fn ($label, $key) => [$key => true])
-                ->all(),
-            'checklist_completed_at' => now(),
             'accurate_po_number' => 'ACC-PO-PDF-001',
             'accurate_po_date' => today(),
             'accurate_note' => 'Sudah dibuat di Accurate.',

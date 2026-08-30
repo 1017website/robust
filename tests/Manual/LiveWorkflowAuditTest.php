@@ -31,7 +31,7 @@ class LiveWorkflowAuditTest extends TestCase
     public function test_complete_live_workflow_and_role_access(): void
     {
         $administrator = User::where('email', 'superadmin@robust.test')->firstOrFail();
-        $salesAdmin = User::where('email', 'admin@robust.test')->firstOrFail();
+        $salesCoordinator = User::where('email', 'admin@robust.test')->firstOrFail();
         $sales = User::where('email', 'sales@robust.test')->firstOrFail();
         $otherSales = User::where('email', 'sales2@robust.test')->firstOrFail();
         $spv = User::where('email', 'spv@robust.test')->firstOrFail();
@@ -43,7 +43,7 @@ class LiveWorkflowAuditTest extends TestCase
 
         $this->record('accounts', 'passed', [
             'administrator' => $administrator->email,
-            'sales_admin' => $salesAdmin->email,
+            'sales_coordinator' => $salesCoordinator->email,
             'sales_owner' => $sales->email,
             'sales_other' => $otherSales->email,
             'sales_spv' => $spv->email,
@@ -56,7 +56,7 @@ class LiveWorkflowAuditTest extends TestCase
 
         // Akses awal per role.
         $this->actingAs($administrator)->get(route('dashboard'))->assertOk();
-        $this->actingAs($salesAdmin)->get(route('admin.pra-leads.index'))->assertOk();
+        $this->actingAs($administrator)->get(route('admin.pra-leads.index'))->assertOk();
         $this->actingAs($sales)->get(route('admin.pra-leads.index'))->assertForbidden();
         $this->actingAs($spv)->get(route('spv.quotation-approvals.index'))->assertOk();
         $this->actingAs($drafter)->get(route('drafter.design-requests.index'))->assertOk();
@@ -68,7 +68,7 @@ class LiveWorkflowAuditTest extends TestCase
         $this->record('role_boundary_initial', 'passed');
 
         // 1. Sales Admin menginput Pra Lead sebagai draft.
-        $this->actingAs($salesAdmin)->post(route('admin.pra-leads.store'), [
+        $this->actingAs($administrator)->post(route('admin.pra-leads.store'), [
             'instansi' => 'PT Audit Laboratorium Nusantara',
             'pic_name' => 'Bapak Ahmad Audit',
             'pic_position' => 'Kepala Laboratorium',
@@ -89,7 +89,7 @@ class LiveWorkflowAuditTest extends TestCase
         $this->assertSame('draft', $praLead->status);
 
         // 2. Assignment ke Sales owner dan kirim menjadi Request Masuk.
-        $this->actingAs($salesAdmin)->put(route('admin.pra-leads.update', $praLead), [
+        $this->actingAs($administrator)->put(route('admin.pra-leads.update', $praLead), [
             'instansi' => $praLead->instansi,
             'pic_name' => $praLead->pic_name,
             'pic_position' => $praLead->pic_position,
@@ -107,7 +107,7 @@ class LiveWorkflowAuditTest extends TestCase
             'action' => 'send',
         ])->assertRedirect(route('admin.pra-leads.index'));
 
-        $this->actingAs($salesAdmin)->get(route('admin.assignment.index'))->assertOk();
+        $this->actingAs($administrator)->get(route('admin.assignment.index'))->assertOk();
         $this->assertSame('waiting_acceptance', $praLead->fresh()->status);
         $this->record('pra_lead_assignment', 'passed', [
             'pra_lead_id' => $praLead->id,
@@ -143,7 +143,7 @@ class LiveWorkflowAuditTest extends TestCase
 
         // 4. Assignment Lead: Sales A -> Sales B -> Sales A dan cek isolasi owner.
         $this->actingAs($otherSales)->get(route('sales.leads.show', $lead))->assertForbidden();
-        $this->actingAs($salesAdmin)->post(route('admin.assignment.reassign'), [
+        $this->actingAs($administrator)->post(route('admin.assignment.reassign'), [
             'lead_id' => $lead->id,
             'to_sales_id' => $otherSales->id,
         ])->assertRedirect();
@@ -152,7 +152,7 @@ class LiveWorkflowAuditTest extends TestCase
         $this->actingAs($sales)->get(route('sales.customers.show', $customer->fresh()))->assertForbidden();
         $this->actingAs($otherSales)->get(route('sales.customers.show', $customer->fresh()))->assertOk();
         $this->assertSame($otherSales->id, $customer->fresh()->sales_id);
-        $this->actingAs($salesAdmin)->post(route('admin.assignment.reassign'), [
+        $this->actingAs($administrator)->post(route('admin.assignment.reassign'), [
             'lead_id' => $lead->id,
             'to_sales_id' => $sales->id,
         ])->assertRedirect();
@@ -401,14 +401,6 @@ SPEC;
             'npwp_number' => '01.234.567.8-999.000',
             'payment_term' => '100% setelah invoice',
             'expected_delivery_date' => '2026-09-15',
-            'checklist' => [
-                'quotation_approved' => 1,
-                'customer_po' => 1,
-                'customer_data' => 1,
-                'delivery_address' => 1,
-                'pic_contact' => 1,
-                'payment_term' => 1,
-            ],
             'admin_note' => 'Mohon proses ke Accurate.',
         ])->assertRedirect();
 
@@ -430,7 +422,7 @@ SPEC;
         $fabrication = Document::where('name', 'Gambar Fabrikasi Audit')->firstOrFail();
 
         // Sales Admin melengkapi dan memproses PO di Accurate.
-        $this->actingAs($salesAdmin)->put(route('admin.purchase-order-requests.update', $poRequest), [
+        $this->actingAs($administrator)->put(route('admin.purchase-order-requests.update', $poRequest), [
             'status' => 'po_created',
             'accurate_po_number' => 'ACC-PO-AUDIT-2026-001',
             'accurate_po_date' => '2026-07-26',
@@ -442,14 +434,10 @@ SPEC;
             'npwp_number' => $poRequest->npwp_number,
             'payment_term' => $poRequest->payment_term,
             'expected_delivery_date' => '2026-09-15',
-            'checklist' => collect(PurchaseOrderRequest::checklistItems())
-                ->mapWithKeys(fn ($label, $key) => [$key => 1])
-                ->all(),
         ])->assertRedirect();
 
         $poRequest->refresh();
         $this->assertSame('po_created', $poRequest->status);
-        $this->assertTrue($poRequest->isChecklistComplete());
         $this->assertTrue(Storage::disk('public')->exists($fabrication->file_path));
         $this->record('project_and_request_po', 'passed', [
             'project_id' => $project->id,
@@ -463,11 +451,11 @@ SPEC;
         $this->actingAs($sales)->get(route('admin.invoices.create', [
             'request_po' => $poRequest->id,
         ]))->assertForbidden();
-        $this->actingAs($salesAdmin)->get(route('admin.invoices.create', [
+        $this->actingAs($administrator)->get(route('admin.invoices.create', [
             'request_po' => $poRequest->id,
         ]))->assertOk();
 
-        $this->actingAs($salesAdmin)->post(route('admin.invoices.store'), [
+        $this->actingAs($administrator)->post(route('admin.invoices.store'), [
             'purchase_order_request_id' => $poRequest->id,
             'invoice_date' => '2026-07-26',
             'note' => 'Invoice simulasi audit live.',

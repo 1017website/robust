@@ -24,7 +24,7 @@ class GlobalSearchController extends Controller
             $user = Auth::user();
             $like = "%{$query}%";
 
-            if ($user->isAdministrator() || $user->isSalesAdmin() || $user->isSales() || $user->isSalesSpv()) {
+            if ($user->isAdministrator() || $user->isSales() || $user->isSalesSpv()) {
                 $customers = Customer::with('primaryPic', 'sales')
                     ->when($user->isSales(), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->where(function (Builder $q) use ($like) {

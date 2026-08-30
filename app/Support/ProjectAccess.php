@@ -9,7 +9,7 @@ class ProjectAccess
 {
     public static function canView(User $user, Project $project): bool
     {
-        if (in_array($user->role, ['administrator', 'sales_admin', 'sales_spv', 'administration', 'production', 'qc', 'delivery'], true)) {
+        if (in_array($user->role, ['administrator', 'sales_spv', 'administration', 'production', 'qc', 'delivery'], true)) {
             return true;
         }
 

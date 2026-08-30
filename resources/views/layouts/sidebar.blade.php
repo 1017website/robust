@@ -41,7 +41,7 @@
 
     $pushItem($menuGroups, 'Dashboard', 'dashboard', 'dashboard', 'bi-house-door');
 
-    if (in_array($role, ['administrator', 'sales_admin'], true)) {
+    if (in_array($role, ['administrator', 'sales'], true)) {
         $pushItem($menuGroups, 'Monitoring Pipeline', 'pipeline.index', 'pipeline.*', 'bi-kanban');
     }
 
@@ -67,17 +67,6 @@
         $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
         $pushItem($menuGroups, 'System Settings', 'admin.system-settings.index', 'admin.system-settings.*', 'bi-gear-wide-connected');
-    } elseif ($role === 'sales_admin') {
-        $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
-        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
-        $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
-        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
-        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
-        $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
-        $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
-        $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
-        $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
-        $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
     } elseif ($role === 'sales_spv') {
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
@@ -120,16 +109,23 @@
         $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } else {
+        $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
+        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
-        $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
+        $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Request PO', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
+        $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
+        $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     }
 

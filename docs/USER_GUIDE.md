@@ -77,12 +77,26 @@ Klik nama pengguna di kanan atas, lalu pilih **Logout**. Pada akun Sales dan Dra
 | SPV Sales | Memeriksa penawaran dan memilih Approve, Minta Revisi, atau Tolak. |
 | Produksi/Drafter | Mengerjakan Design Request, mengisi spesifikasi, costing, item hasil, dokumen, dan mengirim hasil final ke Sales. |
 
+> Role **Sales Admin** sudah dihapus dan digabungkan ke **Sales**. Seluruh akun eks
+> Sales Admin otomatis menjadi Sales, dan role Sales kini mewarisi pekerjaan back
+> office yang dulu dipegang Sales Admin: **Monitoring Pipeline, Pra Leads, Assignment,
+> Invoice, Project Monitoring, dan Manage User**.
+>
+> Yang tetap khusus Administrator: **System Settings**, serta hak melihat seluruh data
+> lintas sales (lead, dokumen, dan aktivitas milik sales lain). Sales tetap hanya
+> melihat data penjualan miliknya sendiri. **Master Item** tetap dipegang Produksi.
+>
+> Pada Manage User, akun non-Administrator tidak dapat melihat maupun mengubah akun
+> Administrator, dan tidak dapat membuat akun ber-role Administrator.
+
 ### Aturan akses penting
 
 - Sales hanya dapat mengakses data penjualan yang menjadi tanggung jawabnya.
 - Drafter hanya dapat mengerjakan Design Request yang ditugaskan kepadanya.
 - SPV Sales dapat membaca customer dan memproses antrean approval penawaran.
 - Hanya Administrator yang dapat membuka **System Settings**.
+- Kolom administrasi pada **Project Monitoring** (Comment, KP, Bukti Potong PPh) dapat
+  diisi oleh Administrator, Sales, dan **Administration**.
 
 ## 4. Tutorial Alur Utama dari Awal sampai Selesai
 
@@ -144,6 +158,17 @@ Bagian ini adalah jalur yang paling disarankan untuk penggunaan sehari-hari.
 
 Gunakan **Tambah Lead Baru** hanya untuk prospek yang memang tidak berasal dari alur Pra Lead.
 
+Catatan isian pada form Lead:
+
+- **Kota** menampilkan saran seluruh kota dan kabupaten di Indonesia (38 provinsi,
+  514 wilayah). Nama kabupaten diawali "Kabupaten" agar tidak tertukar dengan kota
+  bernama sama, misalnya `Bandung` dan `Kabupaten Bandung`. Nama lain tetap dapat
+  diketik manual.
+- **Tipe Instansi** mencakup Universitas, Sekolah, Rumah Sakit, Industri, Pemerintah,
+  BUMN, BUMD, Laboratorium Swasta, Distributor, Kontraktor, dan Lainnya.
+- **Sumber Lead** dibatasi menjadi Distributor, Supplier, Loops LabNusantara,
+  Robust Multilab Solusindo, Robust Indonesia - Sinar Lab, dan MEC.
+
 ### Tahap 4 — Sales mencatat aktivitas tindak lanjut
 
 1. Buka menu **Activities**.
@@ -163,6 +188,9 @@ Design Request digunakan ketika Sales membutuhkan desain, spesifikasi, BOQ, atau
 1. Dari detail Lead, pilih tindakan untuk membuat Design Request, atau buka menu **Design Request**.
 2. Klik **Design Request Baru**.
 3. Isi **Informasi Dasar**:
+   - Nomor Design Request — boleh diisi manual mengikuti penomoran internal.
+     Kosongkan bila ingin nomor otomatis (DR-001, DR-002, dan seterusnya).
+     Nomor tidak boleh sama dengan Design Request lain.
    - Customer/instansi.
    - PIC.
    - Nama project.
@@ -182,6 +210,35 @@ Design Request digunakan ketika Sales membutuhkan desain, spesifikasi, BOQ, atau
 **Hasil:** status menjadi **Assigned** dan Design Request tampil pada akun Drafter yang dipilih.
 
 > Deadline tidak boleh lebih awal dari tanggal request.
+
+Lampiran sketsa maksimal **5 file, 80 MB per file** dengan format PDF, JPG, PNG, WEBP,
+HEIC, DOC/DOCX, atau XLS/XLSX.
+
+**Menyetel batas upload di cPanel.** Batas aplikasi (80 MB) hanya berlaku bila batas PHP
+di server juga sama atau lebih besar. Urutan pengecekan:
+
+1. **MultiPHP INI Editor** (cPanel → Software → MultiPHP INI Editor → Basic Mode), pilih
+   domain lalu set:
+   - `upload_max_filesize` = `80M`
+   - `post_max_size` = `410M` (5 file x 80 MB + selisih data form)
+   - `max_execution_time` = `300`
+   - `max_input_time` = `300`
+   - `memory_limit` = `512M`
+2. File [public/.user.ini](../public/.user.ini) di repo sudah berisi nilai yang sama dan
+   otomatis terbaca pada hosting yang memakai PHP-FPM/CGI (umumnya cPanel + LiteSpeed).
+   Perubahan `.user.ini` baru berlaku setelah cache PHP kedaluwarsa (biasanya 5 menit)
+   atau setelah PHP di-restart.
+3. `php_value upload_max_filesize` di `.htaccess` **tidak berpengaruh** pada PHP-FPM/CGI.
+   Jangan mengandalkan cara ini.
+4. Bila memakai LiteSpeed, periksa juga `LSAPI`/`Max Request Body Size` di WHM
+   (LiteSpeed Web Server → Tuning). Batas ini berada di atas PHP dan akan menolak
+   permintaan sebelum sampai ke PHP.
+5. Bila domain berada di belakang Cloudflare, paket gratis membatasi unggahan **100 MB**
+   per request. Unggahan 5 x 80 MB sekaligus akan terpotong. Solusinya unggah bertahap,
+   atau bypass proxy (DNS only) untuk subdomain CRM.
+
+Cek hasil akhirnya lewat cPanel → **Select PHP Version → Options**, atau dengan membuat
+file `phpinfo.php` sementara dan memastikan `upload_max_filesize` sudah `80M`.
 
 ### Tahap 6 — Drafter mengerjakan Design Request
 
@@ -322,21 +379,30 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
    - **PO Existing / Non-CRM** untuk order yang penawarannya dibuat di luar CRM; isi nama project, nomor referensi (opsional), nilai PO, dan Sales penanggung jawab.
 5. Isi nomor PO customer dan unggah buktinya jika tersedia.
 6. Lengkapi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, serta estimasi tanggal pengiriman.
-7. Periksa checklist kelengkapan:
-   - Penawaran final sudah approved SPV.
-   - PO customer/bukti order sudah dilampirkan.
-   - Data customer sudah lengkap.
-   - Alamat pengiriman/lokasi project sudah jelas.
-   - PIC penerima sudah jelas.
-   - Termin pembayaran sudah jelas.
-   - Data siap diinput ke Accurate.
-8. Klik **Simpan/Buat Request PO**.
-9. Administrator membuka detail Request PO setelah diproses di Accurate dan mengubah status:
-   - Diajukan ke Accurate.
-   - Diproses di Accurate.
-   - PO Accurate Dibuat.
-   - Dibatalkan.
-10. Isi nomor, tanggal, dan catatan PO Accurate.
+7. Kolom bertanda bintang (*) wajib diisi sebelum Request PO diajukan: Nomor Proyek,
+   Nama Customer, Tanggal Request, serta penawaran CRM atau data PO Non-CRM sesuai
+   sumber yang dipilih.
+8. Atur **Checklist Kelengkapan** sesuai kebutuhan order:
+   - Tujuh item bawaan muncul otomatis (penawaran final, PO customer, data customer,
+     alamat pengiriman, PIC penerima, termin pembayaran, dan kesiapan input Accurate).
+   - Klik ikon **hapus** di sebelah item untuk membuang item yang tidak diperlukan.
+   - Ketik pada kolom **Tambah item checklist** lalu klik **+** untuk menambah item sendiri.
+   - Checklist bersifat per Request PO, jadi perubahan di sini tidak mengubah Request PO lain.
+   - Checklist juga dapat diubah kapan saja dari halaman detail Request PO oleh setiap
+     akun yang berhak atas request tersebut (Administrator dan Sales pemiliknya),
+     termasuk saat masih berstatus draf.
+9. Selesaikan dengan salah satu tombol:
+   - **Simpan & Ajukan Request PO** — data lengkap dan langsung diteruskan ke Accurate.
+   - **Simpan Draf (Pending)** — data belum lengkap. Request PO tersimpan berstatus
+     **Draft**, tidak divalidasi, dan belum masuk proses Accurate. Buka kembali lewat
+     tombol **Lanjutkan & Ajukan** pada daftar atau detail Request PO untuk melengkapi
+     dan mengajukannya. Draf tidak dapat diekspor PDF maupun ditagihkan.
+10. Administrator atau Sales membuka detail Request PO setelah diproses di Accurate dan mengubah status:
+    - Diajukan ke Accurate.
+    - Diproses di Accurate.
+    - PO Accurate Dibuat.
+    - Dibatalkan.
+11. Isi nomor, tanggal, dan catatan PO Accurate.
 
 File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/XLSX.
 

@@ -34,4 +34,22 @@ class Lead extends Model
     {
         return ['aktif', 'active'];
     }
+
+    /** Pilihan tipe instansi pada form Lead. */
+    public static function instansiTypes(): array
+    {
+        return [
+            'Universitas',
+            'Sekolah',
+            'Rumah Sakit',
+            'Industri',
+            'Pemerintah',
+            'BUMN',
+            'BUMD',
+            'Laboratorium Swasta',
+            'Distributor',
+            'Kontraktor',
+            'Lainnya',
+        ];
+    }
 }

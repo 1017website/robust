@@ -18,7 +18,7 @@
 
 @section('content')
 @php
-    $canEditAdministration = auth()->user()->isAdminLevel();
+    $canEditAdministration = auth()->user()->canManageProjectAdministration();
     $showPrices = auth()->user()->canViewPrices();
 @endphp
 <x-page-header title="Project Monitoring Dashboard" subtitle="Monitoring administrasi, invoice, produksi, QC, dan delivery dalam satu tampilan." />

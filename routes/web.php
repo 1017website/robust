@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // ---------- Shared (sales + admin) ----------
-    Route::middleware('role:administrator,sales,sales_admin,sales_spv,administration')->group(function () {
+    Route::middleware('role:administrator,sales,sales_spv,administration')->group(function () {
         Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
         Route::get('/activities/create', [ActivityController::class, 'create'])->name('activities.create');
         Route::post('/activities', [ActivityController::class, 'store'])->name('activities.store');
@@ -86,10 +86,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/project-workspace/{project}/workflow/{type}', [ProjectWorkflowController::class, 'attachment'])->name('project-workflow.attachment');
     Route::get('/project-workspace/{project}/design-revisions/{designRevision}', [DesignRevisionController::class, 'attachment'])->name('design-revisions.attachment');
 
-    Route::middleware('role:administrator,sales_admin,administration')->prefix('administration')->name('administration.')->group(function () {
+    Route::middleware('role:administrator,sales,administration')->prefix('administration')->name('administration.')->group(function () {
         Route::get('/project-monitoring', [ProjectMonitoringController::class, 'index'])->name('project-monitoring.index');
     });
-    Route::middleware('role:administrator,sales_admin')->prefix('administration')->name('administration.')->group(function () {
+    Route::middleware('role:administrator,sales,administration')->prefix('administration')->name('administration.')->group(function () {
         Route::put('/project-monitoring/{project}', [ProjectMonitoringController::class, 'update'])->name('project-monitoring.update');
     });
 
@@ -109,7 +109,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- Administrator ----------
-    Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:administrator,sales')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/pra-leads', [PraLeadController::class, 'index'])->name('pra-leads.index');
         Route::post('/pra-leads', [PraLeadController::class, 'store'])->name('pra-leads.store');
         Route::put('/pra-leads/{praLead}', [PraLeadController::class, 'update'])->name('pra-leads.update');
@@ -143,16 +143,19 @@ Route::middleware('auth')->group(function () {
     });
 
     // Request PO terintegrasi langsung dari penawaran; sales dapat membuat tanpa input ulang.
-    Route::middleware('role:administrator,sales_admin,sales')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:administrator,sales')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/request-po', [PurchaseOrderRequestController::class, 'index'])->name('purchase-order-requests.index');
         Route::get('/request-po/create', [PurchaseOrderRequestController::class, 'create'])->name('purchase-order-requests.create');
         Route::post('/request-po', [PurchaseOrderRequestController::class, 'store'])->name('purchase-order-requests.store');
+        Route::get('/request-po/{purchaseOrderRequest}/edit', [PurchaseOrderRequestController::class, 'edit'])->name('purchase-order-requests.edit');
+        Route::put('/request-po/{purchaseOrderRequest}/draft', [PurchaseOrderRequestController::class, 'updateDraft'])->name('purchase-order-requests.draft');
+        Route::put('/request-po/{purchaseOrderRequest}/checklist', [PurchaseOrderRequestController::class, 'updateChecklist'])->name('purchase-order-requests.checklist');
         Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
         Route::get('/request-po/{purchaseOrderRequest}/pdf', [PurchaseOrderRequestController::class, 'downloadPdf'])->name('purchase-order-requests.pdf');
         Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');
     });
 
-    Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:administrator,sales')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
         Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
@@ -162,7 +165,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- Sales ----------
-    Route::middleware('role:sales,sales_admin,sales_spv')->prefix('sales')->name('sales.')->group(function () {
+    Route::middleware('role:sales,sales_spv')->prefix('sales')->name('sales.')->group(function () {
         Route::get('/request-masuk', [RequestMasukController::class, 'index'])->name('request-masuk.index');
         Route::post('/request-masuk/{praLead}/accept', [RequestMasukController::class, 'accept'])->name('request-masuk.accept');
         Route::post('/request-masuk/{praLead}/reject', [RequestMasukController::class, 'reject'])->name('request-masuk.reject');
@@ -198,13 +201,13 @@ Route::middleware('auth')->group(function () {
     });
 
     // Customer read access untuk sales, admin, dan SPV.
-    Route::middleware('role:sales,sales_admin,sales_spv')->prefix('sales')->name('sales.')->group(function () {
+    Route::middleware('role:sales,sales_spv')->prefix('sales')->name('sales.')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->whereNumber('customer')->name('customers.show');
     });
 
     // Perubahan customer hanya untuk sales dan admin.
-    Route::middleware('role:sales,sales_admin')->prefix('sales')->name('sales.')->group(function () {
+    Route::middleware('role:sales')->prefix('sales')->name('sales.')->group(function () {
         Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
         Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
         Route::get('/customers/{customer}/edit', [CustomerController::class, 'edit'])->whereNumber('customer')->name('customers.edit');

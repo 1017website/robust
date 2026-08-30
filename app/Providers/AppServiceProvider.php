@@ -66,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'spv.quotation-approvals.*', $waitingApprovals, 'Approval penawaran', 'Penawaran menunggu review SPV.', route('spv.quotation-approvals.index', ['status' => 'waiting_approval']), 'bi-check2-square', 'text-primary');
                 }
 
-                if ($user->isAdminLevel() || $user->isAdministrator()) {
+                if ($user->canManageBackOffice()) {
                     $submittedPo = PurchaseOrderRequest::where('status', 'submitted')->count();
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request PO baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
 

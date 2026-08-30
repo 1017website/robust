@@ -70,6 +70,11 @@
                             </select>
                             <div class="form-text">Pilih data master untuk mengisi Customer, PIC, Nama Proyek, dan kebutuhan secara otomatis.</div>
                         </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nomor Design Request</label>
+                            <input name="code" value="{{ old('code') }}" class="form-control" maxlength="50" placeholder="Contoh: DR-2026-014 — kosongkan untuk nomor otomatis">
+                            <div class="form-text">Isi manual sesuai penomoran internal. Jika dikosongkan, sistem membuat nomor otomatis (DR-001, DR-002, ...).</div>
+                        </div>
                         <div class="col-md-4"><label class="form-label small fw-bold">Customer / Instansi *</label><input id="customer_name" name="customer_name" value="{{ old('customer_name',$lead?->instansi) }}" class="form-control" required></div>
                         <div class="col-md-4"><label class="form-label small fw-bold">PIC Customer *</label><input id="pic_name" name="pic_name" value="{{ old('pic_name',$lead?->pic_name) }}" class="form-control" required></div>
                         <div class="col-md-4"><label class="form-label small fw-bold">Nama Proyek *</label><input id="project_name" name="project_name" value="{{ old('project_name',$lead?->lab_name) }}" class="form-control" required></div>
