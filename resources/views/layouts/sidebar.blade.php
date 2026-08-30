@@ -48,7 +48,6 @@
     if ($role === 'administrator') {
         $pushLabel($menuGroups, 'MAIN');
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
-        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
@@ -68,6 +67,7 @@
         $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
         $pushItem($menuGroups, 'System Settings', 'admin.system-settings.index', 'admin.system-settings.*', 'bi-gear-wide-connected');
     } elseif ($role === 'sales_spv') {
+        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
@@ -110,7 +110,6 @@
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } else {
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
-        $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');

@@ -41,7 +41,7 @@ class CrmFlowTest extends TestCase
                 'admin.users.index', 'admin.system-settings.index',
             ],
             'sales' => [
-                'dashboard', 'pipeline.index', 'admin.pra-leads.index', 'admin.assignment.index',
+                'dashboard', 'pipeline.index', 'admin.pra-leads.index',
                 'sales.request-masuk.index', 'sales.leads.index', 'sales.design-requests.index',
                 'sales.quotations.index', 'admin.purchase-order-requests.index', 'admin.invoices.index',
                 'sales.customers.index', 'sales.projects.index', 'administration.project-monitoring.index',
@@ -49,7 +49,7 @@ class CrmFlowTest extends TestCase
                 'admin.users.index', 'profile.edit',
             ],
             'sales_spv' => [
-                'dashboard', 'sales.request-masuk.index', 'sales.leads.index',
+                'dashboard', 'admin.assignment.index', 'sales.request-masuk.index', 'sales.leads.index',
                 'sales.design-requests.index', 'spv.quotation-approvals.index',
                 'sales.customers.index', 'sales.projects.index', 'activities.index',
                 'calendar.index', 'reports.index', 'profile.edit',

@@ -20,7 +20,9 @@ class PipelineController extends Controller
         $salesId = Auth::id();
 
         $salesScope = fn (Builder $q, string $column = 'sales_id') => $isSales ? $q->where($column, $salesId) : $q;
-        $canOpenAdmin = $user->isAdminLevel();
+        // Sales kini punya akses ke Pra Leads dan Request PO, jadi tautannya tidak
+        // boleh lagi dimatikan berdasarkan isAdminLevel().
+        $canOpenAdmin = $user->canManageBackOffice();
         $canOpenSales = $user->role === 'sales';
         $canOpenSpv = in_array($user->role, ['administrator', 'sales_spv'], true);
 

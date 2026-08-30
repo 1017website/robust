@@ -78,13 +78,18 @@ Klik nama pengguna di kanan atas, lalu pilih **Logout**. Pada akun Sales dan Dra
 | Produksi/Drafter | Mengerjakan Design Request, mengisi spesifikasi, costing, item hasil, dokumen, dan mengirim hasil final ke Sales. |
 
 > Role **Sales Admin** sudah dihapus dan digabungkan ke **Sales**. Seluruh akun eks
-> Sales Admin otomatis menjadi Sales, dan role Sales kini mewarisi pekerjaan back
-> office yang dulu dipegang Sales Admin: **Monitoring Pipeline, Pra Leads, Assignment,
+> Sales Admin otomatis menjadi Sales, dan role Sales kini mewarisi sebagian pekerjaan
+> back office yang dulu dipegang Sales Admin: **Monitoring Pipeline, Pra Leads,
 > Invoice, Project Monitoring, dan Manage User**.
 >
+> **Assignment** tidak ikut diwariskan. Memindahkan kepemilikan lead antar sales adalah
+> kewenangan pengawasan, sehingga menu tersebut hanya terbuka untuk **Administrator dan
+> SPV Sales**.
+>
 > Yang tetap khusus Administrator: **System Settings**, serta hak melihat seluruh data
-> lintas sales (lead, dokumen, dan aktivitas milik sales lain). Sales tetap hanya
-> melihat data penjualan miliknya sendiri. **Master Item** tetap dipegang Produksi.
+> lintas sales (lead, dokumen, dan aktivitas milik sales lain). Pada menu penjualan
+> Sales tetap hanya melihat data miliknya sendiri; menu back office memuat data lintas
+> sales sesuai sifat pekerjaannya. **Master Item** tetap dipegang Produksi.
 >
 > Pada Manage User, akun non-Administrator tidak dapat melihat maupun mengubah akun
 > Administrator, dan tidak dapat membuat akun ber-role Administrator.

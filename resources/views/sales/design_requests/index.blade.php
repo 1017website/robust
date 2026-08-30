@@ -55,7 +55,12 @@
                                 <td>{{ $dr->deadline?->translatedFormat('d M Y') ?: '-' }}</td>
                                 <td><strong>{{ $dr->progress }}%</strong><div class="sales-progress mt-1"><span style="width:{{ $dr->progress }}%"></span></div></td>
                                 <td>{{ $dr->updated_at->translatedFormat('d M Y') }}<div class="small text-muted-2">{{ $dr->updated_at->format('H:i') }}</div></td>
-                                <td><a href="{{ route('sales.design-requests.show',$dr) }}" class="btn btn-sm btn-soft" aria-label="Buka detail"><i class="bi bi-chevron-right"></i></a></td>
+                                <td class="text-end">
+                                    @if($dr->status === 'draft')
+                                        <a href="{{ route('sales.design-requests.edit',$dr) }}" class="btn btn-sm btn-soft" title="Lanjutkan draf"><i class="bi bi-pencil-square"></i></a>
+                                    @endif
+                                    <a href="{{ route('sales.design-requests.show',$dr) }}" class="btn btn-sm btn-soft" aria-label="Buka detail"><i class="bi bi-chevron-right"></i></a>
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="10"><x-empty text="Belum ada design request." /></td></tr>

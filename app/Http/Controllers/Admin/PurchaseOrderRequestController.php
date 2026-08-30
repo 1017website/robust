@@ -317,7 +317,9 @@ class PurchaseOrderRequestController extends Controller
     protected function selectableQuotations(?PurchaseOrderRequest $requestPo = null)
     {
         return Quotation::with('sales', 'customer.primaryPic')
-            ->whereIn('status', ['approved', 'sent_to_customer', 'customer_accepted'])
+            // Samakan dengan Quotation::canCreatePurchaseOrderRequest(). Status 'approved'
+            // sudah tidak dipakai sejak approval SPV dihapus.
+            ->whereIn('status', ['ready', 'sent_to_customer', 'customer_accepted'])
             ->where(fn ($query) => $query
                 ->whereDoesntHave('purchaseOrderRequest')
                 ->when($requestPo?->quotation_id, fn ($scope, $id) => $scope->orWhere('id', $id)))

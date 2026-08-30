@@ -44,7 +44,6 @@ class August2026CrmRevisionTest extends TestCase
         foreach ([
             'pipeline.index',
             'admin.pra-leads.index',
-            'admin.assignment.index',
             'admin.invoices.index',
             'admin.users.index',
             'administration.project-monitoring.index',
@@ -53,14 +52,59 @@ class August2026CrmRevisionTest extends TestCase
             $this->actingAs($sales)->get(route($route))->assertOk();
         }
 
-        // Yang tetap khusus Administrator.
+        // Yang tidak ikut diwariskan ke Sales.
         $this->actingAs($sales)->get(route('admin.system-settings.index'))->assertForbidden();
         $this->actingAs($sales)->get(route('admin.item-masters.index'))->assertForbidden();
+        $this->actingAs($sales)->get(route('admin.assignment.index'))->assertForbidden();
 
         // Role operasional lain tetap tidak mendapat kewenangan ini.
         $drafter = User::factory()->create(['role' => 'drafter']);
         $this->assertFalse($drafter->canManageBackOffice());
         $this->actingAs($drafter)->get(route('admin.pra-leads.index'))->assertForbidden();
+    }
+
+    public function test_assignment_is_limited_to_administrator_and_sales_spv(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $spv = User::factory()->create(['role' => 'sales_spv']);
+        $firstSales = User::factory()->create(['role' => 'sales', 'is_active' => true]);
+        $secondSales = User::factory()->create(['role' => 'sales', 'is_active' => true]);
+
+        $lead = Lead::create([
+            'code' => 'LEAD-ASSIGN-'.str()->random(4),
+            'instansi' => 'Customer Uji Assignment',
+            'pic_name' => 'PIC Assignment',
+            'phone' => '081200001111',
+            'location' => 'Surabaya',
+            'city' => 'Surabaya',
+            'instansi_type' => 'Industri',
+            'source' => 'distributor',
+            'lab_name' => 'Lab Uji Assignment',
+            'priority' => 'medium',
+            'sales_id' => $firstSales->id,
+            'status' => 'aktif',
+            'stage' => 'lead',
+        ]);
+
+        // Sales tidak lagi dapat membuka maupun memindahkan kepemilikan lead.
+        $this->actingAs($firstSales)->get(route('admin.assignment.index'))->assertForbidden();
+        $this->actingAs($secondSales)->post(route('admin.assignment.reassign'), [
+            'lead_id' => $lead->id,
+            'to_sales_id' => $secondSales->id,
+        ])->assertForbidden();
+        $this->assertSame($firstSales->id, $lead->fresh()->sales_id);
+
+        // Administrator dan SPV Sales tetap dapat menjalankannya.
+        foreach ([$administrator, $spv] as $supervisor) {
+            $this->actingAs($supervisor)->get(route('admin.assignment.index'))->assertOk();
+        }
+
+        $this->actingAs($spv)->post(route('admin.assignment.reassign'), [
+            'lead_id' => $lead->id,
+            'to_sales_id' => $secondSales->id,
+        ])->assertRedirect();
+
+        $this->assertSame($secondSales->id, $lead->fresh()->sales_id);
     }
 
     public function test_administration_role_can_fill_project_administration_columns(): void
@@ -328,6 +372,194 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'crm',
             'action' => 'submit',
         ])->assertSessionHasErrors(['quotation_id', 'project_number', 'customer_name']);
+    }
+
+    public function test_ready_quotation_is_selectable_on_the_request_po_form(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $quotation = Quotation::create([
+            'code' => 'Q-READY-RPO',
+            'customer_name' => 'PT Siap Dikirim',
+            'project_name' => 'Lab Siap Dikirim',
+            'sales_id' => $sales->id,
+            'quote_date' => now()->toDateString(),
+            'currency' => 'IDR',
+            'subtotal' => 20000000,
+            'grand_total' => 20000000,
+            'status' => 'ready',
+            'created_by' => $sales->id,
+        ]);
+
+        // Status 'ready' diizinkan model, jadi harus ikut tampil pada form Request PO.
+        $this->assertTrue($quotation->canCreatePurchaseOrderRequest());
+        $this->actingAs($administrator)->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()
+            ->assertSee('Q-READY-RPO');
+
+        $this->actingAs($administrator)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'crm',
+            'quotation_id' => $quotation->id,
+            'project_number' => 'PRJ-READY-0001',
+            'customer_name' => 'PT Siap Dikirim',
+            'request_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('purchase_order_requests', [
+            'quotation_id' => $quotation->id,
+            'status' => 'submitted',
+        ]);
+    }
+
+    public function test_invoice_can_only_be_issued_after_delivery_is_completed(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $quotation = Quotation::create([
+            'code' => 'Q-INVOICE-GUARD',
+            'customer_name' => 'PT Penjagaan Invoice',
+            'project_name' => 'Lab Penjagaan Invoice',
+            'sales_id' => $sales->id,
+            'quote_date' => now()->toDateString(),
+            'currency' => 'IDR',
+            'subtotal' => 30000000,
+            'grand_total' => 30000000,
+            'status' => 'sent_to_customer',
+            'created_by' => $sales->id,
+        ]);
+        $requestPo = PurchaseOrderRequest::create([
+            'code' => 'RPO-INVOICE-GUARD',
+            'quotation_id' => $quotation->id,
+            'customer_name' => $quotation->customer_name,
+            'requested_by' => $sales->id,
+            'request_date' => today(),
+            'status' => 'submitted',
+        ]);
+
+        // Belum ada Project sama sekali: belum boleh ditagihkan.
+        $this->assertFalse($requestPo->fresh()->canCreateInvoice());
+        $this->actingAs($administrator)
+            ->get(route('admin.invoices.create', ['request_po' => $requestPo->id]))
+            ->assertSessionHasErrors('request_po');
+
+        $project = Project::create([
+            'code' => 'PRJ-INVOICE-GUARD',
+            'quotation_id' => $quotation->id,
+            'name' => 'Lab Penjagaan Invoice',
+            'project_manager_id' => $sales->id,
+            'status' => 'ongoing',
+            'total_value' => 30000000,
+        ]);
+        $workflow = $project->workflow()->firstOrCreate();
+
+        // Project ada tetapi pengiriman belum selesai: tetap belum boleh.
+        $workflow->update(['delivery_status' => 'in_transit']);
+        $this->assertFalse($requestPo->fresh()->canCreateInvoice());
+
+        // Delivery selesai: baru boleh ditagihkan.
+        $workflow->update(['delivery_status' => 'completed']);
+        $this->assertTrue($requestPo->fresh()->canCreateInvoice());
+        $this->actingAs($administrator)
+            ->get(route('admin.invoices.create', ['request_po' => $requestPo->id]))
+            ->assertOk();
+    }
+
+    public function test_sales_can_only_change_pra_leads_they_own(): void
+    {
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $owner = User::factory()->create(['role' => 'sales']);
+        $otherSales = User::factory()->create(['role' => 'sales']);
+
+        $praLead = PraLead::create([
+            'code' => 'PL-OWNERSHIP-'.str()->random(4),
+            'instansi' => 'PT Kepemilikan Pra Lead',
+            'pic_name' => 'PIC Pra Lead',
+            'phone' => '081200002222',
+            'source' => 'distributor',
+            'status' => 'waiting_acceptance',
+            'assigned_sales_id' => $owner->id,
+            'created_by' => $administrator->id,
+        ]);
+
+        $payload = [
+            'instansi' => 'PT Kepemilikan Pra Lead',
+            'pic_name' => 'PIC Pra Lead',
+            'phone' => '081200002222',
+            'source' => 'distributor',
+        ];
+
+        // Sales lain tidak boleh mengubah maupun menghapus.
+        $this->actingAs($otherSales)->put(route('admin.pra-leads.update', $praLead), $payload)->assertForbidden();
+        $this->actingAs($otherSales)->delete(route('admin.pra-leads.destroy', $praLead))->assertForbidden();
+        $this->assertDatabaseHas('pra_leads', ['id' => $praLead->id, 'deleted_at' => null]);
+
+        // Sales yang ditugaskan dan Administrator tetap boleh.
+        $this->actingAs($owner)->put(route('admin.pra-leads.update', $praLead), $payload + [
+            'admin_note' => 'Diperbarui oleh sales yang ditugaskan.',
+        ])->assertRedirect();
+        $this->actingAs($administrator)->delete(route('admin.pra-leads.destroy', $praLead))->assertRedirect();
+        $this->assertSoftDeleted('pra_leads', ['id' => $praLead->id]);
+    }
+
+    public function test_design_request_can_be_saved_as_draft_and_sent_later(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+
+        $this->actingAs($sales)->get(route('sales.design-requests.create'))
+            ->assertOk()
+            ->assertSee('Simpan Draf')
+            // Tombol bernama "action" membayangi properti form.action pada browser,
+            // sehingga URL tujuan XHR harus dibaca lewat getAttribute.
+            ->assertSee("designRequestForm.getAttribute('action')", false)
+            ->assertDontSee("xhr.open('POST', designRequestForm.action", false);
+
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), [
+            'customer_name' => 'Customer Draf Design',
+            'project_name' => 'Project Draf Design',
+            'request_date' => now()->toDateString(),
+            'deadline' => now()->addDays(5)->toDateString(),
+            'priority' => 'normal',
+            'short_description' => 'Menunggu sketsa dari customer.',
+            'detail_need' => 'Detail menyusul setelah survey lokasi.',
+            'production_pic_id' => $drafter->id,
+            'action' => 'save',
+        ])->assertRedirect(route('sales.design-requests.index'));
+
+        $designRequest = DesignRequest::where('project_name', 'Project Draf Design')->firstOrFail();
+        $this->assertSame('draft', $designRequest->status);
+
+        $this->actingAs($sales)->get(route('sales.design-requests.edit', $designRequest))
+            ->assertOk()
+            ->assertSee('Lanjutkan Draf')
+            ->assertSee('Customer Draf Design');
+
+        $this->actingAs($sales)->put(route('sales.design-requests.update', $designRequest), [
+            'customer_name' => 'Customer Draf Design',
+            'project_name' => 'Project Draf Design',
+            'request_date' => now()->toDateString(),
+            'deadline' => now()->addDays(5)->toDateString(),
+            'priority' => 'urgent',
+            'short_description' => 'Sketsa sudah lengkap.',
+            'detail_need' => 'Wall bench dan fume hood sesuai hasil survey.',
+            'production_pic_id' => $drafter->id,
+            'action' => 'send',
+        ])->assertRedirect(route('sales.design-requests.index'));
+
+        $designRequest->refresh();
+        $this->assertSame('assigned', $designRequest->status);
+        $this->assertSame('urgent', $designRequest->priority);
+        $this->assertSame(1, DesignRequest::where('project_name', 'Project Draf Design')->count());
+
+        // Sudah dikirim: jalur draf ditutup.
+        $this->actingAs($sales)->get(route('sales.design-requests.edit', $designRequest))->assertForbidden();
+
+        // Draf milik sales lain tidak dapat dibuka.
+        $otherSales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($otherSales)->get(route('sales.design-requests.edit', $designRequest))->assertForbidden();
     }
 
     public function test_lead_accepts_a_manually_typed_city_and_only_revised_sources(): void

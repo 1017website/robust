@@ -115,9 +115,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/pra-leads/{praLead}', [PraLeadController::class, 'update'])->name('pra-leads.update');
         Route::delete('/pra-leads/{praLead}', [PraLeadController::class, 'destroy'])->name('pra-leads.destroy');
 
-        Route::get('/assignment', [AssignmentController::class, 'index'])->name('assignment.index');
-        Route::post('/assignment/reassign', [AssignmentController::class, 'reassign'])->name('assignment.reassign');
-
         // System Settings khusus Administrator / Superadmin
         Route::middleware('role:administrator')->group(function () {
             Route::get('/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
@@ -175,6 +172,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/design-requests', [SalesDesignRequestController::class, 'index'])->name('design-requests.index');
         Route::get('/design-requests/create', [SalesDesignRequestController::class, 'create'])->name('design-requests.create');
         Route::post('/design-requests', [SalesDesignRequestController::class, 'store'])->name('design-requests.store');
+        Route::get('/design-requests/{designRequest}/edit', [SalesDesignRequestController::class, 'edit'])->name('design-requests.edit');
+        Route::put('/design-requests/{designRequest}', [SalesDesignRequestController::class, 'update'])->name('design-requests.update');
         Route::get('/design-requests/{designRequest}', [SalesDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::post('/design-requests/{designRequest}/revision', [SalesDesignRequestController::class, 'requestRevision'])->name('design-requests.revision');
 
@@ -217,6 +216,13 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- SPV Sales ----------
+    // Assignment bersifat pengawasan: melihat beban kerja seluruh sales dan memindahkan
+    // kepemilikan lead antar sales. Karena itu hanya Administrator dan SPV Sales.
+    Route::middleware('role:administrator,sales_spv')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/assignment', [AssignmentController::class, 'index'])->name('assignment.index');
+        Route::post('/assignment/reassign', [AssignmentController::class, 'reassign'])->name('assignment.reassign');
+    });
+
     Route::middleware('role:administrator,sales_spv')->prefix('spv')->name('spv.')->group(function () {
         Route::get('/quotation-approvals', [QuotationApprovalController::class, 'index'])->name('quotation-approvals.index');
         Route::get('/quotation-approvals/{quotation}', [QuotationApprovalController::class, 'show'])->name('quotation-approvals.show');

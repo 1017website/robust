@@ -85,77 +85,44 @@ class DesignRequestController extends Controller
         $drafterWorkloads = $this->drafterWorkloads($drafters);
         $salesList = User::assignableSales();
 
-        return view('sales.design_requests.create', compact('lead', 'leads', 'customers', 'drafters', 'drafterWorkloads', 'salesList'));
+        return view('sales.design_requests.create', [
+            'designRequest' => null,
+            'lead' => $lead,
+            'leads' => $leads,
+            'customers' => $customers,
+            'drafters' => $drafters,
+            'drafterWorkloads' => $drafterWorkloads,
+            'salesList' => $salesList,
+        ]);
+    }
+
+    /** Melanjutkan Design Request yang masih berstatus draf. */
+    public function edit(DesignRequest $designRequest)
+    {
+        abort_unless($this->canViewDesignRequest($designRequest), 403);
+        abort_unless($designRequest->status === 'draft', 403, 'Hanya Design Request berstatus draf yang dapat diubah.');
+
+        $drafters = User::assignableDraftersQuery()->get();
+
+        return view('sales.design_requests.create', [
+            'designRequest' => $designRequest,
+            'lead' => $designRequest->lead,
+            'leads' => $this->leadQuery()->with('customer.primaryPic')->orderBy('instansi')->get(),
+            'customers' => $this->customerQuery()
+                ->with(['primaryPic', 'leads' => fn ($query) => $query->latest(), 'projects' => fn ($query) => $query->latest()])
+                ->orderBy('name')
+                ->get(),
+            'drafters' => $drafters,
+            'drafterWorkloads' => $this->drafterWorkloads($drafters),
+            'salesList' => User::assignableSales(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            // Nomor boleh diisi manual mengikuti penomoran internal; kosongkan untuk nomor otomatis.
-            'code' => ['nullable', 'string', 'max:50', Rule::unique('design_requests', 'code')],
-            'lead_id' => ['nullable', Rule::exists('leads', 'id')->where(fn ($query) => $this->scopeLeadExistsRule($query))],
-            'customer_id' => ['nullable', Rule::exists('customers', 'id')->where(fn ($query) => $this->scopeCustomerExistsRule($query))],
-            'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
-            'pic_name' => ['nullable', 'string', 'max:255'],
-            'project_name' => ['required', 'string', 'max:255'],
-            'request_date' => ['required', 'date'],
-            'deadline' => ['required', 'date', 'after_or_equal:request_date'],
-            'priority' => ['required', 'in:normal,urgent,low,medium,high'],
-            'short_description' => ['required', 'string', 'max:500'],
-            'lab_type' => ['nullable', 'string', 'max:255'],
-            'capacity' => ['nullable', 'string', 'max:255'],
-            'detail_need' => ['required', 'string', 'max:1000'],
-            'scope_checklist' => ['nullable', 'array'],
-            'scope_checklist.*' => ['nullable', 'string', 'max:120'],
-            'scope_other' => [
-                Rule::requiredIf(fn () => in_array('Lainnya', (array) $request->input('scope_checklist', []), true)),
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'outputs' => ['nullable', 'array'],
-            'outputs.*' => ['nullable', 'string', 'max:80'],
-            'extra_note' => ['nullable', 'string', 'max:500'],
-            'production_pic_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->whereRaw('LOWER(role) = ?', ['drafter'])->where(function ($q) {
-                $q->where('is_active', true)->orWhereNull('is_active');
-            }))],
-            'production_note' => ['nullable', 'string', 'max:300'],
-            'attachments' => ['nullable', 'array', 'max:5'],
-            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:81920'],
-            'sales_id' => [
-                Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
-                'nullable',
-                Rule::exists('users', 'id')->where(fn ($query) => $query
-                    ->where('role', 'sales')
-                    ->where('is_active', true)
-                    ->whereNull('deleted_at')),
-            ],
-        ]);
+        $data = $request->validate($this->rules($request));
 
-        $lead = null;
-        $customer = null;
-
-        if (! empty($data['lead_id'])) {
-            $lead = $this->leadQuery()->with('customer.primaryPic')->findOrFail($data['lead_id']);
-            $customer = app(LeadCustomerConnector::class)->ensureForLead($lead)->load('primaryPic');
-        } elseif (! empty($data['customer_id'])) {
-            $customer = $this->customerQuery()->with('primaryPic')->findOrFail($data['customer_id']);
-        } elseif (! empty($data['customer_name'])) {
-            $customer = $this->findOrCreateCustomerFromRequest($data);
-        }
-
-        if ($customer) {
-            $data['customer_id'] = $customer->id;
-            $data['customer_name'] = $customer->name;
-            $data['pic_name'] = ($data['pic_name'] ?? null) ?: $customer->primaryPic?->name;
-        }
-
-        $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
-        if (($otherIndex = array_search('Lainnya', $data['scope_checklist'], true)) !== false) {
-            $data['scope_checklist'][$otherIndex] = 'Lainnya: '.trim($data['scope_other']);
-        }
-        unset($data['scope_other']);
-        $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
+        $data = $this->resolveCustomer($data);
         $manualCode = trim((string) ($data['code'] ?? ''));
         $data['code'] = $manualCode !== '' ? $manualCode : $this->nextAvailableCode();
         $lead = $this->leadQuery()->find($data['lead_id'] ?? null);
@@ -169,21 +136,12 @@ class DesignRequestController extends Controller
 
         unset($data['attachments']);
         $designRequest = DesignRequest::create($data);
-        foreach ($request->file('attachments', []) as $attachment) {
-            $designRequest->documents()->create([
-                'name' => pathinfo($attachment->getClientOriginalName(), PATHINFO_FILENAME),
-                'category' => 'sales_sketch',
-                'description' => 'Sketsa/lampiran awal dari sales',
-                'file_path' => $attachment->store('design-requests/sales-sketches', 'public'),
-                'file_type' => $attachment->getClientOriginalExtension(),
-                'file_size' => $attachment->getSize(),
-                'version' => 'v1.0', 'revision_number' => 1, 'is_current' => true,
-                'uploaded_by' => Auth::id(),
-            ]);
-        }
+        $this->storeAttachments($request, $designRequest);
         Logger::record('created', "Design Request {$designRequest->code} dibuat", $designRequest);
 
-        $message = 'Design Request berhasil disimpan dan drafter sudah ditugaskan.';
+        $message = $designRequest->status === 'assigned'
+            ? 'Design Request berhasil disimpan dan drafter sudah ditugaskan.'
+            : 'Draf Design Request tersimpan. Lengkapi kapan saja lalu kirim ke drafter.';
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => $message,
@@ -194,6 +152,49 @@ class DesignRequestController extends Controller
         return redirect()
             ->route('sales.design-requests.index')
             ->with('success', $message);
+    }
+
+    /** Menyimpan ulang draf, atau mengirimkannya ke drafter setelah lengkap. */
+    public function update(Request $request, DesignRequest $designRequest)
+    {
+        abort_unless($this->canViewDesignRequest($designRequest), 403);
+        abort_unless($designRequest->status === 'draft', 403, 'Hanya Design Request berstatus draf yang dapat diubah.');
+
+        $rules = $this->rules($request);
+        $rules['code'] = ['nullable', 'string', 'max:50', Rule::unique('design_requests', 'code')->ignore($designRequest->id)];
+        $data = $request->validate($rules);
+
+        $data = $this->resolveCustomer($data);
+        $manualCode = trim((string) ($data['code'] ?? ''));
+        $data['code'] = $manualCode !== '' ? $manualCode : $designRequest->code;
+        $data['status'] = $request->input('action') === 'send' ? 'assigned' : 'draft';
+
+        $lead = $this->leadQuery()->find($data['lead_id'] ?? null);
+        if ($lead) {
+            $data['customer_id'] = $lead->customer_id;
+            $lead->update(['stage' => 'design_request']);
+        }
+
+        unset($data['attachments']);
+        $designRequest->update($data);
+        $this->storeAttachments($request, $designRequest);
+
+        $sent = $designRequest->status === 'assigned';
+        Logger::record(
+            'updated',
+            $sent ? "Design Request {$designRequest->code} dikirim ke drafter" : "Draf Design Request {$designRequest->code} diperbarui",
+            $designRequest
+        );
+
+        $message = $sent
+            ? 'Design Request berhasil dikirim dan drafter sudah ditugaskan.'
+            : 'Draf Design Request tersimpan. Lengkapi kapan saja lalu kirim ke drafter.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'redirect' => route('sales.design-requests.index')], 200);
+        }
+
+        return redirect()->route('sales.design-requests.index')->with('success', $message);
     }
 
     public function show(DesignRequest $designRequest)
@@ -293,6 +294,98 @@ class DesignRequestController extends Controller
         }
 
         return $code;
+    }
+
+    /** Aturan validasi yang dipakai bersama oleh store() dan update(). */
+    protected function rules(Request $request): array
+    {
+        return [
+            // Nomor boleh diisi manual mengikuti penomoran internal; kosongkan untuk nomor otomatis.
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('design_requests', 'code')],
+            'lead_id' => ['nullable', Rule::exists('leads', 'id')->where(fn ($query) => $this->scopeLeadExistsRule($query))],
+            'customer_id' => ['nullable', Rule::exists('customers', 'id')->where(fn ($query) => $this->scopeCustomerExistsRule($query))],
+            'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
+            'pic_name' => ['nullable', 'string', 'max:255'],
+            'project_name' => ['required', 'string', 'max:255'],
+            'request_date' => ['required', 'date'],
+            'deadline' => ['required', 'date', 'after_or_equal:request_date'],
+            'priority' => ['required', 'in:normal,urgent,low,medium,high'],
+            'short_description' => ['required', 'string', 'max:500'],
+            'lab_type' => ['nullable', 'string', 'max:255'],
+            'capacity' => ['nullable', 'string', 'max:255'],
+            'detail_need' => ['required', 'string', 'max:1000'],
+            'scope_checklist' => ['nullable', 'array'],
+            'scope_checklist.*' => ['nullable', 'string', 'max:120'],
+            'scope_other' => [
+                Rule::requiredIf(fn () => in_array('Lainnya', (array) $request->input('scope_checklist', []), true)),
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'outputs' => ['nullable', 'array'],
+            'outputs.*' => ['nullable', 'string', 'max:80'],
+            'extra_note' => ['nullable', 'string', 'max:500'],
+            'production_pic_id' => ['required', Rule::exists('users', 'id')->where(fn ($query) => $query->whereRaw('LOWER(role) = ?', ['drafter'])->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            }))],
+            'production_note' => ['nullable', 'string', 'max:300'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:81920'],
+            'sales_id' => [
+                Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', 'sales')
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
+        ];
+    }
+
+    /** Menentukan customer dari lead, customer terpilih, atau nama yang diketik manual. */
+    protected function resolveCustomer(array $data): array
+    {
+        $customer = null;
+
+        if (! empty($data['lead_id'])) {
+            $lead = $this->leadQuery()->with('customer.primaryPic')->findOrFail($data['lead_id']);
+            $customer = app(LeadCustomerConnector::class)->ensureForLead($lead)->load('primaryPic');
+        } elseif (! empty($data['customer_id'])) {
+            $customer = $this->customerQuery()->with('primaryPic')->findOrFail($data['customer_id']);
+        } elseif (! empty($data['customer_name'])) {
+            $customer = $this->findOrCreateCustomerFromRequest($data);
+        }
+
+        if ($customer) {
+            $data['customer_id'] = $customer->id;
+            $data['customer_name'] = $customer->name;
+            $data['pic_name'] = ($data['pic_name'] ?? null) ?: $customer->primaryPic?->name;
+        }
+
+        $data['scope_checklist'] = array_values(array_filter($data['scope_checklist'] ?? []));
+        if (($otherIndex = array_search('Lainnya', $data['scope_checklist'], true)) !== false) {
+            $data['scope_checklist'][$otherIndex] = 'Lainnya: '.trim($data['scope_other']);
+        }
+        unset($data['scope_other']);
+        $data['outputs'] = array_values(array_filter($data['outputs'] ?? []));
+
+        return $data;
+    }
+
+    protected function storeAttachments(Request $request, DesignRequest $designRequest): void
+    {
+        foreach ($request->file('attachments', []) as $attachment) {
+            $designRequest->documents()->create([
+                'name' => pathinfo($attachment->getClientOriginalName(), PATHINFO_FILENAME),
+                'category' => 'sales_sketch',
+                'description' => 'Sketsa/lampiran awal dari sales',
+                'file_path' => $attachment->store('design-requests/sales-sketches', 'public'),
+                'file_type' => $attachment->getClientOriginalExtension(),
+                'file_size' => $attachment->getSize(),
+                'version' => 'v1.0', 'revision_number' => 1, 'is_current' => true,
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
     }
 
     protected function designRequestQuery()

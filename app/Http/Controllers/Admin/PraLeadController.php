@@ -98,6 +98,7 @@ class PraLeadController extends Controller
 
     public function update(Request $request, PraLead $praLead)
     {
+        $this->authorizeChange($praLead);
         $data = $this->validateData($request);
         $action = $request->input('action', 'save');
 
@@ -137,8 +138,29 @@ class PraLeadController extends Controller
 
     public function destroy(PraLead $praLead)
     {
+        $this->authorizeChange($praLead);
         $praLead->delete();
+
         return back()->with('success', 'Pra Lead dihapus.');
+    }
+
+    /**
+     * Seluruh Pra Lead boleh dilihat agar koordinasi antar sales tetap jalan, tetapi
+     * yang boleh mengubah dan menghapus hanya Administrator, pembuatnya, atau sales
+     * yang ditugaskan pada prospek tersebut.
+     */
+    protected function authorizeChange(PraLead $praLead): void
+    {
+        if (! Auth::user()->isSales()) {
+            return;
+        }
+
+        abort_unless(
+            (int) $praLead->created_by === (int) Auth::id()
+                || (int) $praLead->assigned_sales_id === (int) Auth::id(),
+            403,
+            'Pra Lead ini dibuat dan ditugaskan untuk sales lain.'
+        );
     }
 
     protected function validateData(Request $request): array

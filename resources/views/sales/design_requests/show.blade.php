@@ -32,7 +32,9 @@
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            @if($designRequest->status === 'completed')
+            @if($designRequest->status === 'draft')
+                <a href="{{ route('sales.design-requests.edit',$designRequest) }}" class="btn btn-primary"><i class="bi bi-pencil-square me-1"></i>Lanjutkan &amp; Kirim ke Drafter</a>
+            @elseif($designRequest->status === 'completed')
                 <a href="{{ route('sales.quotations.create',['dr'=>$designRequest->id]) }}" class="btn btn-primary"><i class="bi bi-file-earmark-text me-1"></i>Generate Penawaran</a>
             @else
                 <button type="button" class="btn btn-soft" disabled><i class="bi bi-hourglass-split me-1"></i>Menunggu completed</button>

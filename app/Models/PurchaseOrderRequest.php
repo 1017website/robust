@@ -40,10 +40,9 @@ class PurchaseOrderRequest extends Model
             return false;
         }
 
-        $project = $this->quotation?->project;
-
-        // Data lama yang belum memiliki Project tetap dapat ditagihkan.
-        return ! $project || $project->workflow?->delivery_status === 'completed';
+        // Invoice hanya boleh terbit setelah barang benar-benar sampai: Project sudah
+        // terbentuk (PO Accurate dibuat) dan Delivery menandai pengiriman selesai.
+        return $this->quotation?->project?->workflow?->delivery_status === 'completed';
     }
 
     public function requester(): BelongsTo
