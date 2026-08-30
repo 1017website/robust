@@ -174,8 +174,18 @@ module.exports = {
       s: [
         'Tab Informasi Project memuat identitas dan progres project.',
         'Tab Production, QC & Delivery memperlihatkan posisi pekerjaan tiap divisi.',
-        'Tab Design Revision dipakai untuk mengunggah revisi desain beserta statusnya.',
+        'Buka tab Design Revision untuk mengunggah revisi desain.',
+        'Isi Tanggal Revisi, pilih file revisi, dan tulis Keterangan Perubahan.',
+        'Tekan Simpan Revision. Bar progres menampilkan persentase dan jumlah MB yang sudah terkirim selama proses unggah.',
+        'Setelah tersimpan, revisi muncul pada tabel di bawah beserta nomor urut dan statusnya.',
       ],
+      k: [
+        ['Tanggal Revisi', true, 'Tanggal revisi dibuat.'],
+        ['File Revisi', true, 'Maksimal 80 MB per file, sama dengan lampiran Design Request. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.'],
+        ['Keterangan Perubahan', true, 'Penjelasan apa yang berubah pada revisi ini, maksimal 5000 karakter.'],
+      ],
+      n: `Nomor revisi diberikan otomatis dan berurutan. Berkas gambar teknis berukuran besar memiliki
+        indikator progres unggahan, sehingga terlihat jelas prosesnya sedang berjalan dan bukan macet.`,
     },
 
     'tasks': {

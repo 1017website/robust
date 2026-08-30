@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\DesignRequest;
+use App\Models\DesignRevision;
 use App\Models\Lead;
 use App\Models\PraLead;
 use App\Models\Project;
@@ -512,10 +513,7 @@ class August2026CrmRevisionTest extends TestCase
         $this->actingAs($sales)->get(route('sales.design-requests.create'))
             ->assertOk()
             ->assertSee('Simpan Draf')
-            // Tombol bernama "action" membayangi properti form.action pada browser,
-            // sehingga URL tujuan XHR harus dibaca lewat getAttribute.
-            ->assertSee("designRequestForm.getAttribute('action')", false)
-            ->assertDontSee("xhr.open('POST', designRequestForm.action", false);
+            ->assertSee('data-upload-progress', false);
 
         $this->actingAs($sales)->post(route('sales.design-requests.store'), [
             'customer_name' => 'Customer Draf Design',
@@ -760,6 +758,62 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertSame(1, DesignRequest::withTrashed()->where('code', $auto->code)->count());
     }
 
+    public function test_design_revision_matches_design_request_upload_limit_and_progress(): void
+    {
+        Storage::fake('public');
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $sales = User::factory()->create(['role' => 'sales']);
+        $project = Project::create([
+            'code' => 'PRJ-REVISI-UPLOAD',
+            'name' => 'Project Uji Revisi Desain',
+            'project_manager_id' => $sales->id,
+            'status' => 'ongoing',
+            'total_value' => 50000000,
+        ]);
+
+        // Panel progres dan batas 80 MB tampil pada form revisi di workspace.
+        $this->actingAs($administrator)->get(route('project-workspace.show', $project))
+            ->assertOk()
+            ->assertSee('data-upload-progress', false)
+            ->assertSee('data-max-file-size="'.(80 * 1024 * 1024).'"', false)
+            ->assertSee('data-upload-progress-panel', false)
+            ->assertSee('Maksimal 80 MB per file');
+
+        // Berkas 80 MB diterima, sebagaimana lampiran Design Request.
+        $this->actingAs($administrator)
+            ->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->post(route('design-revisions.store', $project), [
+                'revision_date' => now()->toDateString(),
+                'notes' => 'Revisi gambar fabrikasi berukuran besar.',
+                'revision_file' => UploadedFile::fake()->create('revisi-80mb.dwg', 81920, 'application/acad'),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('redirect', route('project-workspace.show', $project).'#design-revisions');
+
+        $revision = DesignRevision::where('project_id', $project->id)->firstOrFail();
+        $this->assertSame('revisi-80mb.dwg', $revision->original_name);
+        $this->assertTrue(Storage::disk('public')->exists($revision->file_path));
+
+        // Di atas batas tetap ditolak.
+        $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
+            'revision_date' => now()->toDateString(),
+            'notes' => 'Berkas melebihi batas.',
+            'revision_file' => UploadedFile::fake()->create('terlalu-besar.dwg', 81921, 'application/acad'),
+        ])->assertUnprocessable()->assertJsonValidationErrors('revision_file');
+
+        $this->assertSame(1, DesignRevision::where('project_id', $project->id)->count());
+    }
+
+    public function test_shared_upload_script_reads_the_form_action_attribute(): void
+    {
+        $script = file_get_contents(public_path('js/upload-progress.js'));
+
+        // Kontrol bernama "action" di dalam form membayangi properti form.action,
+        // sehingga URL tujuan XHR wajib dibaca lewat getAttribute.
+        $this->assertStringContainsString("form.getAttribute('action')", $script);
+        $this->assertStringNotContainsString("xhr.open('POST', form.action", $script);
+    }
+
     public function test_design_request_accepts_an_eighty_megabyte_attachment(): void
     {
         Storage::fake('public');
@@ -796,9 +850,10 @@ class August2026CrmRevisionTest extends TestCase
         $this->actingAs($sales)
             ->get(route('sales.design-requests.create'))
             ->assertOk()
-            ->assertSee('id="designUploadProgress"', false)
-            ->assertSee('id="designUploadPercent"', false)
-            ->assertSee("xhr.upload.addEventListener('progress'", false);
+            ->assertSee('data-upload-progress-panel', false)
+            ->assertSee('data-upload-percent', false)
+            ->assertSee('data-max-file-size="'.(80 * 1024 * 1024).'"', false)
+            ->assertSee('js/upload-progress.js', false);
 
         $response = $this->actingAs($sales)
             ->withHeaders([

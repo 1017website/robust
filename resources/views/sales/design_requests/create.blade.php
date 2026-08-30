@@ -10,7 +10,8 @@
     $defaultUrgency = in_array($designRequest?->priority ?? $lead?->priority, ['high', 'urgent'], true) ? 'urgent' : 'normal';
 @endphp
 <div class="sales-ui">
-    <form id="designRequestForm" method="POST" action="{{ $isDraft ? route('sales.design-requests.update', $designRequest) : route('sales.design-requests.store') }}" enctype="multipart/form-data">
+    <form id="designRequestForm" method="POST" action="{{ $isDraft ? route('sales.design-requests.update', $designRequest) : route('sales.design-requests.store') }}" enctype="multipart/form-data"
+        data-upload-progress data-max-file-size="83886080" data-max-files="5" data-redirect="{{ route('sales.design-requests.index') }}">
         @csrf
         @if($isDraft)@method('PUT')@endif
         <input type="hidden" id="lead_id" name="lead_id" value="{{ old('lead_id', $designRequest?->lead_id ?? $lead?->id) }}">
@@ -119,17 +120,7 @@
                     <label class="form-label small fw-bold">Upload sketsa (maks. 5 file, 80 MB/file)</label>
                     <input id="designRequestAttachments" type="file" name="attachments[]" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx">
                     <div class="form-text">Bisa berupa foto coretan, layout awal, PDF, atau dokumen referensi customer.@if($isDraft) Lampiran yang sudah diunggah pada draf tetap tersimpan; unggahan baru akan ditambahkan.@endif</div>
-                    <div id="designUploadProgress" class="mt-3 d-none" aria-live="polite">
-                        <div class="d-flex align-items-center justify-content-between gap-3 mb-1">
-                            <span id="designUploadStatus" class="small fw-bold">Menyiapkan upload...</span>
-                            <strong id="designUploadPercent" class="small text-primary">0%</strong>
-                        </div>
-                        <div class="progress" style="height: 12px;" aria-label="Progres upload lampiran">
-                            <div id="designUploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
-                        </div>
-                        <div id="designUploadDetail" class="form-text">0 B terkirim</div>
-                    </div>
-                    <div id="designUploadErrors" class="alert alert-danger d-none mt-3 mb-0" role="alert"></div>
+                    <x-upload-progress />
                 </div>
 
                 <div class="sales-form-card">
@@ -229,152 +220,6 @@ masterSource?.addEventListener('change', event => {
 scopeOtherCheckbox?.addEventListener('change', toggleScopeOther);
 toggleScopeOther();
 
-const designRequestForm = document.getElementById('designRequestForm');
-const designRequestAttachments = document.getElementById('designRequestAttachments');
-const uploadProgress = document.getElementById('designUploadProgress');
-const uploadProgressBar = document.getElementById('designUploadProgressBar');
-const uploadStatus = document.getElementById('designUploadStatus');
-const uploadPercent = document.getElementById('designUploadPercent');
-const uploadDetail = document.getElementById('designUploadDetail');
-const uploadErrors = document.getElementById('designUploadErrors');
-const maxAttachmentSize = 80 * 1024 * 1024;
-
-function formatBytes(bytes) {
-    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    const value = bytes / (1024 ** unitIndex);
-
-    return `${value.toLocaleString('id-ID', { maximumFractionDigits: unitIndex === 0 ? 0 : 1 })} ${units[unitIndex]}`;
-}
-
-function setUploadProgress(percent, status, detail = '') {
-    const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
-    uploadProgress?.classList.remove('d-none');
-    if (uploadProgressBar) {
-        uploadProgressBar.style.width = `${safePercent}%`;
-        uploadProgressBar.setAttribute('aria-valuenow', safePercent.toString());
-    }
-    if (uploadPercent) uploadPercent.textContent = `${safePercent}%`;
-    if (uploadStatus) uploadStatus.textContent = status;
-    if (uploadDetail) uploadDetail.textContent = detail;
-}
-
-function showUploadErrors(messages) {
-    if (!uploadErrors) return;
-
-    uploadErrors.replaceChildren();
-    const title = document.createElement('div');
-    title.className = 'fw-bold mb-1';
-    title.textContent = 'Data belum dapat disimpan:';
-    uploadErrors.appendChild(title);
-
-    const list = document.createElement('ul');
-    list.className = 'mb-0 ps-3';
-    messages.forEach(message => {
-        const item = document.createElement('li');
-        item.textContent = message;
-        list.appendChild(item);
-    });
-    uploadErrors.appendChild(list);
-    uploadErrors.classList.remove('d-none');
-    uploadErrors.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function setFormBusy(isBusy) {
-    designRequestForm?.querySelectorAll('button[type="submit"], button:not([type])').forEach(button => {
-        button.disabled = isBusy;
-    });
-}
-
-designRequestForm?.addEventListener('submit', event => {
-    event.preventDefault();
-
-    const files = Array.from(designRequestAttachments?.files ?? []);
-    const clientErrors = [];
-    if (files.length > 5) clientErrors.push('Maksimal 5 file dapat diunggah sekaligus.');
-    files.filter(file => file.size > maxAttachmentSize).forEach(file => {
-        clientErrors.push(`${file.name} melebihi batas 80 MB per file.`);
-    });
-
-    uploadErrors?.classList.add('d-none');
-    if (clientErrors.length) {
-        showUploadErrors(clientErrors);
-        return;
-    }
-
-    const formData = new FormData(designRequestForm);
-    const submitter = event.submitter;
-    if (submitter?.name) formData.set(submitter.name, submitter.value);
-
-    // Jangan pakai designRequestForm.action: tombol bernama "action" di dalam form
-    // membayangi properti tersebut sehingga yang terbaca elemennya, bukan URL.
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', designRequestForm.getAttribute('action'), true);
-    xhr.setRequestHeader('Accept', 'application/json');
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-    setFormBusy(true);
-    uploadProgressBar?.classList.add('progress-bar-animated');
-    uploadProgressBar?.classList.remove('bg-danger');
-    setUploadProgress(0, files.length ? 'Menyiapkan upload...' : 'Menyimpan data...', files.length ? `${files.length} file dipilih` : 'Tanpa lampiran');
-
-    xhr.upload.addEventListener('progress', progressEvent => {
-        if (!progressEvent.lengthComputable) {
-            setUploadProgress(0, 'Mengunggah lampiran...', `${formatBytes(progressEvent.loaded)} terkirim`);
-            return;
-        }
-
-        const percent = (progressEvent.loaded / progressEvent.total) * 100;
-        setUploadProgress(percent, 'Mengunggah ke server...', `${formatBytes(progressEvent.loaded)} dari ${formatBytes(progressEvent.total)} terkirim`);
-    });
-
-    xhr.upload.addEventListener('load', () => {
-        setUploadProgress(100, 'Upload selesai, memproses data...', 'Menunggu konfirmasi dari server.');
-    });
-
-    xhr.addEventListener('load', () => {
-        let payload = {};
-        try {
-            payload = JSON.parse(xhr.responseText || '{}');
-        } catch (error) {
-            payload = {};
-        }
-
-        if (xhr.status >= 200 && xhr.status < 300) {
-            setUploadProgress(100, 'Upload selesai. Mengalihkan...', 'Design Request berhasil disimpan.');
-            uploadProgressBar?.classList.remove('progress-bar-animated');
-            window.location.assign(payload.redirect || @json(route('sales.design-requests.index')));
-            return;
-        }
-
-        setFormBusy(false);
-        uploadProgressBar?.classList.remove('progress-bar-animated');
-        uploadProgressBar?.classList.add('bg-danger');
-        setUploadProgress(0, 'Upload gagal', 'Periksa pesan kesalahan di bawah.');
-
-        if (xhr.status === 422 && payload.errors) {
-            showUploadErrors(Object.values(payload.errors).flat());
-        } else if (xhr.status === 413) {
-            showUploadErrors(['Total ukuran upload melebihi batas yang diizinkan server. Kurangi jumlah atau ukuran file, lalu coba lagi.']);
-        } else if (xhr.status === 419) {
-            showUploadErrors(['Sesi Anda telah berakhir. Muat ulang halaman, lalu coba kembali.']);
-        } else {
-            showUploadErrors([payload.message || 'Upload gagal karena terjadi gangguan pada server. Silakan coba kembali.']);
-        }
-    });
-
-    xhr.addEventListener('error', () => {
-        setFormBusy(false);
-        uploadProgressBar?.classList.remove('progress-bar-animated');
-        uploadProgressBar?.classList.add('bg-danger');
-        setUploadProgress(0, 'Koneksi terputus', 'Upload belum selesai.');
-        showUploadErrors(['Koneksi ke server terputus. Periksa jaringan Anda, lalu coba kembali.']);
-    });
-
-    xhr.send(formData);
-});
 </script>
 @endpush
 @endsection

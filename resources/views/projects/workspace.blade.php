@@ -268,10 +268,12 @@
             @if($canRevision)
             <div class="workflow-card mb-3">
                 <div class="card-head"><h2>Tambah Design Revision</h2></div>
-                <form method="POST" action="{{ route('design-revisions.store', $project) }}" enctype="multipart/form-data" class="row g-3">@csrf
+                <form method="POST" action="{{ route('design-revisions.store', $project) }}" enctype="multipart/form-data" class="row g-3"
+                    data-upload-progress data-max-file-size="83886080" data-max-files="1" data-redirect="{{ route('project-workspace.show', $project) }}#design-revisions">@csrf
                     <div class="col-md-3"><label class="form-label">Tanggal Revisi</label><input type="date" class="form-control" name="revision_date" value="{{ old('revision_date', now()->format('Y-m-d')) }}" required></div>
-                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required></div>
+                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required><div class="form-text">Maksimal 80 MB per file. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.</div></div>
                     <div class="col-md-5"><label class="form-label">Keterangan Perubahan</label><textarea class="form-control" name="notes" rows="2" required>{{ old('notes') }}</textarea></div>
+                    <div class="col-12"><x-upload-progress /></div>
                     <div class="col-12"><button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Simpan Revision {{ $project->designRevisions->count() + 1 }}</button></div>
                 </form>
             </div>

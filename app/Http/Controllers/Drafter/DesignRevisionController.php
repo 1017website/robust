@@ -19,7 +19,8 @@ class DesignRevisionController extends Controller
         $data = $request->validate([
             'revision_date' => ['required', 'date'],
             'notes' => ['required', 'string', 'max:5000'],
-            'revision_file' => ['required', 'file', 'max:51200', 'extensions:pdf,dwg,dxf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar'],
+            // Disamakan dengan lampiran Design Request: 80 MB per berkas.
+            'revision_file' => ['required', 'file', 'max:81920', 'extensions:pdf,dwg,dxf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar'],
         ]);
 
         $file = $request->file('revision_file');
@@ -47,7 +48,20 @@ class DesignRevisionController extends Controller
             throw $e;
         }
 
-        return back()->with('success', 'Design Revision baru berhasil disimpan.')->withFragment('design-revisions');
+        $message = 'Design Revision baru berhasil disimpan.';
+
+        if ($request->expectsJson()) {
+            // Unggahan berjalan lewat XHR agar progresnya terlihat; pesan tetap
+            // dititipkan ke session supaya muncul setelah halaman dialihkan.
+            $request->session()->flash('success', $message);
+
+            return response()->json([
+                'message' => $message,
+                'redirect' => route('project-workspace.show', $project).'#design-revisions',
+            ], 201);
+        }
+
+        return back()->with('success', $message)->withFragment('design-revisions');
     }
 
     public function updateStatus(Request $request, Project $project, DesignRevision $designRevision)

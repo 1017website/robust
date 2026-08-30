@@ -143,6 +143,8 @@ class DesignRequestController extends Controller
             ? 'Design Request berhasil disimpan dan drafter sudah ditugaskan.'
             : 'Draf Design Request tersimpan. Lengkapi kapan saja lalu kirim ke drafter.';
         if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
             return response()->json([
                 'message' => $message,
                 'redirect' => route('sales.design-requests.index'),
@@ -191,6 +193,8 @@ class DesignRequestController extends Controller
             : 'Draf Design Request tersimpan. Lengkapi kapan saja lalu kirim ke drafter.';
 
         if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
             return response()->json(['message' => $message, 'redirect' => route('sales.design-requests.index')], 200);
         }
 
