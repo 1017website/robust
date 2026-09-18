@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Detail Request PO')
+@section('title', 'Detail Request Process')
 @section('content')
 @php($progress = $requestPo->checklistProgress())
 <x-page-header :title="$requestPo->code" :subtitle="($requestPo->customer_name ?: ($requestPo->quotation?->customer_name ?: 'Customer')).' · '.($requestPo->quotation?->project_name ?: 'Project')">
@@ -77,19 +77,40 @@
                         price-label="Harga Satuan"
                     />
                 @empty
-                    <x-empty text="Belum ada item penawaran pada Request PO ini." />
+                    <x-empty text="Belum ada item penawaran pada Request Process ini." />
                 @endforelse
             </div>
         </div>
     </div>
     <div class="col-lg-4">
+        <div class="card-r">
+            <div class="card-head"><h2>Nomor RPO &amp; Dokumen PO</h2></div>
+            <form method="POST" action="{{ route('admin.purchase-order-requests.document', $requestPo) }}" enctype="multipart/form-data">
+                @csrf @method('PUT')
+                <div class="mb-3">
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor RPO</label>
+                    <input id="requestCode" name="code" value="{{ old('code', $requestPo->code) }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" required>
+                    @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                @if($requestPo->customer_po_file)
+                    <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank" rel="noopener" class="btn btn-soft btn-sm mb-3">Lihat Dokumen PO</a>
+                @else
+                    <p class="small text-muted-2">Belum ada dokumen PO. Pilih file untuk melampirkannya.</p>
+                @endif
+                <label for="customerPoFile" class="form-label small fw-semibold">{{ $requestPo->customer_po_file ? 'Ganti Dokumen PO' : 'Upload Dokumen PO' }}</label>
+                <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
+                <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Maksimal 5 MB. File lama tetap tersimpan jika tidak memilih file baru.</div>
+                @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <button type="submit" class="btn btn-primary mt-3">Simpan Nomor &amp; Dokumen</button>
+            </form>
+        </div>
         @if(auth()->user()->canManageBackOffice() && !$requestPo->invoice && $requestPo->quotation?->project && !$requestPo->canCreateInvoice())
         <div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>Invoice tersedia setelah Delivery mengunggah POD dan menandai penerimaan customer selesai.</div>
         @endif
         @if($requestPo->isDraft())
         <div class="card-r">
             <div class="card-head"><h2>Draf Belum Diajukan</h2></div>
-            <p class="small text-muted-2 mb-3">Request PO ini masih tersimpan sebagai draf. Data belum diteruskan ke Accurate dan belum bisa diproses menjadi Project atau Invoice.</p>
+            <p class="small text-muted-2 mb-3">Request Process ini masih tersimpan sebagai draf. Data belum diteruskan ke Accurate dan belum bisa diproses menjadi Project atau Invoice.</p>
             <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary w-100"><i class="bi bi-pencil-square me-1"></i>Lanjutkan Pengisian</a>
         </div>
         @elseif(auth()->user()->canManageBackOffice())

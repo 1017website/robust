@@ -46,7 +46,7 @@ class PurchaseOrderRequestController extends Controller
     {
         $quotation = $request->get('quotation')
             ? Quotation::with('sales', 'customer.primaryPic', 'purchaseOrderRequest')
-                ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+                ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
                 ->findOrFail($request->get('quotation'))
             : null;
 
@@ -58,11 +58,11 @@ class PurchaseOrderRequestController extends Controller
         ]);
     }
 
-    /** Melanjutkan pengisian Request PO yang masih berstatus draf. */
+    /** Melanjutkan pengisian Request Process yang masih berstatus draf. */
     public function edit(PurchaseOrderRequest $purchaseOrderRequest)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request PO berstatus draf yang dapat diubah.');
+        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request Process berstatus draf yang dapat diubah.');
 
         return view('admin.purchase_order_requests.create', [
             'requestPo' => $purchaseOrderRequest,
@@ -86,9 +86,9 @@ class PurchaseOrderRequestController extends Controller
 
         if (! $isExternal && ! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
-            abort_if(Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id(), 403);
+            abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
             if (! $quotation->canCreatePurchaseOrderRequest()) {
-                return back()->withInput()->with('error', 'Request PO hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request PO.');
+                return back()->withInput()->with('error', 'Request Process hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request Process.');
             }
         }
 
@@ -98,7 +98,7 @@ class PurchaseOrderRequestController extends Controller
             }
 
             $poRequest = PurchaseOrderRequest::create($this->attributes($data, $quotation) + [
-                'code' => CodeGenerator::next(PurchaseOrderRequest::class, 'RPO', 4, true),
+                'code' => $data['code'] ?? $this->nextRequestCode(),
                 'requested_by' => Auth::id(),
                 'status' => $asDraft ? 'draft' : 'submitted',
             ]);
@@ -113,25 +113,25 @@ class PurchaseOrderRequestController extends Controller
         Logger::record(
             'created',
             $asDraft
-                ? "Draf Request PO {$poRequest->code} disimpan"
+                ? "Draf Request Process {$poRequest->code} disimpan"
                 : ($isExternal
-                    ? "Request PO {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
-                    : "Request PO {$poRequest->code} dibuat dari penawaran ".($poRequest->quotation?->code ?: '-')),
+                    ? "Request Process {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
+                    : "Request Process {$poRequest->code} dibuat dari penawaran ".($poRequest->quotation?->code ?: '-')),
             $poRequest
         );
 
         return redirect()
             ->route('admin.purchase-order-requests.show', $poRequest)
             ->with('success', $asDraft
-                ? 'Draf Request PO tersimpan. Lengkapi datanya kapan saja lalu ajukan.'
-                : 'Request PO berhasil dibuat. Lanjutkan proses PO di Accurate.');
+                ? 'Draf Request Process tersimpan. Lengkapi datanya kapan saja lalu ajukan.'
+                : 'Request Process berhasil dibuat. Lanjutkan proses PO di Accurate.');
     }
 
     /** Menyimpan ulang draf, atau mengajukannya setelah lengkap. */
     public function updateDraft(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request PO berstatus draf yang dapat diubah.');
+        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request Process berstatus draf yang dapat diubah.');
 
         $asDraft = $this->wantsDraft($request);
         $data = $this->validatedData($request, true, $asDraft, $purchaseOrderRequest);
@@ -148,9 +148,9 @@ class PurchaseOrderRequestController extends Controller
             $quotation = $quotation?->isExternal() ? $quotation : null;
         } elseif (! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
-            abort_if(Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id(), 403);
+            abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
             if ((int) $quotation->id !== (int) $purchaseOrderRequest->quotation_id && ! $quotation->canCreatePurchaseOrderRequest()) {
-                return back()->withInput()->with('error', 'Request PO hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request PO.');
+                return back()->withInput()->with('error', 'Request Process hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request Process.');
             }
         } elseif ($quotation?->isExternal()) {
             $quotation = null;
@@ -170,6 +170,7 @@ class PurchaseOrderRequestController extends Controller
             }
 
             $purchaseOrderRequest->update($this->attributes($data, $quotation) + [
+                'code' => $data['code'] ?? $purchaseOrderRequest->code,
                 'status' => $asDraft ? 'draft' : 'submitted',
             ]);
 
@@ -180,21 +181,21 @@ class PurchaseOrderRequestController extends Controller
 
         Logger::record(
             'updated',
-            $asDraft ? "Draf Request PO {$purchaseOrderRequest->code} diperbarui" : "Request PO {$purchaseOrderRequest->code} diajukan",
+            $asDraft ? "Draf Request Process {$purchaseOrderRequest->code} diperbarui" : "Request Process {$purchaseOrderRequest->code} diajukan",
             $purchaseOrderRequest
         );
 
         return redirect()
             ->route('admin.purchase-order-requests.show', $purchaseOrderRequest)
             ->with('success', $asDraft
-                ? 'Draf Request PO tersimpan.'
-                : 'Request PO berhasil diajukan. Lanjutkan proses PO di Accurate.');
+                ? 'Draf Request Process tersimpan.'
+                : 'Request Process berhasil diajukan. Lanjutkan proses PO di Accurate.');
     }
 
     /**
-     * Simpan checklist Request PO.
+     * Simpan checklist Request Process.
      *
-     * Terbuka untuk setiap akun yang berhak atas Request PO ini (Administrator dan
+     * Terbuka untuk setiap akun yang berhak atas Request Process ini (Administrator dan
      * Sales pemiliknya), termasuk saat masih berstatus draf, sehingga item yang tidak
      * diperlukan bisa dihapus dan item sendiri bisa ditambahkan.
      */
@@ -225,7 +226,7 @@ class PurchaseOrderRequestController extends Controller
     public function downloadPdf(PurchaseOrderRequest $purchaseOrderRequest, OperationalDocumentPdf $pdf)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request PO belum dapat diekspor. Ajukan request terlebih dahulu.');
+        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request Process belum dapat diekspor. Ajukan request terlebih dahulu.');
 
         $filename = trim((string) preg_replace(
             '/[^\pL\pN._-]+/u',
@@ -241,8 +242,8 @@ class PurchaseOrderRequestController extends Controller
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
-        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Request PO hanya untuk Administrator dan Sales Admin.');
-        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request PO harus diajukan terlebih dahulu.');
+        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Request Process hanya untuk Administrator dan Sales.');
+        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request Process harus diajukan terlebih dahulu.');
 
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::processStatuses()))],
@@ -281,7 +282,7 @@ class PurchaseOrderRequestController extends Controller
                 : null;
         });
 
-        Logger::record('updated', "Status Request PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
+        Logger::record('updated', "Status Request Process {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
         return back()->with(
             'success',
@@ -289,8 +290,36 @@ class PurchaseOrderRequestController extends Controller
                 ? ($project->quotation?->design_request_id
                     ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
                     : "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.")
-                : 'Request PO berhasil diperbarui.'
+                : 'Request Process berhasil diperbarui.'
         );
+    }
+
+    public function updateDocument(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
+    {
+        $this->authorizeAccess($purchaseOrderRequest);
+        $data = $request->validate([
+            'code' => ['nullable', 'required_without:customer_po_file', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($purchaseOrderRequest->id)],
+            'customer_po_file' => ['nullable', 'required_without:code', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+        ], $this->validationMessages());
+
+        $attributes = ['code' => $data['code'] ?? $purchaseOrderRequest->code];
+        if ($request->hasFile('customer_po_file')) {
+            $attributes['customer_po_file'] = $request->file('customer_po_file')->store('purchase-order-requests', 'public');
+        }
+        $purchaseOrderRequest->update($attributes);
+        Logger::record('updated', "Nomor dan dokumen PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
+
+        return back()->with('success', 'Nomor RPO dan dokumen PO berhasil disimpan.');
+    }
+
+    protected function nextRequestCode(): string
+    {
+        $sequence = PurchaseOrderRequest::count() + 1;
+        do {
+            $code = sprintf('RPO-%s-%04d', date('Y'), $sequence++);
+        } while (PurchaseOrderRequest::where('code', $code)->exists());
+
+        return $code;
     }
 
     protected function wantsDraft(Request $request): bool
@@ -300,7 +329,7 @@ class PurchaseOrderRequestController extends Controller
 
     protected function authorizeAccess(PurchaseOrderRequest $purchaseOrderRequest): void
     {
-        if (! Auth::user()->isSales()) {
+        if (Auth::user()->isAdminLevel() || ! Auth::user()->isSales()) {
             return;
         }
 
@@ -311,7 +340,7 @@ class PurchaseOrderRequestController extends Controller
         );
     }
 
-    /** Penawaran yang belum punya Request PO, ditambah penawaran milik draf yang sedang diubah. */
+    /** Penawaran yang belum punya Request Process, ditambah penawaran milik draf yang sedang diubah. */
     protected function selectableQuotations(?PurchaseOrderRequest $requestPo = null)
     {
         return Quotation::with('sales', 'customer.primaryPic')
@@ -321,7 +350,7 @@ class PurchaseOrderRequestController extends Controller
             ->where(fn ($query) => $query
                 ->whereDoesntHave('purchaseOrderRequest')
                 ->when($requestPo?->quotation_id, fn ($scope, $id) => $scope->orWhere('id', $id)))
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest('approved_at')
             ->get();
     }
@@ -424,7 +453,7 @@ class PurchaseOrderRequestController extends Controller
 
     /**
      * Saat menyimpan draf seluruh isian boleh kosong; kelengkapan baru divalidasi
-     * penuh ketika Request PO benar-benar diajukan.
+     * penuh ketika Request Process benar-benar diajukan.
      */
     protected function validatedData(Request $request, bool $withQuotationRule = false, bool $asDraft = false, ?PurchaseOrderRequest $current = null): array
     {
@@ -441,6 +470,7 @@ class PurchaseOrderRequestController extends Controller
         $required = fn (string ...$rules) => $asDraft ? ['nullable', ...$rules] : ['required', ...$rules];
 
         $rules = [
+            'code' => ['nullable', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($current?->id)],
             'purchase_source' => ['required', Rule::in(['crm', 'external'])],
             'project_number' => $required('string', 'max:100'),
             'customer_name' => $required('string', 'max:255'),
@@ -488,6 +518,18 @@ class PurchaseOrderRequestController extends Controller
             ];
         }
 
-        return $request->validate($rules);
+        return $request->validate($rules, $this->validationMessages());
+    }
+
+    protected function validationMessages(): array
+    {
+        return [
+            'code.unique' => 'Nomor RPO sudah digunakan. Gunakan nomor lain.',
+            'code.max' => 'Nomor RPO maksimal 100 karakter.',
+            'code.required_without' => 'Isi nomor RPO atau pilih dokumen PO yang akan diunggah.',
+            'customer_po_file.required_without' => 'Pilih dokumen PO atau isi nomor RPO.',
+            'customer_po_file.mimes' => 'Dokumen PO harus berupa PDF, JPG, PNG, Word, atau Excel.',
+            'customer_po_file.max' => 'Ukuran dokumen PO maksimal 5 MB.',
+        ];
     }
 }

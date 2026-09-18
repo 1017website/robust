@@ -29,7 +29,7 @@ class PraLeadSidebarAccessTest extends TestCase
     {
         foreach (array_keys(User::roles()) as $role) {
             $user = User::factory()->create(['role' => $role]);
-            $allowed = in_array($role, ['administrator', 'sales_admin', 'sales_spv'], true);
+            $allowed = in_array($role, ['administrator', 'sales', 'sales_admin', 'sales_spv'], true);
             $payload = ['instansi' => 'Prospek '.$role, 'pic_name' => 'PIC', 'phone' => '08123456789', 'source' => 'distributor', 'priority' => 'medium'];
             $page = $this->actingAs($user)->get(route('admin.pra-leads.index'));
             $response = $this->post(route('admin.pra-leads.store'), $payload);
@@ -55,16 +55,16 @@ class PraLeadSidebarAccessTest extends TestCase
         $other = User::factory()->create();
         $admin = User::factory()->create(['role' => 'administrator']);
         PurchaseOrderRequest::create(['code' => 'OTHER-PO', 'requested_by' => $other->id, 'status' => 'submitted']);
-        $this->assertSame(0, $this->counts($sales)['admin.purchase-order-requests.*'] ?? 0);
-        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index'))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 0);
+        $this->assertSame(1, $this->counts($sales)['admin.purchase-order-requests.*'] ?? 0);
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index'))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 1);
 
         PurchaseOrderRequest::create(['code' => 'OWN-PO', 'requested_by' => $sales->id, 'status' => 'submitted']);
         PurchaseOrderRequest::create(['code' => 'DRAFT-PO', 'requested_by' => $sales->id, 'status' => 'draft']);
         $quote = Quotation::create(['customer_name' => 'Customer', 'project_name' => 'Project', 'sales_id' => $sales->id]);
         PurchaseOrderRequest::create(['code' => 'QUOTE-PO', 'quotation_id' => $quote->id, 'requested_by' => $other->id, 'status' => 'submitted']);
-        $this->assertSame(2, $this->counts($sales)['admin.purchase-order-requests.*']);
+        $this->assertSame(3, $this->counts($sales)['admin.purchase-order-requests.*']);
         $this->assertSame(3, $this->counts($admin)['admin.purchase-order-requests.*']);
-        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index', ['status' => 'submitted']))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 2);
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index', ['status' => 'submitted']))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 3);
     }
 
     public function test_design_badges_exclude_unassigned_other_and_deleted_records(): void

@@ -79,7 +79,7 @@ class CalendarController extends Controller
         }
 
         $query = Activity::whereYear('activity_date', $year)->whereMonth('activity_date', $month);
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->where('sales_id', Auth::id());
         }
         if (! Auth::user()->isSales() && $salesId = $request->get('sales_id')) {

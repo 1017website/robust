@@ -13,7 +13,7 @@ class SalesAdminRestorationTest extends TestCase
 
     public function test_sales_admin_menus_and_system_boundaries(): void
     {
-        $admin = User::factory()->create(['role' => 'sales_admin']);
+        $admin = User::factory()->create(['role' => 'sales']);
         $this->assertTrue($admin->isSalesAdmin());
         $this->assertTrue($admin->canManageBackOffice());
         $this->assertFalse($admin->isAdministrator());
@@ -33,24 +33,24 @@ class SalesAdminRestorationTest extends TestCase
         ])->assertSessionHasErrors('role');
     }
 
-    public function test_administrator_can_assign_sales_admin_from_manage_user(): void
+    public function test_administrator_assigns_merged_sales_role_from_manage_user(): void
     {
         $superadmin = User::factory()->create(['role' => 'administrator']);
         $this->actingAs($superadmin)->post(route('admin.users.store'), [
             'name' => 'Sales Admin Test', 'email' => 'new-sales-admin@example.test',
-            'role' => 'sales_admin', 'password' => 'test-password', 'password_confirmation' => 'test-password',
+            'role' => 'sales', 'password' => 'test-password', 'password_confirmation' => 'test-password',
         ])->assertSessionHasNoErrors()->assertRedirect();
-        $this->assertDatabaseHas('users', ['email' => 'new-sales-admin@example.test', 'role' => 'sales_admin']);
+        $this->assertDatabaseHas('users', ['email' => 'new-sales-admin@example.test', 'role' => 'sales']);
     }
 
-    public function test_sales_can_request_po_but_only_back_office_can_process_accurate(): void
+    public function test_sales_and_legacy_sales_admin_can_process_accurate(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $admin = User::factory()->create(['role' => 'sales_admin']);
         $po = PurchaseOrderRequest::create(['code' => 'ROLE-PO', 'requested_by' => $sales->id, 'status' => 'submitted']);
         $this->actingAs($sales)->get(route('admin.purchase-order-requests.create'))->assertOk();
-        $this->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertDontSee('Update Status Accurate');
-        $this->put(route('admin.purchase-order-requests.update', $po), ['status' => 'processing_accurate'])->assertForbidden();
+        $this->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
+        $this->put(route('admin.purchase-order-requests.update', $po), ['status' => 'processing_accurate'])->assertRedirect()->assertSessionHasNoErrors();
         $this->actingAs($admin)->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
         $this->put(route('admin.purchase-order-requests.update', $po), ['status' => 'processing_accurate'])->assertSessionHasNoErrors()->assertRedirect();
         $this->assertSame('processing_accurate', $po->fresh()->status);

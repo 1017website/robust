@@ -20,7 +20,7 @@ class LeadController extends Controller
     public function index(Request $request)
     {
         $query = Lead::query()
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
             ->latest();
 
         if ($s = $request->get('q')) {
@@ -37,7 +37,7 @@ class LeadController extends Controller
 
         $leads = $query->paginate(10)->withQueryString();
 
-        $base = Lead::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
+        $base = Lead::query()->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
             'total' => (clone $base)->count(),
             'lead' => (clone $base)->whereIn('stage', ['lead', 'identify'])->count(),
@@ -214,7 +214,7 @@ class LeadController extends Controller
     protected function ensureAccess(Lead $lead): void
     {
         abort_if(
-            Auth::user()->isSales() && (int) $lead->sales_id !== (int) Auth::id(),
+            (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $lead->sales_id !== (int) Auth::id(),
             403,
             'Lead ini bukan milik Anda.'
         );

@@ -68,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($user->canManageBackOffice() || $user->isSales()) {
                     $submittedPo = PurchaseOrderRequest::visibleTo($user)->where('status', 'submitted')->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request PO baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request Process baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
 
                     $readyInvoices = $user->canManageBackOffice() && $hasExpandedOperationalWorkflow
                         ? PurchaseOrderRequest::whereDoesntHave('invoice')
@@ -130,7 +130,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if (in_array($user->role, ['administrator', 'sales_admin', 'sales_spv', 'sales', 'administration'], true)) {
                     $overdueActivities = Activity::query()
-                        ->when($user->isSales(), fn ($query) => $query->where('sales_id', $user->id))
+                        ->when(($user->isSales() && ! $user->isAdminLevel()), fn ($query) => $query->where('sales_id', $user->id))
                         ->whereDate('activity_date', '<', today())
                         ->whereNotIn('status', ['completed', 'cancelled'])
                         ->count();

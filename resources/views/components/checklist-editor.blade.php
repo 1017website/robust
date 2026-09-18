@@ -2,7 +2,7 @@
     'items' => [],
     'idPrefix' => 'chk',
 ])
-{{-- Editor checklist Request PO: tiap item punya icon hapus, dan item baru bisa ditambah. --}}
+{{-- Editor checklist Request Process: tiap item punya icon hapus, dan item baru bisa ditambah. --}}
 <div data-checklist-editor>
     {{-- Penanda agar "semua item dihapus" tidak dianggap "form tanpa checklist". --}}
     <input type="hidden" name="checklist_present" value="1">
@@ -19,7 +19,7 @@
         @endforeach
     </div>
 
-    <div data-checklist-empty class="form-text fst-italic {{ count($items) ? 'd-none' : '' }}">Semua item checklist sudah dihapus.</div>
+    <div data-checklist-empty class="form-text {{ count($items) ? 'd-none' : '' }}">Belum ada item checklist. Tambahkan sesuai kebutuhan.</div>
 
     <div class="input-group input-group-sm mt-2">
         <input type="text" class="form-control" maxlength="255" data-checklist-new placeholder="Tambah item checklist...">

@@ -27,7 +27,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             'invoice',
         ]);
         $this->logo = $this->loadLogo();
-        $this->documentLabel = 'REQUEST PURCHASE ORDER';
+        $this->documentLabel = 'REQUEST PROCESS';
 
         $pages = $this->buildRequestPoPages($requestPo);
 
@@ -56,7 +56,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     {
         $pages = [];
         [$page, $y] = $this->documentHeader(
-            'REQUEST PURCHASE ORDER',
+            'REQUEST PROCESS',
             $requestPo->code,
             'Dokumen administrasi pemrosesan purchase order',
             PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
@@ -100,7 +100,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             if ($y - $checklistHeight < 58) {
                 $pages[] = $page;
                 [$page, $y] = $this->documentHeader(
-                    'REQUEST PURCHASE ORDER',
+                    'REQUEST PROCESS',
                     $requestPo->code,
                     'Checklist dan item penawaran - lanjutan',
                     PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
@@ -114,7 +114,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         if ($y < 170) {
             $pages[] = $page;
             [$page, $y] = $this->documentHeader(
-                'REQUEST PURCHASE ORDER',
+                'REQUEST PROCESS',
                 $requestPo->code,
                 'Item penawaran - lanjutan',
                 PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
@@ -140,7 +140,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
                 if ($maxLines < 4) {
                     $pages[] = $page;
                     [$page, $y] = $this->documentHeader(
-                        'REQUEST PURCHASE ORDER',
+                        'REQUEST PROCESS',
                         $requestPo->code,
                         'Item penawaran - lanjutan',
                         PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
@@ -170,7 +170,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         if ($y < 170) {
             $pages[] = $page;
             [$page, $y] = $this->documentHeader(
-                'REQUEST PURCHASE ORDER',
+                'REQUEST PROCESS',
                 $requestPo->code,
                 'Ringkasan - lanjutan',
                 PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
@@ -203,7 +203,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             ['PROJECT', $invoice->project_name],
             ['NOMOR PROYEK', $invoice->project_number],
             ['TANGGAL INVOICE', $invoice->invoice_date?->format('d/m/Y')],
-            ['REQUEST PO', $requestPo?->code],
+            ['REQUEST PROCESS', $requestPo?->code],
             ['SALES', $quotation?->sales?->name],
         ]);
         $y -= 104;

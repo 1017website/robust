@@ -51,7 +51,7 @@ class Quotation extends Model
             'sent_to_customer' => 'Dikirim ke Customer',
             'customer_accepted' => 'Customer Setuju',
             'customer_rejected' => 'Customer Tidak Setuju',
-            'request_po_created' => 'Request PO Dibuat',
+            'request_po_created' => 'Request Process Dibuat',
             'expired' => 'Expired',
 
             // Kompatibilitas data lama
@@ -116,6 +116,12 @@ class Quotation extends Model
     {
         return in_array($this->status, ['ready', 'sent_to_customer', 'customer_accepted'], true)
             && ! $this->purchaseOrderRequest()->exists();
+    }
+
+    public function canCreateProject(): bool
+    {
+        return in_array($this->status, self::wonStatuses(), true)
+            && ! $this->project()->exists();
     }
 
     public function isUploaded(): bool

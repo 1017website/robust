@@ -25,13 +25,15 @@ class QuotationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Quotation::with('customer', 'sales')
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+        $query = Quotation::with('customer.primaryPic', 'sales')
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
             ->latest();
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")
                 ->orWhere('project_name', 'like', "%$s%")
+                ->orWhere('pic_name', 'like', "%$s%")
+                ->orWhereHas('customer.primaryPic', fn ($pic) => $pic->where('name', 'like', "%$s%"))
                 ->orWhere('code', 'like', "%$s%"));
         }
         if ($status = $request->get('status')) {
@@ -53,7 +55,7 @@ class QuotationController extends Controller
             abort(404, 'Design Request selesai tidak ditemukan atau bukan milik Anda.');
         }
 
-        $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
+        $customers = $this->customerQuery()->orderBy('name')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = $this->safeItemMasters();
 
@@ -145,7 +147,7 @@ class QuotationController extends Controller
 
         $quotation->load('items', 'designRequest', 'documents.uploader');
         $designRequest = $quotation->designRequest;
-        $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))->orderBy('name')->get();
+        $customers = $this->customerQuery()->orderBy('name')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = $this->safeItemMasters();
 
@@ -318,7 +320,7 @@ class QuotationController extends Controller
         $this->recordHistory($quotation, 'customer_accepted', $oldStatus, 'customer_accepted', $request->input('note'));
         Logger::record('customer_accepted', "Penawaran {$quotation->code} disetujui customer", $quotation);
 
-        return back()->with('success', 'Penawaran ditandai customer setuju. Request PO sudah dapat dibuat.');
+        return back()->with('success', 'Penawaran ditandai customer setuju. Request Process sudah dapat dibuat.');
     }
 
     public function markLost(Request $request, Quotation $quotation)
@@ -578,7 +580,7 @@ class QuotationController extends Controller
     protected function customerQuery()
     {
         return Customer::query()
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()));
     }
 
     protected function safeItemMasters()
@@ -593,7 +595,7 @@ class QuotationController extends Controller
     {
         return DesignRequest::with('customer', 'lead', 'sales')
             ->where('status', 'completed')
-            ->when(Auth::user()->isSales(), function ($query) {
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), function ($query) {
                 $query->where(function ($scope) {
                     $scope->where('sales_id', Auth::id())
                         ->orWhereHas('lead', fn ($lead) => $lead->where('sales_id', Auth::id()))
@@ -605,7 +607,7 @@ class QuotationController extends Controller
 
     protected function canAccessDesignRequestForQuotation(DesignRequest $designRequest): bool
     {
-        if (! Auth::user()->isSales()) {
+        if (Auth::user()->isAdminLevel() || ! Auth::user()->isSales()) {
             return true;
         }
 
@@ -627,7 +629,7 @@ class QuotationController extends Controller
 
     protected function ensureOwner(Quotation $quotation): void
     {
-        if (Auth::user()->isSales() && (int) $quotation->sales_id !== (int) Auth::id()) {
+        if ((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id()) {
             abort(403, 'Penawaran ini bukan milik Anda.');
         }
     }

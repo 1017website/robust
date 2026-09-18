@@ -81,7 +81,7 @@ class ReportController extends Controller
             return view('drafter.reports.index', compact('summary', 'statusSummary', 'monthlyCompleted', 'productivity', 'upcomingDeadlines', 'activeProjects'));
         }
 
-        $isSales = Auth::user()->isSales();
+        $isSales = (Auth::user()->isSales() && ! Auth::user()->isAdminLevel());
         $showPrices = Auth::user()->canViewPrices();
         $uid = Auth::id();
 

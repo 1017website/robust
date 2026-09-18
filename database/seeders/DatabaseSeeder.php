@@ -31,8 +31,8 @@ class DatabaseSeeder extends Seeder
         ]);
         $admin = User::create([
             'name' => 'Budi Santoso', 'email' => 'admin@robust.test',
-            'password' => Hash::make('password'), 'role' => 'sales_admin',
-            'job_title' => 'Sales Admin', 'phone' => '081200000001', 'is_active' => true,
+            'password' => Hash::make('password'), 'role' => 'sales',
+            'job_title' => 'Sales', 'phone' => '081200000001', 'is_active' => true,
         ]);
         $sales = User::create([
             'name' => 'Rizky Pratama', 'email' => 'sales@robust.test',

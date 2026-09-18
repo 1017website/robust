@@ -18,7 +18,7 @@ class CustomerController extends Controller
     {
         $query = Customer::with('primaryPic', 'sales')->latest();
 
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->where('sales_id', Auth::id());
         }
         if ($s = $request->get('q')) {
@@ -40,7 +40,7 @@ class CustomerController extends Controller
 
         $customers = $query->paginate(10)->withQueryString();
 
-        $scope = fn () => Customer::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
+        $scope = fn () => Customer::query()->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
             'total' => $scope()->count(),
             'identify' => $scope()->where('pipeline_stage', 'identify')->count(),
@@ -59,7 +59,7 @@ class CustomerController extends Controller
                 'quotations' => fn ($query) => $query->latest(),
                 'activities' => fn ($query) => $query->latest('activity_date'),
                 'documents' => fn ($query) => $query->latest(),
-            ])->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+            ])->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()));
 
             $selectedCustomer = $request->filled('customer')
                 ? $detailQuery->find($request->integer('customer'))
@@ -177,7 +177,7 @@ class CustomerController extends Controller
     protected function ensureAccess(Customer $customer): void
     {
         abort_if(
-            Auth::user()->isSales() && (int) $customer->sales_id !== (int) Auth::id(),
+            (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $customer->sales_id !== (int) Auth::id(),
             403,
             'Customer ini bukan milik Anda.'
         );

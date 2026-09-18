@@ -149,6 +149,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/request-po/{purchaseOrderRequest}/edit', [PurchaseOrderRequestController::class, 'edit'])->name('purchase-order-requests.edit');
         Route::put('/request-po/{purchaseOrderRequest}/draft', [PurchaseOrderRequestController::class, 'updateDraft'])->name('purchase-order-requests.draft');
         Route::put('/request-po/{purchaseOrderRequest}/checklist', [PurchaseOrderRequestController::class, 'updateChecklist'])->name('purchase-order-requests.checklist');
+        Route::put('/request-po/{purchaseOrderRequest}/document', [PurchaseOrderRequestController::class, 'updateDocument'])->name('purchase-order-requests.document');
         Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
         Route::get('/request-po/{purchaseOrderRequest}/pdf', [PurchaseOrderRequestController::class, 'downloadPdf'])->name('purchase-order-requests.pdf');
         Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');

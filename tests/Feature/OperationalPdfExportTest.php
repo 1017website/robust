@@ -31,7 +31,7 @@ class OperationalPdfExportTest extends TestCase
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertDownload('PRJ-PDF-MODERN.pdf');
         $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
-        $this->assertStringContainsString('REQUEST PURCHASE ORDER', $response->getContent());
+        $this->assertStringContainsString('REQUEST PROCESS', $response->getContent());
         $this->assertStringContainsString('ROBUST', $response->getContent());
         $this->assertStringContainsString('WALL BENCH - STEEL STRUCTURE', $response->getContent());
         $this->assertStringContainsString('PENGIRIMAN & BILLING', $response->getContent());
@@ -39,7 +39,7 @@ class OperationalPdfExportTest extends TestCase
 
         $this->actingAs($otherSales)
             ->get(route('admin.purchase-order-requests.pdf', $requestPo))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($admin)
             ->get(route('admin.purchase-order-requests.pdf', $requestPo))
             ->assertOk();
@@ -71,10 +71,10 @@ class OperationalPdfExportTest extends TestCase
         $this->actingAs($salesAdmin)->get(route('admin.invoices.pdf', $invoice))->assertOk();
         $this->actingAs($sales)
             ->get(route('admin.invoices.pdf', $invoice))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($otherSales)
             ->get(route('admin.invoices.pdf', $invoice))
-            ->assertForbidden();
+            ->assertOk();
 
         $drafter = User::factory()->create(['role' => 'drafter']);
         $this->actingAs($drafter)
@@ -157,6 +157,7 @@ SPEC,
             'accurate_po_date' => today(),
             'accurate_note' => 'Sudah dibuat di Accurate.',
             'admin_note' => 'Dokumen pengujian PDF modern.',
+            'checklist' => [['key' => 'customer_po', 'label' => 'PO customer sudah dilampirkan', 'checked' => true]],
             'status' => 'paid',
         ]);
         $invoice = Invoice::create([

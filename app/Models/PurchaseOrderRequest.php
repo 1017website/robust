@@ -12,7 +12,7 @@ class PurchaseOrderRequest extends Model
 
     public function scopeVisibleTo(\Illuminate\Database\Eloquent\Builder $query, User $user): \Illuminate\Database\Eloquent\Builder
     {
-        return $query->when($user->isSales(), fn ($query) => $query->where(fn ($scope) => $scope
+        return $query->when(($user->isSales() && ! $user->isAdminLevel()), fn ($query) => $query->where(fn ($scope) => $scope
             ->where('requested_by', $user->id)
             ->orWhereHas('quotation', fn ($quotation) => $quotation->where('sales_id', $user->id))));
     }
@@ -59,8 +59,8 @@ class PurchaseOrderRequest extends Model
 
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
-    /** Item bawaan yang muncul saat Request PO baru dibuat. */
-    public static function defaultChecklistItems(): array
+    /** Label untuk membaca checklist lama yang disimpan sebagai key dan boolean. */
+    protected static function legacyChecklistLabels(): array
     {
         return [
             'quotation_approved' => 'Penawaran final sudah siap dikirim',
@@ -74,10 +74,10 @@ class PurchaseOrderRequest extends Model
     }
 
     /**
-     * Checklist milik Request PO ini.
+     * Checklist milik Request Process ini.
      *
-     * Item disimpan per Request PO sehingga setiap akun dapat menghapus item yang
-     * tidak diperlukan atau menambah item sendiri tanpa mengubah Request PO lain.
+     * Item disimpan per Request Process sehingga setiap akun dapat menghapus item yang
+     * tidak diperlukan atau menambah item sendiri tanpa mengubah Request Process lain.
      * Data lama yang masih berbentuk {key: bool} tetap terbaca.
      *
      * @return array<int, array{key: string, label: string, checked: bool}>
@@ -87,13 +87,10 @@ class PurchaseOrderRequest extends Model
         $stored = $this->checklist;
 
         if ($stored === null) {
-            return collect(self::defaultChecklistItems())
-                ->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'checked' => false])
-                ->values()
-                ->all();
+            return [];
         }
 
-        $defaults = self::defaultChecklistItems();
+        $defaults = self::legacyChecklistLabels();
         $items = [];
 
         foreach ($stored as $key => $value) {
@@ -145,7 +142,7 @@ class PurchaseOrderRequest extends Model
         return ['draft' => 'Draft'] + self::processStatuses();
     }
 
-    /** Status proses setelah Request PO diajukan (dipakai pada form update Accurate). */
+    /** Status proses setelah Request Process diajukan (dipakai pada form update Accurate). */
     public static function processStatuses(): array
     {
         return [

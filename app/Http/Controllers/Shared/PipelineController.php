@@ -16,12 +16,12 @@ class PipelineController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $isSales = $user->isSales();
+        $isSales = ($user->isSales() && ! $user->isAdminLevel());
         $salesId = Auth::id();
 
         $salesScope = fn (Builder $q, string $column = 'sales_id') => $isSales ? $q->where($column, $salesId) : $q;
         $canOpenAdmin = $user->canManageBackOffice();
-        $canOpenSales = $user->role === 'sales';
+        $canOpenSales = $user->isSales() || $user->isAdministrator();
         $canOpenSpv = in_array($user->role, ['administrator', 'sales_spv'], true);
 
         $cards = [
@@ -56,7 +56,7 @@ class PipelineController extends Controller
                 'icon' => 'bi-cloud-arrow-up',
             ],
             [
-                'label' => 'Request PO Open',
+                'label' => 'Request Process Open',
                 'count' => PurchaseOrderRequest::visibleTo($user)->whereIn('status', ['submitted', 'processing_accurate'])->count(),
                 'route' => ($canOpenAdmin || $isSales) ? route('admin.purchase-order-requests.index') : '#',
                 'icon' => 'bi-receipt',

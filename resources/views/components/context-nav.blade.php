@@ -2,7 +2,7 @@
     $routeName = request()->route()?->getName() ?? '';
     $isIndex = str_ends_with($routeName, '.index') || in_array($routeName, ['dashboard', 'profile.edit'], true);
     $sections = [
-        'admin.purchase-order-requests.' => ['admin.purchase-order-requests.index', 'Request PO'],
+        'admin.purchase-order-requests.' => ['admin.purchase-order-requests.index', 'Request Process'],
         'admin.system-settings.' => ['admin.system-settings.index', 'System Settings'],
         'admin.pra-leads.' => ['admin.pra-leads.index', 'Pra Leads'],
         'admin.assignment.' => ['admin.assignment.index', 'Assignment'],

@@ -2,7 +2,11 @@
 @section('title', 'Projects')
 @section('content')
 @php($showPrices = auth()->user()->canViewPrices())
-<x-page-header title="Projects" subtitle="Project hasil penawaran yang menang" />
+<x-page-header title="Projects" subtitle="Project hasil penawaran yang menang">
+    @if(auth()->user()->canCreateProject())
+        <a href="{{ route('sales.projects.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Project Baru</a>
+    @endif
+</x-page-header>
 <div class="card-r">
     <form class="filter-bar" method="GET">
         <select name="status" class="form-select">

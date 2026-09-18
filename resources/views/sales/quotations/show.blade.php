@@ -20,7 +20,10 @@
         <form method="POST" action="{{ route('sales.quotations.lost',$quotation) }}" class="d-inline">@csrf<button class="btn btn-soft btn-sm text-danger">Customer Tidak Setuju</button></form>
     @endif
     @if($quotation->canCreatePurchaseOrderRequest())
-        <a href="{{ route('admin.purchase-order-requests.create',['quotation'=>$quotation->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i>Buat Request PO</a>
+        <a href="{{ route('admin.purchase-order-requests.create',['quotation'=>$quotation->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i>Buat Request Process</a>
+    @endif
+    @if(auth()->user()->canCreateProject() && $quotation->canCreateProject())
+        <a href="{{ route('sales.projects.create',['quotation'=>$quotation->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-folder-plus me-1"></i>Buat Project</a>
     @endif
 </x-page-header>
 

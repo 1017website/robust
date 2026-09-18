@@ -147,9 +147,9 @@ class PraLeadController extends Controller
     protected function authorizeChange(PraLead $praLead): void
     {
         abort_unless(
-            in_array(Auth::user()->role, ['administrator', 'sales_admin', 'sales_spv'], true),
+            Auth::user()->isAdminLevel() || Auth::user()->isSalesSpv(),
             403,
-            'Pra Lead hanya dapat dikelola Administrator, Sales Admin, dan SPV Sales.'
+            'Pra Lead hanya dapat dikelola Administrator, Sales, dan SPV Sales.'
         );
     }
 

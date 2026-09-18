@@ -19,7 +19,7 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $query = Project::with('customer', 'projectManager')->latest();
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->whereHas('quotation', fn ($q) => $q->where('sales_id', Auth::id()));
         }
         if ($status = $request->get('status')) {
@@ -117,14 +117,14 @@ class ProjectController extends Controller
         return Quotation::with('sales')
             ->whereIn('status', Quotation::wonStatuses())
             ->whereDoesntHave('project')
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()))
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest();
     }
 
     protected function canViewProject(Project $project): bool
     {
         $user = Auth::user();
-        if (! $user->isSales()) {
+        if ($user->isAdminLevel() || ! $user->isSales()) {
             return true;
         }
 

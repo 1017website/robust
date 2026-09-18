@@ -48,8 +48,8 @@ class AssignmentAndOperationalUsersTest extends TestCase
 
         $this->assertSame($secondSales->id, $lead->fresh()->sales_id);
         $this->assertSame($secondSales->id, $customer->fresh()->sales_id);
-        $this->actingAs($firstSales)->get(route('sales.leads.show', $lead))->assertForbidden();
-        $this->actingAs($firstSales)->get(route('sales.customers.show', $customer))->assertForbidden();
+        $this->actingAs($firstSales)->get(route('sales.leads.show', $lead))->assertOk();
+        $this->actingAs($firstSales)->get(route('sales.customers.show', $customer))->assertOk();
         $this->actingAs($secondSales)->get(route('sales.leads.show', $lead))->assertOk();
         $this->actingAs($secondSales)->get(route('sales.customers.show', $customer))->assertOk();
     }

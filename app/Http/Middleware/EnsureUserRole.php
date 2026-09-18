@@ -21,7 +21,8 @@ class EnsureUserRole
             return $next($request);
         }
 
-        if (! empty($roles) && ! in_array($user->role, $roles, true)) {
+        $hasSalesAccess = $user->isSales() && (in_array('sales', $roles, true) || in_array('sales_admin', $roles, true));
+        if (! empty($roles) && ! in_array($user->role, $roles, true) && ! $hasSalesAccess) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 

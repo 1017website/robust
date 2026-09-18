@@ -31,7 +31,7 @@ class ActivityController extends Controller
         $query = Activity::with('customer.primaryPic', 'lead', 'sales')
             ->orderByDesc('activity_date')
             ->orderBy('activity_time');
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->where('sales_id', Auth::id());
         }
         if (! Auth::user()->isSales() && $salesId = $request->get('sales_id')) {
@@ -65,7 +65,7 @@ class ActivityController extends Controller
         $activities = $query->paginate(10)->withQueryString();
 
         $selectedActivityQuery = Activity::with('customer.primaryPic', 'lead', 'sales');
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $selectedActivityQuery->where('sales_id', Auth::id());
         }
         $selectedActivity = $request->get('activity')
@@ -73,8 +73,8 @@ class ActivityController extends Controller
             : $activities->first();
 
         $activityScope = fn () => Activity::query()
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->when(! Auth::user()->isSales() && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->when(! (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
 
         $stats = [
             'today' => $activityScope()->whereDate('activity_date', today())->count(),
@@ -84,8 +84,8 @@ class ActivityController extends Controller
         ];
 
         $customerScope = fn () => Customer::with('primaryPic', 'sales')
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->when(! Auth::user()->isSales() && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->when(! (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
 
         $pipeline = collect(Customer::stages())->mapWithKeys(function ($label, $stage) use ($customerScope) {
             $q = $customerScope()->where('pipeline_stage', $stage)->latest('updated_at');
@@ -120,7 +120,7 @@ class ActivityController extends Controller
 
     public function create()
     {
-        $customers = Customer::when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+        $customers = Customer::when(Auth::user()->isSales() && ! Auth::user()->isAdminLevel(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->orderBy('name')
             ->get();
         $salesUsers = User::assignableSales();
@@ -157,7 +157,7 @@ class ActivityController extends Controller
 
         if (! empty($data['customer_id'])) {
             $customer = Customer::findOrFail($data['customer_id']);
-            abort_if(Auth::user()->isSales() && (int) $customer->sales_id !== (int) Auth::id(), 403);
+            abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $customer->sales_id !== (int) Auth::id(), 403);
             if (! Auth::user()->isSales() && (int) $customer->sales_id !== (int) $data['sales_id']) {
                 throw ValidationException::withMessages(['customer_id' => 'Customer tidak dimiliki oleh sales yang dipilih.']);
             }
@@ -165,7 +165,7 @@ class ActivityController extends Controller
         }
         if (! empty($data['lead_id'])) {
             $lead = Lead::findOrFail($data['lead_id']);
-            abort_if(Auth::user()->isSales() && (int) $lead->sales_id !== (int) Auth::id(), 403);
+            abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $lead->sales_id !== (int) Auth::id(), 403);
             if (! Auth::user()->isSales() && (int) $lead->sales_id !== (int) $data['sales_id']) {
                 throw ValidationException::withMessages(['lead_id' => 'Lead tidak dimiliki oleh sales yang dipilih.']);
             }
@@ -190,7 +190,7 @@ class ActivityController extends Controller
 
     public function updateStatus(Request $request, Activity $activity)
     {
-        abort_if(Auth::user()->isSales() && (int) $activity->sales_id !== (int) Auth::id(), 403);
+        abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $activity->sales_id !== (int) Auth::id(), 403);
         $request->validate([
             'status' => ['required', Rule::in(array_keys(Activity::statuses()))],
             'result' => ['nullable', 'string', 'max:2000'],

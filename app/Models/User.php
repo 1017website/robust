@@ -29,8 +29,8 @@ class User extends Authenticatable
     }
 
     public function isAdministrator(): bool { return $this->role === 'administrator'; }
-    public function isSalesAdmin(): bool { return $this->role === 'sales_admin'; }
-    public function isSales(): bool { return $this->role === 'sales'; }
+    public function isSalesAdmin(): bool { return in_array($this->role, ['sales', 'sales_admin'], true); }
+    public function isSales(): bool { return in_array($this->role, ['sales', 'sales_admin'], true); }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
     public function isProduction(): bool { return $this->role === 'production'; }
     public function isQc(): bool { return $this->role === 'qc'; }
@@ -45,33 +45,39 @@ class User extends Authenticatable
     }
 
     /**
-     * Hak melihat data lintas sales untuk Administrator dan Sales Admin.
+     * Hak melihat data lintas sales untuk Administrator dan Sales.
      * Pengaturan sistem tetap menggunakan isAdministrator().
      */
+    /** Pembuatan project hanya untuk administrator dan lini sales pelaksana. */
+    public function canCreateProject(): bool
+    {
+        return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
+    }
+
     public function isAdminLevel(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin'], true);
+        return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
     }
 
     /**
-     * Proses Accurate pada Request PO dan penerbitan Invoice.
+     * Proses Accurate pada Request Process dan penerbitan Invoice.
      */
     public function canManageBackOffice(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin'], true);
+        return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
     }
 
     /** Kolom administrasi (comment, KP, bukti potong PPh) pada Project Monitoring. */
     public function canManageProjectAdministration(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin', 'administration'], true);
+        return in_array($this->role, ['administrator', 'sales_admin', 'sales', 'administration'], true);
     }
 
     public function roleLabel(): string
     {
         return match ($this->role) {
             'administrator' => 'Administrator',
-            'sales_admin' => 'Sales Admin',
+            'sales_admin' => 'Sales',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Drafter',
@@ -88,7 +94,6 @@ class User extends Authenticatable
     {
         return [
             'administrator' => 'Administrator',
-            'sales_admin' => 'Sales Admin',
             'sales_spv' => 'SPV Sales',
             'sales' => 'Sales',
             'drafter' => 'Drafter',

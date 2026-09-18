@@ -1,8 +1,8 @@
 @extends('layouts.app')
-@section('title', 'Request PO')
+@section('title', 'Request Process')
 @section('content')
-<x-page-header title="Request PO" subtitle="Monitoring Request PO dari penawaran CRM maupun order existing menuju Accurate">
-    <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Request PO Baru</a>
+<x-page-header title="Request Process" subtitle="Monitoring Request Process dari penawaran CRM maupun order existing menuju Accurate">
+    <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Request Process Baru</a>
 </x-page-header>
 
 <div class="card-r">
@@ -38,7 +38,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9"><x-empty text="Belum ada Request PO." /></td></tr>
+                <tr><td colspan="9"><x-empty text="Belum ada Request Process." /></td></tr>
             @endforelse
             </tbody>
         </table>

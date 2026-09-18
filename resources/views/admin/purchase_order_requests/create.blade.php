@@ -1,13 +1,13 @@
 @extends('layouts.app')
-@section('title', $requestPo ? 'Lanjutkan Draf Request PO' : 'Request PO Baru')
+@section('title', $requestPo ? 'Lanjutkan Draf Request Process' : 'Request Process Baru')
 @section('content')
 @php
     $isEditingDraft = (bool) $requestPo;
     $defaultSource = $requestPo?->quotation?->isExternal() ? 'external' : 'crm';
     $purchaseSource = old('purchase_source', $defaultSource);
     $value = fn (string $field, $fallback = null) => old($field, $requestPo?->{$field} ?? $fallback);
-    $checklistItems = old('checklist')
-        ? collect(old('checklist'))
+    $checklistItems = old('checklist_present')
+        ? collect(old('checklist', []))
             ->map(fn ($row) => [
                 'key' => $row['key'] ?? '',
                 'label' => $row['label'] ?? '',
@@ -19,7 +19,7 @@
         : ($requestPo ? $requestPo->checklistItems() : (new \App\Models\PurchaseOrderRequest)->checklistItems());
 @endphp
 <x-page-header
-    :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Request PO Baru'"
+    :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Request Process Baru'"
     subtitle="Buat request monitoring untuk dilanjutkan menjadi PO di Accurate">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
 </x-page-header>
@@ -30,7 +30,13 @@
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card-r">
-                <div class="card-head"><h2>Sumber Request PO</h2></div>
+                <div class="card-head"><h2>Sumber Request Process</h2></div>
+                <div class="mb-3">
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor RPO</label>
+                    <input id="requestCode" name="code" value="{{ $value('code') }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" aria-describedby="requestCodeHelp">
+                    <div id="requestCodeHelp" class="form-text">Isi nomor sendiri. Kosongkan untuk memakai nomor otomatis; nomor harus unik.</div>
+                    @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6">
                         <label class="info-card d-flex gap-2 align-items-start h-100">
@@ -59,7 +65,7 @@
                                 <option value="{{ $quotation->id }}" selected>{{ $quotation->code }} — {{ $quotation->customer_name }} — {{ $quotation->project_name }}</option>
                             @endif
                         </select>
-                        <div class="form-text">Hanya penawaran yang belum memiliki Request PO yang ditampilkan.</div>
+                        <div class="form-text">Hanya penawaran yang belum memiliki Request Process yang ditampilkan.</div>
                 </div>
 
                 <div id="externalQuotationFields" class="mb-3 {{ $purchaseSource === 'external' ? '' : 'd-none' }}">
@@ -87,8 +93,10 @@
                         <input name="customer_po_number" value="{{ $value('customer_po_number') }}" class="form-control" placeholder="Jika customer sudah memberi nomor PO">
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label small fw-semibold">Upload PO Customer / Lampiran</label>
-                        <input type="file" name="customer_po_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+                        <label for="customerPoFile" class="form-label small fw-semibold">Upload Dokumen PO</label>
+                        <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
+                        <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Maksimal 5 MB.</div>
+                        @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         @if($requestPo?->customer_po_file)
                             <div class="form-text">Lampiran saat ini: <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank">lihat file</a>. Unggah file baru hanya jika ingin mengganti.</div>
                         @endif
@@ -121,12 +129,12 @@
                 <ol class="small mb-0 ps-3">
                     <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
                     <li>Lengkapi data customer, PO, dan pengiriman.</li>
-                    <li>Ajukan Request PO — atau simpan sebagai draf jika belum lengkap.</li>
+                    <li>Ajukan Request Process atau simpan sebagai draf jika belum lengkap.</li>
                     <li>PO resmi dibuat di Accurate.</li>
                 </ol>
-                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Request PO diajukan.</div>
+                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Request Process diajukan.</div>
             </div>
-            <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Request PO' : 'Simpan & Ajukan Request PO' }}</button>
+            <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Request Process' : 'Simpan & Ajukan Request Process' }}</button>
             <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>
             <div class="form-text mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum diteruskan ke Accurate.</div>
         </div>

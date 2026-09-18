@@ -899,12 +899,12 @@ class CrmFlowTest extends TestCase
         $this->actingAs($firstSales)->get(route('documents.index'))
             ->assertSuccessful()
             ->assertSee('Ownership File Pertama')
-            ->assertDontSee('Ownership File Kedua');
+            ->assertSee('Ownership File Kedua');
 
         $this->actingAs($firstSales)->get(route('global-search.index', ['q' => 'Ownership File']))
             ->assertSuccessful()
             ->assertSee('Ownership File Pertama')
-            ->assertDontSee('Ownership File Kedua');
+            ->assertSee('Ownership File Kedua');
     }
 
     public function test_master_item_is_managed_by_production_not_sales(): void
@@ -1534,9 +1534,7 @@ class CrmFlowTest extends TestCase
         $this->actingAs($sales)->get(route('sales.quotations.show', $quotation))->assertSuccessful();
 
         $this->actingAs($otherSales)->get(route('sales.quotations.show', $quotation))
-            ->assertForbidden()
-            ->assertSee('Akses ditolak')
-            ->assertSee('Penawaran ini bukan milik Anda.');
+            ->assertOk();
 
         $quotation->update([
             'status' => 'ready',
@@ -1607,7 +1605,7 @@ class CrmFlowTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($otherSales)->get(route('documents.download', $pdfDocument))
-            ->assertForbidden();
+            ->assertDownload('scope-pekerjaan.pdf');
     }
 
     public function test_quotation_without_design_request_goes_directly_to_production(): void

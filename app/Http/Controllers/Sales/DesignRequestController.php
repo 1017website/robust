@@ -20,7 +20,7 @@ class DesignRequestController extends Controller
     public function index(Request $request)
     {
         $query = DesignRequest::with('productionPic', 'sales')
-            ->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()))
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
             ->latest();
 
         if ($s = $request->get('q')) {
@@ -48,7 +48,7 @@ class DesignRequestController extends Controller
         }
 
         $designRequests = $query->paginate(10)->withQueryString();
-        $base = DesignRequest::query()->when(Auth::user()->isSales(), fn ($q) => $q->where('sales_id', Auth::id()));
+        $base = DesignRequest::query()->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()));
         $stats = [
             'total' => (clone $base)->count(),
             'waiting' => (clone $base)->where('status', 'assigned')->count(),
@@ -395,7 +395,7 @@ class DesignRequestController extends Controller
     protected function designRequestQuery()
     {
         return DesignRequest::with('productionPic', 'sales', 'customer', 'lead')
-            ->when(Auth::user()->isSales(), function ($query) {
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), function ($query) {
                 $query->where(function ($scope) {
                     $scope->where('sales_id', Auth::id())
                         ->orWhereHas('lead', fn ($lead) => $lead->where('sales_id', Auth::id()))
@@ -407,13 +407,13 @@ class DesignRequestController extends Controller
     protected function leadQuery()
     {
         return Lead::query()
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where('sales_id', Auth::id()));
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()));
     }
 
     protected function customerQuery()
     {
         return Customer::query()
-            ->when(Auth::user()->isSales(), function ($query) {
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), function ($query) {
                 $query->where(function ($scope) {
                     $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
                 });
@@ -444,7 +444,7 @@ class DesignRequestController extends Controller
 
     protected function scopeLeadExistsRule($query)
     {
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->where('sales_id', Auth::id());
         }
 
@@ -453,7 +453,7 @@ class DesignRequestController extends Controller
 
     protected function scopeCustomerExistsRule($query)
     {
-        if (Auth::user()->isSales()) {
+        if (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) {
             $query->where(function ($scope) {
                 $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
             });
@@ -465,7 +465,7 @@ class DesignRequestController extends Controller
     protected function findOrCreateCustomerFromRequest(array $data): Customer
     {
         $customer = Customer::query()
-            ->when(Auth::user()->isSales(), function ($query) {
+            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), function ($query) {
                 $query->where(function ($scope) {
                     $scope->where('sales_id', Auth::id())->orWhereNull('sales_id');
                 });
@@ -498,7 +498,7 @@ class DesignRequestController extends Controller
 
     protected function canViewDesignRequest(DesignRequest $designRequest): bool
     {
-        if (! Auth::user()->isSales()) {
+        if (Auth::user()->isAdminLevel() || ! Auth::user()->isSales()) {
             return true;
         }
 
