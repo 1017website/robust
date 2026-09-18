@@ -74,10 +74,10 @@ class PurchaseOrderRequest extends Model
     }
 
     /**
-     * Checklist milik Request Process ini.
+     * Checklist milik Project ini.
      *
-     * Item disimpan per Request Process sehingga setiap akun dapat menghapus item yang
-     * tidak diperlukan atau menambah item sendiri tanpa mengubah Request Process lain.
+     * Item disimpan per Project sehingga setiap akun dapat menghapus item yang
+     * tidak diperlukan atau menambah item sendiri tanpa mengubah Project lain.
      * Data lama yang masih berbentuk {key: bool} tetap terbaca.
      *
      * @return array<int, array{key: string, label: string, checked: bool}>
@@ -142,7 +142,7 @@ class PurchaseOrderRequest extends Model
         return ['draft' => 'Draft'] + self::processStatuses();
     }
 
-    /** Status proses setelah Request Process diajukan (dipakai pada form update Accurate). */
+    /** Status proses setelah Project diajukan (dipakai pada form update Accurate). */
     public static function processStatuses(): array
     {
         return [

@@ -2,7 +2,7 @@
     'items' => [],
     'idPrefix' => 'chk',
 ])
-{{-- Editor checklist Request Process: tiap item punya icon hapus, dan item baru bisa ditambah. --}}
+{{-- Editor checklist Project: tiap item punya icon hapus, dan item baru bisa ditambah. --}}
 <div data-checklist-editor>
     {{-- Penanda agar "semua item dihapus" tidak dianggap "form tanpa checklist". --}}
     <input type="hidden" name="checklist_present" value="1">

@@ -32,7 +32,7 @@
                                 <td style="min-width:150px"><div class="sales-progress"><span style="width:{{ $project->progress }}%"></span></div><small>{{ $project->progress }}%</small></td>
                             </tr>
                         @empty
-                            <tr><td colspan="6"><x-empty text="Belum ada project produksi." /></td></tr>
+                            <tr><td colspan="6"><x-empty text="Belum ada request process produksi." /></td></tr>
                         @endforelse
                         </tbody>
                     </table>

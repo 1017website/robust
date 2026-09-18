@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Monitoring Pipeline')
 @section('content')
-<x-page-header title="Monitoring Pipeline" subtitle="Pantauan end-to-end dari Pra Lead sampai Request Process Accurate" />
+<x-page-header title="Monitoring Pipeline" subtitle="Pantauan end-to-end dari Pra Lead sampai Project Accurate" />
 
 <div class="row g-3 mb-3">
     @foreach($cards as $card)
@@ -24,7 +24,7 @@
 <div class="row g-3 mb-3">
     <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Design Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['design_overdue'] }}</div><div class="text-muted-2 small">Design request melewati deadline dan belum completed.</div></div></div>
     <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>Draft Penawaran Terlambat</h2></div><div class="display-6 fw-semibold">{{ $sla['quotation_draft_overdue'] }}</div><div class="text-muted-2 small">Draft belum disiapkan lebih dari 2 hari.</div></div></div>
-    <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Request Process Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['po_overdue'] }}</div><div class="text-muted-2 small">Request Process belum selesai lebih dari 3 hari.</div></div></div>
+    <div class="col-md-4"><div class="card-r"><div class="card-head"><h2>SLA Project Overdue</h2></div><div class="display-6 fw-semibold">{{ $sla['po_overdue'] }}</div><div class="text-muted-2 small">Project belum selesai lebih dari 3 hari.</div></div></div>
 </div>
 
 <div class="row g-3">
@@ -91,7 +91,7 @@
     </div>
     <div class="col-lg-4">
         <div class="card-r">
-            <div class="card-head"><h2>Request Process Open</h2></div>
+            <div class="card-head"><h2>Project Open</h2></div>
             @forelse($requestPoPipeline as $po)
                 <div class="border-bottom py-2">
                     <div class="d-flex justify-content-between gap-2"><strong>{{ $po->code }}</strong><x-status-badge :status="$po->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$po->status] ?? $po->status" /></div>
@@ -99,7 +99,7 @@
                     <div class="small">Checklist: {{ $po->checklistProgress()['done'] }}/{{ $po->checklistProgress()['total'] }}</div>
                 </div>
             @empty
-                <x-empty text="Tidak ada Request Process open." />
+                <x-empty text="Tidak ada Project open." />
             @endforelse
         </div>
     </div>

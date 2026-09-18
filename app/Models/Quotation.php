@@ -51,7 +51,7 @@ class Quotation extends Model
             'sent_to_customer' => 'Dikirim ke Customer',
             'customer_accepted' => 'Customer Setuju',
             'customer_rejected' => 'Customer Tidak Setuju',
-            'request_po_created' => 'Request Process Dibuat',
+            'request_po_created' => 'Project Dibuat',
             'expired' => 'Expired',
 
             // Kompatibilitas data lama

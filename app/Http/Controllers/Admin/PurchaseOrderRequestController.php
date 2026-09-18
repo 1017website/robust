@@ -59,11 +59,11 @@ class PurchaseOrderRequestController extends Controller
         ]);
     }
 
-    /** Melanjutkan pengisian Request Process yang masih berstatus draf. */
+    /** Melanjutkan pengisian Project yang masih berstatus draf. */
     public function edit(PurchaseOrderRequest $purchaseOrderRequest)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request Process berstatus draf yang dapat diubah.');
+        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Project berstatus draf yang dapat diubah.');
 
         return view('admin.purchase_order_requests.create', [
             'requestPo' => $purchaseOrderRequest,
@@ -89,7 +89,7 @@ class PurchaseOrderRequestController extends Controller
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
             abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
             if (! $quotation->canCreatePurchaseOrderRequest()) {
-                return back()->withInput()->with('error', 'Request Process hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request Process.');
+                return back()->withInput()->with('error', 'Project hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Project.');
             }
         }
 
@@ -114,25 +114,25 @@ class PurchaseOrderRequestController extends Controller
         Logger::record(
             'created',
             $asDraft
-                ? "Draf Request Process {$poRequest->code} disimpan"
+                ? "Draf Project {$poRequest->code} disimpan"
                 : ($isExternal
-                    ? "Request Process {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
-                    : "Request Process {$poRequest->code} dibuat dari penawaran ".($poRequest->quotation?->code ?: '-')),
+                    ? "Project {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
+                    : "Project {$poRequest->code} dibuat dari penawaran ".($poRequest->quotation?->code ?: '-')),
             $poRequest
         );
 
         return redirect()
             ->route('admin.purchase-order-requests.show', $poRequest)
             ->with('success', $asDraft
-                ? 'Draf Request Process tersimpan. Lengkapi datanya kapan saja lalu ajukan.'
-                : 'Request Process berhasil dibuat. Lanjutkan proses PO di Accurate.');
+                ? 'Draf Project tersimpan. Lengkapi datanya kapan saja lalu ajukan.'
+                : 'Project berhasil dibuat. Lanjutkan proses PO di Accurate.');
     }
 
     /** Menyimpan ulang draf, atau mengajukannya setelah lengkap. */
     public function updateDraft(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Request Process berstatus draf yang dapat diubah.');
+        abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Project berstatus draf yang dapat diubah.');
 
         $asDraft = $this->wantsDraft($request);
         $data = $this->validatedData($request, true, $asDraft, $purchaseOrderRequest);
@@ -151,7 +151,7 @@ class PurchaseOrderRequestController extends Controller
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
             abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
             if ((int) $quotation->id !== (int) $purchaseOrderRequest->quotation_id && ! $quotation->canCreatePurchaseOrderRequest()) {
-                return back()->withInput()->with('error', 'Request Process hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Request Process.');
+                return back()->withInput()->with('error', 'Project hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Project.');
             }
         } elseif ($quotation?->isExternal()) {
             $quotation = null;
@@ -182,21 +182,21 @@ class PurchaseOrderRequestController extends Controller
 
         Logger::record(
             'updated',
-            $asDraft ? "Draf Request Process {$purchaseOrderRequest->code} diperbarui" : "Request Process {$purchaseOrderRequest->code} diajukan",
+            $asDraft ? "Draf Project {$purchaseOrderRequest->code} diperbarui" : "Project {$purchaseOrderRequest->code} diajukan",
             $purchaseOrderRequest
         );
 
         return redirect()
             ->route('admin.purchase-order-requests.show', $purchaseOrderRequest)
             ->with('success', $asDraft
-                ? 'Draf Request Process tersimpan.'
-                : 'Request Process berhasil diajukan. Lanjutkan proses PO di Accurate.');
+                ? 'Draf Project tersimpan.'
+                : 'Project berhasil diajukan. Lanjutkan proses PO di Accurate.');
     }
 
     /**
-     * Simpan checklist Request Process.
+     * Simpan checklist Project.
      *
-     * Terbuka untuk setiap akun yang berhak atas Request Process ini (Administrator dan
+     * Terbuka untuk setiap akun yang berhak atas Project ini (Administrator dan
      * Sales pemiliknya), termasuk saat masih berstatus draf, sehingga item yang tidak
      * diperlukan bisa dihapus dan item sendiri bisa ditambahkan.
      */
@@ -227,7 +227,7 @@ class PurchaseOrderRequestController extends Controller
     public function downloadPdf(PurchaseOrderRequest $purchaseOrderRequest, OperationalDocumentPdf $pdf)
     {
         $this->authorizeAccess($purchaseOrderRequest);
-        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request Process belum dapat diekspor. Ajukan request terlebih dahulu.');
+        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project belum dapat diekspor. Ajukan request terlebih dahulu.');
 
         $filename = trim((string) preg_replace(
             '/[^\pL\pN._-]+/u',
@@ -243,8 +243,8 @@ class PurchaseOrderRequestController extends Controller
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
-        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Request Process hanya untuk Administrator dan Sales.');
-        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request Process harus diajukan terlebih dahulu.');
+        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Project hanya untuk Administrator dan Sales.');
+        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project harus diajukan terlebih dahulu.');
 
         $data = $request->validate([
             'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::processStatuses()))],
@@ -283,7 +283,7 @@ class PurchaseOrderRequestController extends Controller
                 : null;
         });
 
-        Logger::record('updated', "Status Request Process {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
+        Logger::record('updated', "Status Project {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
         return back()->with(
             'success',
@@ -291,7 +291,7 @@ class PurchaseOrderRequestController extends Controller
                 ? ($project->quotation?->design_request_id
                     ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
                     : "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.")
-                : 'Request Process berhasil diperbarui.'
+                : 'Project berhasil diperbarui.'
         );
     }
 
@@ -356,7 +356,7 @@ class PurchaseOrderRequestController extends Controller
         );
     }
 
-    /** Penawaran yang belum punya Request Process, ditambah penawaran milik draf yang sedang diubah. */
+    /** Penawaran yang belum punya Project, ditambah penawaran milik draf yang sedang diubah. */
     protected function selectableQuotations(?PurchaseOrderRequest $requestPo = null)
     {
         return Quotation::with('sales', 'customer.primaryPic')
@@ -469,7 +469,7 @@ class PurchaseOrderRequestController extends Controller
 
     /**
      * Saat menyimpan draf seluruh isian boleh kosong; kelengkapan baru divalidasi
-     * penuh ketika Request Process benar-benar diajukan.
+     * penuh ketika Project benar-benar diajukan.
      */
     protected function validatedData(Request $request, bool $withQuotationRule = false, bool $asDraft = false, ?PurchaseOrderRequest $current = null): array
     {

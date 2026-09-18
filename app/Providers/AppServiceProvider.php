@@ -68,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
                 if ($user->canManageBackOffice() || $user->isSales()) {
                     $submittedPo = PurchaseOrderRequest::visibleTo($user)->where('status', 'submitted')->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request Process baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Project baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
 
                     $readyInvoices = $user->canManageBackOffice() && $hasExpandedOperationalWorkflow
                         ? PurchaseOrderRequest::whereDoesntHave('invoice')

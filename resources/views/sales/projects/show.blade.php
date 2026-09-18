@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Detail Project')
+@section('title', 'Detail Request Process')
 @section('content')
 @php($showPrices = auth()->user()->canViewPrices())
 <x-page-header :title="$project->name" :subtitle="$project->code.' · '.($project->customer?->name ?? '')">

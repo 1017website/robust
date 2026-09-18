@@ -31,7 +31,7 @@
                     <td><a href="{{ route('sales.projects.show',$p) }}" class="btn btn-sm btn-soft">Detail</a></td>
                 </tr>
             @empty
-                <tr><td colspan="{{ $showPrices ? 8 : 7 }}"><x-empty text="Belum ada project." /></td></tr>
+                <tr><td colspan="{{ $showPrices ? 8 : 7 }}"><x-empty text="Belum ada request process." /></td></tr>
             @endforelse
             </tbody>
         </table>

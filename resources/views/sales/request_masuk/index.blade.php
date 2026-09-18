@@ -9,6 +9,10 @@
         default => 'st-gray'
     };
     $previewUrl = fn($id) => route('sales.request-masuk.index', array_merge(request()->query(), ['request' => $id])).'#detail-request';
+    // Pengirim request = user yang membuat pra lead (bisa Admin, SPV, atau sales itu sendiri).
+    $senderName = fn($req) => $req->creator?->name ?: 'Administrator';
+    $senderRole = fn($req) => $req->creator?->id === auth()->id() ? 'Dibuat sendiri' : ($req->creator?->roleLabel() ?: 'Administrator');
+    $senderInitial = fn($req) => strtoupper(mb_substr($senderName($req), 0, 1));
 @endphp
 <div class="sales-ui">
     <div class="sales-main-grid">
@@ -16,7 +20,7 @@
             <div class="sales-page-head">
                 <div>
                     <h1 class="page-title mb-1">Request Masuk</h1>
-                    <div class="page-subtitle">Daftar prospek baru yang dikirim oleh Administrator. Silakan tinjau dan terima untuk menjadi lead Anda.</div>
+                    <div class="page-subtitle">Daftar prospek baru yang ditugaskan kepada Anda. Silakan tinjau dan terima untuk menjadi lead Anda.</div>
                 </div>
             </div>
 
@@ -27,11 +31,20 @@
                 <div class="sales-stat"><div class="ico sred"><i class="bi bi-x-circle"></i></div><div><div class="label">Ditolak</div><div class="value">{{ $stats['ditolak'] }}</div><div class="sub">Dalam 7 hari terakhir</div></div></div>
             </div>
 
+            @php
+                // Chip rentang waktu saling eksklusif; priority & q tetap dipertahankan saat berpindah chip.
+                $activeRange = request()->boolean('today') ? 'today' : (request()->boolean('week') ? 'week' : 'all');
+                $rangeUrl = fn($range) => route('sales.request-masuk.index', array_filter(array_merge(
+                    ['priority' => request('priority'), 'q' => request('q')],
+                    $range === 'all' ? [] : [$range => 1]
+                ), fn($v) => $v !== null && $v !== ''));
+            @endphp
             <form class="sales-filter-row" method="GET" style="grid-template-columns:120px 120px 120px 160px 1fr">
-                <a href="{{ route('sales.request-masuk.index') }}" class="sales-chip {{ !request()->hasAny(['priority','q']) ? 'active' : '' }} text-center">Semua Request</a>
-                <a href="{{ route('sales.request-masuk.index',['today'=>1]) }}" class="sales-chip text-center">Hari Ini</a>
-                <a href="{{ route('sales.request-masuk.index',['week'=>1]) }}" class="sales-chip text-center">Minggu Ini</a>
-                <select name="priority" class="form-select">
+                @if($activeRange !== 'all')<input type="hidden" name="{{ $activeRange }}" value="1">@endif
+                <a href="{{ $rangeUrl('all') }}" class="sales-chip {{ $activeRange === 'all' ? 'active' : '' }} text-center">Semua Request</a>
+                <a href="{{ $rangeUrl('today') }}" class="sales-chip {{ $activeRange === 'today' ? 'active' : '' }} text-center">Hari Ini</a>
+                <a href="{{ $rangeUrl('week') }}" class="sales-chip {{ $activeRange === 'week' ? 'active' : '' }} text-center">Minggu Ini</a>
+                <select name="priority" class="form-select" onchange="this.form.submit()">
                     <option value="">Semua Prioritas</option>
                     <option value="high" @selected(request('priority')=='high')>High</option>
                     <option value="medium" @selected(request('priority')=='medium')>Medium</option>
@@ -43,7 +56,7 @@
             <div class="card-r p-0 overflow-hidden">
                 <div class="table-wrap">
                     <table class="sales-table">
-                        <thead><tr><th>Customer / Instansi</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Admin Pengirim</th><th>Prioritas</th><th>Status</th><th>Diterima</th><th></th></tr></thead>
+                        <thead><tr><th>Customer / Instansi</th><th>Kebutuhan Awal</th><th>Lokasi</th><th>Pengirim</th><th>Prioritas</th><th>Status</th><th>Diterima</th><th></th></tr></thead>
                         <tbody>
                         @forelse($requests as $req)
                             <tr class="{{ $selected && $selected->id === $req->id ? 'selected' : '' }}" data-detail-href="{{ $previewUrl($req->id) }}" tabindex="0" role="link" aria-label="Tampilkan preview request">
@@ -52,7 +65,7 @@
                                 </td>
                                 <td><div class="fw-bold text-truncate-cell">{{ $req->lab_type ?: 'Kebutuhan proyek' }}</div><div class="small text-muted-2 text-truncate-cell">{{ $req->initial_need ?: '—' }}</div></td>
                                 <td class="fw-semibold">{{ $req->location ?: '—' }}</td>
-                                <td><div class="d-flex align-items-center gap-2"><div class="mini-avatar">A</div><div>Admin<br><span class="small text-muted-2">{{ optional($req->sent_at ?? $req->created_at)->translatedFormat('d M Y') }}</span></div></div></td>
+                                <td><div class="d-flex align-items-center gap-2"><div class="mini-avatar">{{ $senderInitial($req) }}</div><div>{{ $senderName($req) }}<div class="small text-muted-2">{{ $senderRole($req) }} &middot; {{ optional($req->sent_at ?? $req->created_at)->translatedFormat('d M Y') }}</div></div></div></td>
                                 <td><span class="status-soft {{ $req->priority === 'high' ? 'st-red' : ($req->priority === 'low' ? 'st-green' : 'st-yellow') }}">{{ ucfirst($req->priority) }}</span></td>
                                 <td><span class="status-soft st-blue">Baru</span></td>
                                 <td>{{ optional($req->sent_at ?? $req->created_at)->isToday() ? 'Hari ini' : optional($req->sent_at ?? $req->created_at)->diffForHumans() }}<div class="small text-muted-2">{{ optional($req->sent_at ?? $req->created_at)->format('H:i') }}</div></td>
@@ -74,7 +87,7 @@
                 <div class="sales-detail-body request-detail-body">
                     <div class="d-flex flex-wrap gap-2 mb-2"><span class="status-soft st-blue">NEW REQUEST</span>@if($selected->assigned_sales_id)<span class="badge rounded-pill text-bg-success"><i class="bi bi-person-check-fill me-1"></i>Assigned dari Pra Leads</span>@endif</div>
                     <div class="sales-detail-title">{{ $selected->instansi }}</div>
-                    <div class="small text-muted-2 mb-3">Request dikirim oleh Admin pada {{ optional($selected->sent_at ?? $selected->created_at)->translatedFormat('d M Y, H:i') }}</div>
+                    <div class="small text-muted-2 mb-3">Request dikirim oleh {{ $senderName($selected) }} ({{ $senderRole($selected) }}) pada {{ optional($selected->sent_at ?? $selected->created_at)->translatedFormat('d M Y, H:i') }}</div>
 
                     <div class="row g-3">
                         <div class="col-12"><div class="info-card"><h6><i class="bi bi-person sblue rounded p-2 me-2"></i>Informasi Customer</h6>

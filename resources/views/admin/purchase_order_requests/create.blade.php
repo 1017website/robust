@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $requestPo ? 'Lanjutkan Draf Request Process' : 'Request Process Baru')
+@section('title', $requestPo ? 'Lanjutkan Draf Project' : 'Project Baru')
 @section('content')
 @php
     $isEditingDraft = (bool) $requestPo;
@@ -19,7 +19,7 @@
         : ($requestPo ? $requestPo->checklistItems() : (new \App\Models\PurchaseOrderRequest)->checklistItems());
 @endphp
 <x-page-header
-    :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Request Process Baru'"
+    :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Project Baru'"
     subtitle="Buat request monitoring untuk dilanjutkan menjadi PO di Accurate">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
 </x-page-header>
@@ -30,7 +30,7 @@
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card-r">
-                <div class="card-head"><h2>Sumber Request Process</h2></div>
+                <div class="card-head"><h2>Sumber Project</h2></div>
                 <div class="mb-3">
                     <label for="requestCode" class="form-label small fw-semibold">Nomor RPO</label>
                     <input id="requestCode" name="code" value="{{ $value('code') }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" aria-describedby="requestCodeHelp">
@@ -65,7 +65,7 @@
                                 <option value="{{ $quotation->id }}" selected>{{ $quotation->code }} — {{ $quotation->customer_name }} — {{ $quotation->project_name }}</option>
                             @endif
                         </select>
-                        <div class="form-text">Hanya penawaran yang belum memiliki Request Process yang ditampilkan.</div>
+                        <div class="form-text">Hanya penawaran yang belum memiliki Project yang ditampilkan.</div>
                 </div>
 
                 <div id="externalQuotationFields" class="mb-3 {{ $purchaseSource === 'external' ? '' : 'd-none' }}">
@@ -129,12 +129,12 @@
                 <ol class="small mb-0 ps-3">
                     <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
                     <li>Lengkapi data customer, PO, dan pengiriman.</li>
-                    <li>Ajukan Request Process atau simpan sebagai draf jika belum lengkap.</li>
+                    <li>Ajukan Project atau simpan sebagai draf jika belum lengkap.</li>
                     <li>PO resmi dibuat di Accurate.</li>
                 </ol>
-                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Request Process diajukan.</div>
+                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan.</div>
             </div>
-            <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Request Process' : 'Simpan & Ajukan Request Process' }}</button>
+            <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
             <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>
             <div class="form-text mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum diteruskan ke Accurate.</div>
         </div>

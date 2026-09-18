@@ -17,7 +17,8 @@ class RequestMasukController extends Controller
     public function index(Request $request)
     {
         $uid = Auth::id();
-        $query = PraLead::where('assigned_sales_id', $uid)
+        $query = PraLead::with('creator')
+            ->where('assigned_sales_id', $uid)
             ->whereIn('status', ['waiting_acceptance'])
             ->latest();
 
@@ -30,11 +31,13 @@ class RequestMasukController extends Controller
         if ($p = $request->get('priority')) {
             $query->where('priority', $p);
         }
+        // Tanggal yang difilter mengikuti tanggal yang tampil di tabel (sent_at, fallback created_at).
+        $sentAt = DB::raw('COALESCE(sent_at, created_at)');
         if ($request->boolean('today')) {
-            $query->whereDate('sent_at', today());
+            $query->whereDate($sentAt, today());
         }
         if ($request->boolean('week')) {
-            $query->whereBetween('sent_at', [now()->startOfWeek(), now()->endOfWeek()]);
+            $query->whereBetween($sentAt, [now()->startOfWeek(), now()->endOfWeek()]);
         }
 
         $requests = $query->paginate(8)->withQueryString();

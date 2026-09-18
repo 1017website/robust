@@ -82,7 +82,7 @@ class ProjectController extends Controller
         $project = Project::create($data);
         Logger::record('created', "Project {$project->name} dibuat dari penawaran {$quotation->code}", $project);
 
-        return redirect()->route('sales.projects.show', $project)->with('success', 'Project berhasil dibuat.');
+        return redirect()->route('sales.projects.show', $project)->with('success', 'Request Process berhasil dibuat.');
     }
 
     public function show(Project $project)

@@ -56,7 +56,7 @@ class PipelineController extends Controller
                 'icon' => 'bi-cloud-arrow-up',
             ],
             [
-                'label' => 'Request Process Open',
+                'label' => 'Project Open',
                 'count' => PurchaseOrderRequest::visibleTo($user)->whereIn('status', ['submitted', 'processing_accurate'])->count(),
                 'route' => ($canOpenAdmin || $isSales) ? route('admin.purchase-order-requests.index') : '#',
                 'icon' => 'bi-receipt',

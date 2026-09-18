@@ -38,7 +38,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9"><x-empty text="Belum ada Request Process." /></td></tr>
+                <tr><td colspan="9"><x-empty text="Belum ada Project." /></td></tr>
             @endforelse
             </tbody>
         </table>
