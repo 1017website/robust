@@ -138,8 +138,8 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Design Request selesai diproses')
             ->assertSeeInOrder([
-                'bi bi-file-earmark-text',
-                'Penawaran',
+                'bi bi-pencil-square',
+                'Design Request',
                 'side-badge',
             ], false);
 

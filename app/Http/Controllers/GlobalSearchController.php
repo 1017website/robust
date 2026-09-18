@@ -24,7 +24,7 @@ class GlobalSearchController extends Controller
             $user = Auth::user();
             $like = "%{$query}%";
 
-            if ($user->isAdministrator() || $user->isSales() || $user->isSalesSpv()) {
+            if ($user->isAdminLevel() || $user->isSales() || $user->isSalesSpv()) {
                 $customers = Customer::with('primaryPic', 'sales')
                     ->when($user->isSales(), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->where(function (Builder $q) use ($like) {
@@ -48,7 +48,7 @@ class GlobalSearchController extends Controller
                 }
             }
 
-            if ($user->isAdministrator() || $user->isSales()) {
+            if ($user->isAdminLevel() || $user->isSales()) {
                 $leads = Lead::with('sales')
                     ->when($user->isSales(), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->where(function (Builder $q) use ($like) {
@@ -121,7 +121,7 @@ class GlobalSearchController extends Controller
                 }
             }
 
-            if ($user->isAdministrator() || $user->isSales() || $user->isDrafter()) {
+            if ($user->isAdminLevel() || $user->isSales() || $user->isDrafter()) {
                 $designRequests = DesignRequest::with('sales', 'productionPic')
                     ->when($user->isSales(), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->when($user->isDrafter(), fn (Builder $q) => $q->where('production_pic_id', $user->id))
@@ -148,7 +148,7 @@ class GlobalSearchController extends Controller
                 }
             }
 
-            if ($user->isAdministrator() || $user->isSales()) {
+            if ($user->isAdminLevel() || $user->isSales()) {
                 $projects = Project::with('customer')
                     ->when($user->isSales(), fn (Builder $q) => $q->whereHas('quotation', fn (Builder $quote) => $quote->where('sales_id', $user->id)))
                     ->where(function (Builder $q) use ($like) {

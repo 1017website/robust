@@ -53,7 +53,7 @@ class AppServiceProvider extends ServiceProvider
                         ->whereDoesntHave('quotations', fn ($query) => $query
                             ->whereColumn('quotations.updated_at', '>=', 'design_requests.submitted_at'))
                         ->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'sales.quotations.*', $completedDesignRequests, 'Design Request selesai diproses', 'Produksi sudah melengkapi spesifikasi dan HPP. Buat atau perbarui penawaran.', route('sales.quotations.create'), 'bi-file-earmark-check', 'text-success');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'sales.design-requests.*', $completedDesignRequests, 'Design Request selesai diproses', 'Produksi sudah melengkapi spesifikasi dan HPP. Buat atau perbarui penawaran.', route('sales.design-requests.index', ['status' => 'completed']), 'bi-file-earmark-check', 'text-success');
 
                     $approvedQuotations = Quotation::where('sales_id', $user->id)
                         ->where('status', 'approved')
@@ -66,13 +66,13 @@ class AppServiceProvider extends ServiceProvider
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'spv.quotation-approvals.*', $waitingApprovals, 'Approval penawaran', 'Penawaran menunggu review SPV.', route('spv.quotation-approvals.index', ['status' => 'waiting_approval']), 'bi-check2-square', 'text-primary');
                 }
 
-                if ($user->canManageBackOffice()) {
-                    $submittedPo = PurchaseOrderRequest::where('status', 'submitted')->count();
+                if ($user->canManageBackOffice() || $user->isSales()) {
+                    $submittedPo = PurchaseOrderRequest::visibleTo($user)->where('status', 'submitted')->count();
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Request PO baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
 
-                    $readyInvoices = $hasExpandedOperationalWorkflow
-                        ? Project::whereHas('workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
-                            ->whereHas('quotation.purchaseOrderRequest', fn ($po) => $po->whereDoesntHave('invoice'))
+                    $readyInvoices = $user->canManageBackOffice() && $hasExpandedOperationalWorkflow
+                        ? PurchaseOrderRequest::whereDoesntHave('invoice')
+                            ->whereHas('quotation.project.workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
                             ->count()
                         : 0;
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.invoices.*', $readyInvoices, 'Project siap ditagihkan', 'Delivery dan penerimaan customer selesai. Invoice dapat diterbitkan.', route('admin.invoices.index'), 'bi-file-earmark-richtext', 'text-success');
@@ -99,6 +99,9 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 if ($user->isProduction()) {
+                    $pendingDesigns = DesignRequest::whereIn('status', ['drawing_uploaded', 'revision_drawing_uploaded'])->count();
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.design-requests.*', $pendingDesigns, 'Desain menunggu proses produksi', 'Lengkapi spesifikasi dan HPP desain yang sudah diunggah.', route('drafter.design-requests.index'), 'bi-pencil-square', 'text-primary');
+
                     $readyProduction = Project::query()
                         ->whereHas('documents', fn ($documents) => $documents->where('category', 'fabrication_drawing')->where('is_current', true))
                         ->where(fn ($projects) => $projects->whereDoesntHave('workflow')
@@ -125,13 +128,13 @@ class AppServiceProvider extends ServiceProvider
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingDelivery, 'Project siap dikirim', 'QC selesai. Atur jadwal, unggah POD, dan konfirmasi penerimaan customer.', route('drafter.projects.index'), 'bi-truck', 'text-primary');
                 }
 
-                if (in_array($user->role, ['administrator', 'sales_spv', 'sales', 'administration'], true)) {
+                if (in_array($user->role, ['administrator', 'sales_admin', 'sales_spv', 'sales', 'administration'], true)) {
                     $overdueActivities = Activity::query()
                         ->when($user->isSales(), fn ($query) => $query->where('sales_id', $user->id))
                         ->whereDate('activity_date', '<', today())
                         ->whereNotIn('status', ['completed', 'cancelled'])
                         ->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'activities.*', $overdueActivities, 'Aktivitas terlambat', 'Follow up belum diselesaikan.', route('activities.index', ['status' => 'scheduled']), 'bi-exclamation-triangle', 'text-danger');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'activities.*', $overdueActivities, 'Aktivitas terlambat', 'Follow up belum diselesaikan.', route('activities.index', ['period' => 'overdue']), 'bi-exclamation-triangle', 'text-danger');
                 }
             }
 

@@ -92,7 +92,7 @@
             <p class="small text-muted-2 mb-3">Request PO ini masih tersimpan sebagai draf. Data belum diteruskan ke Accurate dan belum bisa diproses menjadi Project atau Invoice.</p>
             <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary w-100"><i class="bi bi-pencil-square me-1"></i>Lanjutkan Pengisian</a>
         </div>
-        @else
+        @elseif(auth()->user()->canManageBackOffice())
         <div class="card-r">
             <div class="card-head"><h2>Update Accurate</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">

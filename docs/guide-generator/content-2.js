@@ -2,12 +2,10 @@
 
 module.exports = {
   sales: {
-    intro: `Sales adalah pemilik proses penjualan dari prospek masuk sampai order terbit. Sejak role Sales Admin
-      dihapus, Sales juga mewarisi sebagian pekerjaan back office: Pra Leads, Invoice, Project Monitoring, dan
-      Manage User. Pada menu penjualan — Leads, Customers, Design Request, Penawaran, Project, dan Activities —
-      Sales hanya melihat data miliknya sendiri. Menu back office memuat data lintas sales karena sifat
-      pekerjaannya memang menyeluruh. Assignment tidak termasuk: pemindahan kepemilikan lead adalah kewenangan
-      Administrator dan SPV Sales.`,
+    intro: `Sales adalah pemilik proses penjualan dari prospek masuk sampai order terbit.
+      Sales Admin kembali menjadi role terpisah untuk pekerjaan administrasi. Sales mengelola
+      Leads, Customers, Design Request, Penawaran, Project, Activities, dan Request PO miliknya.
+      Pra Leads dan Assignment dikelola Administrator, Sales Admin, dan SPV Sales.`,
 
     'dashboard': {
       f: `Ringkasan performa pribadi: lead aktif, penawaran aktif, project berjalan, deal won bulan ini, dan
@@ -399,9 +397,9 @@ module.exports = {
     },
 
     'pra-leads': {
-      f: `Sejak role Sales Admin digabungkan, Sales juga dapat mencatat dan mendistribusikan Pra Lead.`,
+      f: `Pra Leads dikelola Administrator, Sales Admin, dan SPV Sales. Menu ini tidak tersedia untuk Sales.`,
       s: [
-        'Cara pemakaiannya sama persis dengan bab Administrator: isi form, pilih Sales PIC, lalu Simpan Draft, Simpan, atau Kirim ke Sales.',
+        'Sales menerima Pra Lead yang ditugaskan kepadanya melalui menu Request Masuk.',
       ],
     },
 

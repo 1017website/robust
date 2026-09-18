@@ -73,23 +73,20 @@ Klik nama pengguna di kanan atas, lalu pilih **Logout**. Pada akun Sales dan Dra
 | Role | Tanggung jawab utama |
 |---|---|
 | Administrator | Mengelola konfigurasi, user, pra lead, assignment, monitoring, proses Accurate, dan dapat menangani approval penawaran. |
+| Sales Admin | Mengelola Pra Leads, Assignment, proses Accurate, Invoice, Customers, Project Monitoring, dan user non-Administrator. |
 | Sales | Menerima request, mengelola lead/customer/aktivitas, membuat Design Request dan penawaran, mencatat respons customer, serta membuat Project dan Request PO. |
 | SPV Sales | Memeriksa penawaran dan memilih Approve, Minta Revisi, atau Tolak. |
 | Produksi/Drafter | Mengerjakan Design Request, mengisi spesifikasi, costing, item hasil, dokumen, dan mengirim hasil final ke Sales. |
 
-> Role **Sales Admin** sudah dihapus dan digabungkan ke **Sales**. Seluruh akun eks
-> Sales Admin otomatis menjadi Sales, dan role Sales kini mewarisi sebagian pekerjaan
-> back office yang dulu dipegang Sales Admin: **Monitoring Pipeline, Pra Leads,
-> Invoice, Project Monitoring, dan Manage User**.
+> Role **Sales Admin** kembali terpisah dari **Sales**. Pra Leads dikelola oleh
+> **Administrator, Sales Admin, dan SPV Sales**. Sales tidak memiliki menu Pra Leads,
+> Invoice, Project Monitoring, atau Manage User, tetapi tetap dapat membuat Request PO miliknya.
 >
-> **Assignment** tidak ikut diwariskan. Memindahkan kepemilikan lead antar sales adalah
-> kewenangan pengawasan, sehingga menu tersebut hanya terbuka untuk **Administrator dan
-> SPV Sales**.
+> **Assignment** tersedia untuk **Administrator, Sales Admin, dan SPV Sales**.
 >
-> Yang tetap khusus Administrator: **System Settings**, serta hak melihat seluruh data
-> lintas sales (lead, dokumen, dan aktivitas milik sales lain). Pada menu penjualan
-> Sales tetap hanya melihat data miliknya sendiri; menu back office memuat data lintas
-> sales sesuai sifat pekerjaannya. **Master Item** tetap dipegang Produksi.
+> **System Settings** tetap khusus Administrator. Sales Admin memiliki akses data
+> lintas sales untuk pekerjaan administrasi. Sales tetap hanya melihat data penjualan
+> miliknya sendiri. **Master Item** tetap dipegang Produksi dan Administrator.
 >
 > Pada Manage User, akun non-Administrator tidak dapat melihat maupun mengubah akun
 > Administrator, dan tidak dapat membuat akun ber-role Administrator.

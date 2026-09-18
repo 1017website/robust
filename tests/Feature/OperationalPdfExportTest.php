@@ -67,13 +67,14 @@ class OperationalPdfExportTest extends TestCase
         $this->assertStringContainsString('RINGKASAN TAGIHAN', $response->getContent());
         $this->assertStringContainsString('TERMIN PEMBAYARAN', $response->getContent());
 
-        // Sales kini mewarisi kewenangan back office eks Sales Admin.
+        $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
+        $this->actingAs($salesAdmin)->get(route('admin.invoices.pdf', $invoice))->assertOk();
         $this->actingAs($sales)
             ->get(route('admin.invoices.pdf', $invoice))
-            ->assertOk();
+            ->assertForbidden();
         $this->actingAs($otherSales)
             ->get(route('admin.invoices.pdf', $invoice))
-            ->assertOk();
+            ->assertForbidden();
 
         $drafter = User::factory()->create(['role' => 'drafter']);
         $this->actingAs($drafter)

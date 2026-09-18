@@ -21,9 +21,7 @@ class PurchaseOrderRequestController extends Controller
     public function index(Request $request)
     {
         $query = PurchaseOrderRequest::with('quotation.sales', 'requester')->latest()
-            ->when(Auth::user()->isSales(), fn ($query) => $query->where(fn ($scope) => $scope
-                ->where('requested_by', Auth::id())
-                ->orWhereHas('quotation', fn ($quotation) => $quotation->where('sales_id', Auth::id()))));
+            ->visibleTo(Auth::user());
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('code', 'like', "%$s%")
@@ -243,7 +241,7 @@ class PurchaseOrderRequestController extends Controller
 
     public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
-        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Request PO hanya untuk Administrator dan Sales.');
+        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Request PO hanya untuk Administrator dan Sales Admin.');
         abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Request PO harus diajukan terlebih dahulu.');
 
         $data = $request->validate([

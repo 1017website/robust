@@ -51,6 +51,9 @@ class ActivityController extends Controller
         }
         if ($selectedDate) {
             $query->whereDate('activity_date', $selectedDate);
+        } elseif ($period === 'overdue') {
+            $query->whereDate('activity_date', '<', today())
+                ->whereNotIn('status', ['completed', 'cancelled']);
         } elseif ($period === 'week') {
             $query->whereBetween('activity_date', [now()->startOfWeek(), now()->endOfWeek()]);
         } elseif ($period === 'month') {

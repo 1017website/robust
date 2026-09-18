@@ -21,20 +21,19 @@ class August2026CrmRevisionTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_sales_admin_is_no_longer_a_selectable_role(): void
+    public function test_sales_admin_is_a_separate_selectable_role(): void
     {
-        $this->assertArrayNotHasKey('sales_admin', User::roles());
+        $this->assertSame('Sales Admin', User::roles()['sales_admin']);
         $this->assertSame('Sales', User::roles()['sales']);
     }
 
-    public function test_sales_inherits_the_former_sales_admin_capabilities(): void
+    public function test_sales_no_longer_inherits_sales_admin_capabilities(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
 
-        $this->assertFalse(method_exists($sales, 'isSalesAdmin'));
-        $this->assertArrayNotHasKey('sales_admin', User::roles());
-        $this->assertTrue($sales->canManageBackOffice());
-        $this->assertTrue($sales->canManageProjectAdministration());
+        $this->assertFalse($sales->isSalesAdmin());
+        $this->assertFalse($sales->canManageBackOffice());
+        $this->assertFalse($sales->canManageProjectAdministration());
         // isAdminLevel tetap khusus Administrator: dipakai untuk hak lihat lintas sales.
         $this->assertFalse($sales->isAdminLevel());
 
@@ -44,16 +43,16 @@ class August2026CrmRevisionTest extends TestCase
 
         foreach ([
             'pipeline.index',
-            'admin.pra-leads.index',
-            'admin.invoices.index',
-            'admin.users.index',
-            'administration.project-monitoring.index',
             'admin.purchase-order-requests.index',
         ] as $route) {
             $this->actingAs($sales)->get(route($route))->assertOk();
         }
 
         // Yang tidak ikut diwariskan ke Sales.
+        $this->actingAs($sales)->get(route('admin.invoices.index'))->assertForbidden();
+        $this->actingAs($sales)->get(route('admin.users.index'))->assertForbidden();
+        $this->actingAs($sales)->get(route('administration.project-monitoring.index'))->assertForbidden();
+        $this->actingAs($sales)->get(route('admin.pra-leads.index'))->assertForbidden();
         $this->actingAs($sales)->get(route('admin.system-settings.index'))->assertForbidden();
         $this->actingAs($sales)->get(route('admin.item-masters.index'))->assertForbidden();
         $this->actingAs($sales)->get(route('admin.assignment.index'))->assertForbidden();
@@ -467,7 +466,7 @@ class August2026CrmRevisionTest extends TestCase
             ->assertOk();
     }
 
-    public function test_sales_can_only_change_pra_leads_they_own(): void
+    public function test_sales_cannot_change_pra_leads_even_when_assigned(): void
     {
         $administrator = User::factory()->create(['role' => 'administrator']);
         $owner = User::factory()->create(['role' => 'sales']);
@@ -496,10 +495,10 @@ class August2026CrmRevisionTest extends TestCase
         $this->actingAs($otherSales)->delete(route('admin.pra-leads.destroy', $praLead))->assertForbidden();
         $this->assertDatabaseHas('pra_leads', ['id' => $praLead->id, 'deleted_at' => null]);
 
-        // Sales yang ditugaskan dan Administrator tetap boleh.
+        // Penugasan tidak memberikan Sales akses mengelola Pra Lead.
         $this->actingAs($owner)->put(route('admin.pra-leads.update', $praLead), $payload + [
             'admin_note' => 'Diperbarui oleh sales yang ditugaskan.',
-        ])->assertRedirect();
+        ])->assertForbidden();
         $this->actingAs($administrator)->delete(route('admin.pra-leads.destroy', $praLead))->assertRedirect();
         $this->assertSoftDeleted('pra_leads', ['id' => $praLead->id]);
     }

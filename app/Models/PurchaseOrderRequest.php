@@ -10,6 +10,13 @@ class PurchaseOrderRequest extends Model
 {
     protected $guarded = ['id'];
 
+    public function scopeVisibleTo(\Illuminate\Database\Eloquent\Builder $query, User $user): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->when($user->isSales(), fn ($query) => $query->where(fn ($scope) => $scope
+            ->where('requested_by', $user->id)
+            ->orWhereHas('quotation', fn ($quotation) => $quotation->where('sales_id', $user->id))));
+    }
+
     protected $casts = [
         'request_date' => 'date',
         'accurate_po_date' => 'date',

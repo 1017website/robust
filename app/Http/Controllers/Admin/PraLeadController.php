@@ -144,22 +144,12 @@ class PraLeadController extends Controller
         return back()->with('success', 'Pra Lead dihapus.');
     }
 
-    /**
-     * Seluruh Pra Lead boleh dilihat agar koordinasi antar sales tetap jalan, tetapi
-     * yang boleh mengubah dan menghapus hanya Administrator, pembuatnya, atau sales
-     * yang ditugaskan pada prospek tersebut.
-     */
     protected function authorizeChange(PraLead $praLead): void
     {
-        if (! Auth::user()->isSales()) {
-            return;
-        }
-
         abort_unless(
-            (int) $praLead->created_by === (int) Auth::id()
-                || (int) $praLead->assigned_sales_id === (int) Auth::id(),
+            in_array(Auth::user()->role, ['administrator', 'sales_admin', 'sales_spv'], true),
             403,
-            'Pra Lead ini dibuat dan ditugaskan untuk sales lain.'
+            'Pra Lead hanya dapat dikelola Administrator, Sales Admin, dan SPV Sales.'
         );
     }
 

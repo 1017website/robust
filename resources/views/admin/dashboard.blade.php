@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Dashboard Administrator')
+@section('title', 'Dashboard '.auth()->user()->roleLabel())
 @section('content')
 @php
     $allPra = max(1, $stats['pra_leads'] ?? 0);

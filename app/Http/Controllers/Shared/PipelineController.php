@@ -20,8 +20,6 @@ class PipelineController extends Controller
         $salesId = Auth::id();
 
         $salesScope = fn (Builder $q, string $column = 'sales_id') => $isSales ? $q->where($column, $salesId) : $q;
-        // Sales kini punya akses ke Pra Leads dan Request PO, jadi tautannya tidak
-        // boleh lagi dimatikan berdasarkan isAdminLevel().
         $canOpenAdmin = $user->canManageBackOffice();
         $canOpenSales = $user->role === 'sales';
         $canOpenSpv = in_array($user->role, ['administrator', 'sales_spv'], true);
@@ -29,8 +27,8 @@ class PipelineController extends Controller
         $cards = [
             [
                 'label' => 'Pra Lead Menunggu Sales',
-                'count' => PraLead::where('status', 'waiting_acceptance')->count(),
-                'route' => $canOpenAdmin ? route('admin.pra-leads.index', ['status' => 'waiting_acceptance']) : '#',
+                'count' => PraLead::when($isSales, fn ($query) => $query->where('assigned_sales_id', $salesId))->where('status', 'waiting_acceptance')->count(),
+                'route' => ($canOpenSpv || $user->isSalesAdmin()) ? route('admin.pra-leads.index', ['status' => 'waiting_acceptance']) : ($isSales ? route('sales.request-masuk.index') : '#'),
                 'icon' => 'bi-percent',
             ],
             [
@@ -59,8 +57,8 @@ class PipelineController extends Controller
             ],
             [
                 'label' => 'Request PO Open',
-                'count' => PurchaseOrderRequest::whereIn('status', ['submitted', 'processing_accurate'])->count(),
-                'route' => $canOpenAdmin ? route('admin.purchase-order-requests.index') : '#',
+                'count' => PurchaseOrderRequest::visibleTo($user)->whereIn('status', ['submitted', 'processing_accurate'])->count(),
+                'route' => ($canOpenAdmin || $isSales) ? route('admin.purchase-order-requests.index') : '#',
                 'icon' => 'bi-receipt',
             ],
         ];

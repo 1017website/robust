@@ -20,7 +20,7 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         return match ($user->role) {
-            'administrator' => $this->adminDashboard(),
+            'administrator', 'sales_admin' => $this->adminDashboard(),
             'sales_spv' => $this->spvDashboard(),
             'drafter' => $this->drafterDashboard(),
             'production' => redirect()->route('drafter.projects.index'),
