@@ -35,9 +35,11 @@
             @if($designRequest->status === 'draft')
                 <a href="{{ route('sales.design-requests.edit',$designRequest) }}" class="btn btn-primary"><i class="bi bi-pencil-square me-1"></i>Lanjutkan &amp; Kirim ke Drafter</a>
             @elseif($designRequest->status === 'completed')
+                <a href="{{ route('drafter.design-requests.show',$designRequest) }}" class="btn btn-soft"><i class="bi bi-sliders me-1"></i>Ubah Spesifikasi &amp; HPP</a>
                 <a href="{{ route('sales.quotations.create',['dr'=>$designRequest->id]) }}" class="btn btn-primary"><i class="bi bi-file-earmark-text me-1"></i>Generate Penawaran</a>
             @else
-                <button type="button" class="btn btn-soft" disabled><i class="bi bi-hourglass-split me-1"></i>Menunggu completed</button>
+                {{-- Spesifikasi, HPP, dan item penawaran diisi Sales di workspace Design Request. --}}
+                <a href="{{ route('drafter.design-requests.show',$designRequest) }}" class="btn btn-primary"><i class="bi bi-sliders me-1"></i>Isi Spesifikasi &amp; HPP</a>
             @endif
         </div>
     </div>

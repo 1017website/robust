@@ -53,7 +53,12 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->post(route('drafter.design-requests.feedback', $designRequest), ['action' => 'save'])
             ->assertForbidden();
 
+        // Spesifikasi dan HPP diisi Sales; Produksi hanya boleh melihat.
         $this->actingAs($production)
+            ->post(route('drafter.design-requests.feedback', $designRequest), ['action' => 'save'])
+            ->assertForbidden();
+
+        $this->actingAs($sales)
             ->post(route('drafter.design-requests.feedback', $designRequest), ['action' => 'save'])
             ->assertSessionHasErrors('action');
 
@@ -111,9 +116,18 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->get(route('drafter.design-requests.show', $designRequest))
             ->assertOk()
             ->assertDontSeeText('Dimensi Utama')
-            ->assertDontSee('name="dimensions', false);
+            ->assertDontSee('name="dimensions', false)
+            // Produksi hanya melihat: tidak ada tombol simpan/selesaikan.
+            ->assertSee('Spesifikasi, HPP, dan item penawaran diisi oleh Sales.')
+            ->assertDontSee('Selesaikan Spesifikasi');
 
-        $this->actingAs($production)
+        $this->actingAs($sales)
+            ->get(route('drafter.design-requests.show', $designRequest))
+            ->assertOk()
+            ->assertSee('Selesaikan Spesifikasi')
+            ->assertSee('Simpan Progress');
+
+        $this->actingAs($sales)
             ->post(route('drafter.design-requests.feedback', $designRequest), [
                 'cost_material' => 1000000,
                 'cost_production' => 500000,
@@ -127,7 +141,7 @@ class DesignRequestRevisionWorkflowTest extends TestCase
                 ]],
                 'action' => 'submit',
             ])
-            ->assertRedirect(route('drafter.design-requests.index'));
+            ->assertRedirect(route('sales.design-requests.show', $designRequest));
 
         $this->assertSame('completed', $designRequest->fresh()->status);
         $this->assertSame(1750000.0, (float) $designRequest->fresh()->cost_total);
@@ -174,7 +188,7 @@ class DesignRequestRevisionWorkflowTest extends TestCase
         $this->assertCount(0, $designRequest->items);
         $this->assertSame('completed', $revision->snapshot['status']);
 
-        $this->actingAs($production)
+        $this->actingAs($sales)
             ->post(route('drafter.design-requests.feedback', $designRequest), ['action' => 'save'])
             ->assertSessionHasErrors('action');
 
@@ -212,7 +226,7 @@ class DesignRequestRevisionWorkflowTest extends TestCase
             ->assertStatus(422);
         $this->assertDatabaseHas('documents', ['id' => $initialDocument->id]);
 
-        $this->actingAs($production)
+        $this->actingAs($sales)
             ->post(route('drafter.design-requests.feedback', $designRequest), [
                 'cost_material' => 1400000,
                 'cost_production' => 700000,
@@ -226,7 +240,7 @@ class DesignRequestRevisionWorkflowTest extends TestCase
                 ]],
                 'action' => 'submit',
             ])
-            ->assertRedirect(route('drafter.design-requests.index'));
+            ->assertRedirect(route('sales.design-requests.show', $designRequest));
 
         $this->assertSame('completed', $designRequest->fresh()->status);
         $this->assertSame(2400000.0, (float) $designRequest->fresh()->cost_total);

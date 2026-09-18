@@ -999,7 +999,11 @@ class CrmFlowTest extends TestCase
             'name' => 'Gambar Fabrikasi', 'category' => 'fabrication_drawing',
             'file' => UploadedFile::fake()->create('fabrikasi.pdf', 20, 'application/pdf'),
         ])->assertStatus(422);
+        // Spesifikasi, HPP, dan item penawaran diisi Sales, bukan Produksi.
         $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
+            'action' => 'save',
+        ])->assertForbidden();
+        $this->actingAs($sales)->post(route('drafter.design-requests.feedback', $designRequest), [
             'cost_material' => 1000000,
             'cost_production' => 500000,
             'cost_installation' => 250000,
@@ -1013,7 +1017,7 @@ class CrmFlowTest extends TestCase
                 'margin' => 20,
             ]],
             'action' => 'submit',
-        ])->assertRedirect(route('drafter.design-requests.index'));
+        ])->assertRedirect(route('sales.design-requests.show', $designRequest));
         $this->assertSame('completed', $designRequest->fresh()->status);
 
         $quoteData = [
@@ -1230,7 +1234,7 @@ class CrmFlowTest extends TestCase
             'file' => UploadedFile::fake()->create('drawing-fume-hood.pdf', 20, 'application/pdf'),
         ])->assertRedirect();
 
-        $this->actingAs($production)->post(route('drafter.design-requests.feedback', $designRequest), [
+        $this->actingAs($sales)->post(route('drafter.design-requests.feedback', $designRequest), [
             'cost_material' => 5000000,
             'cost_production' => 2000000,
             'cost_installation' => 500000,
@@ -1246,7 +1250,7 @@ class CrmFlowTest extends TestCase
                 'quotation_image' => UploadedFile::fake()->image('fh-150.png', 800, 600),
             ]],
             'action' => 'submit',
-        ])->assertRedirect(route('drafter.design-requests.index'));
+        ])->assertRedirect(route('sales.design-requests.show', $designRequest));
 
         $designItem = $designRequest->items()->firstOrFail();
         $this->assertSame('completed', $designRequest->fresh()->status);

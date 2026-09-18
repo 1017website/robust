@@ -232,10 +232,15 @@ Route::middleware('auth')->group(function () {
     // ---------- Drafter ----------
     Route::middleware('role:drafter,production')->prefix('drafter')->name('drafter.')->group(function () {
         Route::get('/design-requests', [DrafterDesignRequestController::class, 'index'])->name('design-requests.index');
-        Route::get('/design-requests/{designRequest}', [DrafterDesignRequestController::class, 'show'])->name('design-requests.show');
         Route::put('/design-requests/{designRequest}/progress', [DrafterDesignRequestController::class, 'updateProgress'])->name('design-requests.progress');
-        Route::post('/design-requests/{designRequest}/feedback', [DrafterDesignRequestController::class, 'submitFeedback'])->name('design-requests.feedback');
         Route::get('/tasks', [DrafterTaskController::class, 'index'])->name('tasks.index');
+    });
+
+    // Workspace spesifikasi & HPP. Pengisiannya milik Sales; Drafter dan Produksi
+    // tetap boleh membuka halaman ini, tetapi hanya untuk melihat.
+    Route::middleware('role:drafter,production,sales')->prefix('drafter')->name('drafter.')->group(function () {
+        Route::get('/design-requests/{designRequest}', [DrafterDesignRequestController::class, 'show'])->name('design-requests.show');
+        Route::post('/design-requests/{designRequest}/feedback', [DrafterDesignRequestController::class, 'submitFeedback'])->name('design-requests.feedback');
     });
 
     Route::middleware('role:drafter,production,qc,delivery,administration')->prefix('drafter')->name('drafter.')->group(function () {

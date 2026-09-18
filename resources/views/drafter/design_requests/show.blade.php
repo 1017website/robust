@@ -12,22 +12,30 @@
     $productionReady = $latestRevisionRequest
         ? in_array($latestRevisionRequest->status, ['drawing_uploaded', 'completed'], true)
         : $designRequest->hasProductionReadyDocument();
-    $canEditSpecs = auth()->user()->isProduction() && $productionReady;
+    // Spesifikasi, HPP, dan item penawaran diisi Sales. Drafter dan Produksi
+    // tetap boleh membuka halaman ini, tetapi hanya untuk melihat.
+    $isSpecEditor = auth()->user()->isSales() || auth()->user()->isAdministrator();
+    $canEditSpecs = $isSpecEditor && $productionReady;
+    $backUrl = auth()->user()->isSales()
+        ? route('sales.design-requests.index')
+        : route('drafter.design-requests.index');
 @endphp
 <div class="drafter-ui">
     <div class="drafter-request-head">
         <div>
-            <div class="crumb"><a href="{{ route('drafter.design-requests.index') }}">Design Request</a> <i class="bi bi-chevron-right"></i> {{ $designRequest->code }}</div>
+            <div class="crumb"><a href="{{ $backUrl }}">Design Request</a> <i class="bi bi-chevron-right"></i> {{ $designRequest->code }}</div>
             <h1>{{ $designRequest->code }} <x-status-badge :status="$designRequest->status" /></h1>
             <p>{{ $designRequest->project_name }} - {{ $designRequest->customer_name }}</p>
         </div>
-        <div class="page-actions"><a href="{{ route('drafter.design-requests.index') }}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Kembali</a></div>
+        <div class="page-actions"><a href="{{ $backUrl }}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Kembali</a></div>
     </div>
 
     <nav class="d-tabs big" aria-label="Bagian design request"><a href="#brief" class="active"><i class="bi bi-shield-check me-1"></i>Detail</a><a href="#history"><i class="bi bi-clock-history me-1"></i>Riwayat</a><a href="#revisions"><i class="bi bi-arrow-repeat me-1"></i>Revisi</a><a href="#documents"><i class="bi bi-folder2-open me-1"></i>Dokumen</a></nav>
 
     @if(auth()->user()->isDrafter())
-        <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Drafter hanya mengunggah atau merevisi drawing dan dokumen. Spesifikasi serta HPP diisi oleh Produksi.</div>
+        <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Drafter hanya mengunggah atau merevisi drawing dan dokumen. Spesifikasi serta HPP diisi oleh Sales.</div>
+    @elseif(!$isSpecEditor)
+        <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Spesifikasi, HPP, dan item penawaran diisi oleh Sales. Halaman ini hanya dapat dilihat.</div>
     @elseif(!$productionReady)
         <div class="alert alert-warning"><i class="bi bi-lock me-2"></i>Form spesifikasi dan HPP terkunci sampai Drafter mengunggah drawing atau dokumen terbaru.</div>
     @endif
@@ -43,7 +51,7 @@
         <main class="center-feedback" id="feedback">
             <div class="info-card"><div class="card-head"><h2>Spesifikasi & HPP Produksi</h2></div>
                 <div class="feedback-grid">
-                    <div class="spec-card"><div class="spec-head"><strong>Estimasi Costing Awal — Produksi</strong></div><div class="cost-list"><label>Material <input name="cost_material" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_material', (float) $designRequest->cost_material) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Produksi <input name="cost_production" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_production', (float) $designRequest->cost_production) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><label>Instalasi <input name="cost_installation" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_installation', (float) $designRequest->cost_installation) }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></label><div class="total">Total Estimasi <strong id="costEstimateTotal" aria-live="polite">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div></div></div>
+                    <div class="spec-card"><div class="spec-head"><strong>Estimasi Costing Awal — Sales</strong></div><div class="cost-list"><label>Material <input name="cost_material" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_material', (float) $designRequest->cost_material) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><label>Produksi <input name="cost_production" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_production', (float) $designRequest->cost_production) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><label>Instalasi <input name="cost_installation" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_installation', (float) $designRequest->cost_installation) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><div class="total">Total Estimasi <strong id="costEstimateTotal" aria-live="polite">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div></div></div>
                 </div>
             </div>
 
@@ -69,11 +77,11 @@
                                     @if($it->quotation_image_path)
                                         <div class="mb-2"><img src="{{ asset('storage/'.$it->quotation_image_path) }}" alt="{{ $it->name }}" style="max-height:140px;max-width:100%;object-fit:contain"><small class="text-muted-2 d-block mt-1">Untuk mengganti gambar, unggah file baru. File lama tidak dihapus.</small></div>
                                     @endif
-                                    @if(auth()->user()->isProduction())<input type="file" name="items[{{ $i }}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm"><small class="text-muted-2">JPG/PNG/WebP, maksimal 10 MB.</small>@else<small class="text-muted-2">Gambar item dikelola oleh Produksi.</small>@endif
+                                    @if($isSpecEditor)<input type="file" name="items[{{ $i }}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm"><small class="text-muted-2">JPG/PNG/WebP, maksimal 10 MB.</small>@else<small class="text-muted-2">Gambar item dikelola oleh Sales.</small>@endif
                                 </div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[{{ $i }}][qty]" type="text" inputmode="decimal" data-qty value="{{ $it->qty }}" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[{{ $i }}][unit]" value="{{ $it->unit }}" class="form-control form-control-sm"></div>
-                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Produksi</label><input name="items[{{ $i }}][unit_price]" type="text" inputmode="numeric" data-rupiah value="{{ $it->unit_price }}" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></div>
+                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[{{ $i }}][unit_price]" type="text" inputmode="numeric" data-rupiah value="{{ $it->unit_price }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>
                                 <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[{{ $i }}][is_optional]" value="1" class="form-check-input" @checked($it->is_optional)><span class="form-check-label">Item opsional</span></label></div>
                             </div>
                         </div>
@@ -85,10 +93,10 @@
                                 <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[0][variant]" class="form-control form-control-sm"></div>
                                 <div class="col-md-1"></div>
                                 <div class="col-12"><x-specification-editor name="items[0][specification]" label="Spesifikasi untuk Penawaran" /></div>
-                                <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>@if(auth()->user()->isProduction())<input type="file" name="items[0][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">@else<small class="text-muted-2 d-block">Gambar item dikelola oleh Produksi.</small>@endif</div>
+                                <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>@if($isSpecEditor)<input type="file" name="items[0][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">@else<small class="text-muted-2 d-block">Gambar item dikelola oleh Sales.</small>@endif</div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[0][qty]" type="text" inputmode="decimal" data-qty value="1" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[0][unit]" value="Unit" class="form-control form-control-sm"></div>
-                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Produksi</label><input name="items[0][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" @disabled(auth()->user()->isDrafter())></div>
+                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[0][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>
                                 <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[0][is_optional]" value="1" class="form-check-input"><span class="form-check-label">Item opsional</span></label></div>
                             </div>
                         </div>
@@ -98,12 +106,12 @@
         </main>
 
         <aside class="right-status">
-            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dokumen: {{ $designRequest->documents->count() }} file</li><li>Costing: <span id="feedbackCostTotal">{{ \App\Support\Format::rupiah($costTotal) }}</span></li></ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi spesifikasi per item, dokumen, dan HPP sebelum submit final ke sales.</small></div></div>
+            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dokumen: {{ $designRequest->documents->count() }} file</li><li>Costing: <span id="feedbackCostTotal">{{ \App\Support\Format::rupiah($costTotal) }}</span></li></ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi spesifikasi per item, dokumen, dan HPP sebelum menyelesaikan Design Request.</small></div></div>
             <div class="info-card"><h6>Catatan Teknis</h6><textarea name="technical_note" class="form-control" rows="7" placeholder="Catatan teknis untuk sales...">{{ $designRequest->technical_note }}</textarea></div>
             <div class="info-card" id="history"><h6>Log Aktivitas</h6><div class="d-timeline small">@foreach([$designRequest->updated_at,$designRequest->created_at] as $date)<div><time>{{ $date->format('d M H:i') }}</time><span></span><p><strong>{{ $designRequest->productionPic?->name ?? auth()->user()->name }}</strong><small>Update {{ $designRequest->status }}</small></p></div>@endforeach</div></div>
         </aside>
 
-        <div class="submit-bar"><a href="{{ route('drafter.design-requests.index') }}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Kembali</a>@if($canEditSpecs)<div class="ms-auto d-flex flex-wrap gap-2 submit-actions"><button type="submit" name="action" value="save" class="btn btn-soft">Simpan Progress</button><button type="submit" name="action" value="review" class="btn btn-warning">Kirim untuk Review</button><button type="submit" name="action" value="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Submit Final ke Sales</button></div>@else<div class="ms-auto small text-muted-2">{{ auth()->user()->isDrafter() ? 'Gunakan form upload drawing/dokumen di bawah.' : 'Menunggu drawing/dokumen dari Drafter.' }}</div>@endif</div>
+        <div class="submit-bar"><a href="{{ $backUrl }}" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i>Kembali</a>@if($canEditSpecs)<div class="ms-auto d-flex flex-wrap gap-2 submit-actions"><button type="submit" name="action" value="save" class="btn btn-soft">Simpan Progress</button><button type="submit" name="action" value="review" class="btn btn-warning">Kirim untuk Review</button><button type="submit" name="action" value="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Selesaikan Spesifikasi &amp; HPP</button></div>@else<div class="ms-auto small text-muted-2">@if(auth()->user()->isDrafter())Gunakan form upload drawing/dokumen di bawah.@elseif(!$isSpecEditor)Pengisian spesifikasi dan HPP dilakukan oleh Sales.@else Menunggu drawing/dokumen dari Drafter.@endif</div>@endif</div>
         </fieldset>
     </form>
 
@@ -133,7 +141,7 @@
 @push('scripts')
 <script>
 let rowIdx = {{ max(1, $designRequest->items->count()) }};
-const canEditQuotationImage = @json(auth()->user()->isProduction());
+const canEditQuotationImage = @json($isSpecEditor);
 
 document.addEventListener('DOMContentLoaded', function () {
     const costInputs = Array.from(document.querySelectorAll(
@@ -172,7 +180,7 @@ document.getElementById('addRow')?.addEventListener('click', function(){
         <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>${canEditQuotationImage ? `<input type="file" name="items[${i}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">` : '<small class="text-muted-2 d-block">Gambar item dikelola oleh Produksi.</small>'}</div>
         <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[${i}][qty]" type="text" inputmode="decimal" data-qty value="1" class="form-control form-control-sm"></div>
         <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[${i}][unit]" value="Unit" class="form-control form-control-sm"></div>
-        <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Produksi</label><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" {{ auth()->user()->isDrafter() ? 'disabled' : '' }}></div>
+        <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[${i}][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" {{ $isSpecEditor ? '' : 'disabled' }}></div>
         <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input"><span class="form-check-label">Item opsional</span></label></div>
     </div>`;
     document.getElementById('itemEditors').appendChild(editor);

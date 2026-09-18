@@ -83,7 +83,7 @@ class DesignRequestController extends Controller
     public function submitFeedback(Request $request, DesignRequest $designRequest)
     {
         $this->ensureAssigned($designRequest);
-        abort_unless(Auth::user()->isProduction(), 403, 'Spesifikasi dan HPP hanya dapat diisi oleh Produksi.');
+        abort_unless($this->canEditSpecs(), 403, 'Spesifikasi dan HPP hanya dapat diisi oleh Sales.');
 
         $latestRevision = $designRequest->revisionRequests()->latest('revision_number')->first();
         $productionReady = $latestRevision
@@ -92,7 +92,7 @@ class DesignRequestController extends Controller
 
         if (! $productionReady) {
             throw ValidationException::withMessages([
-                'action' => 'Produksi baru dapat mengisi spesifikasi dan HPP setelah Drafter mengunggah drawing atau dokumen terbaru.',
+                'action' => 'Spesifikasi dan HPP baru dapat diisi setelah Drafter mengunggah drawing atau dokumen terbaru.',
             ]);
         }
 
@@ -165,10 +165,22 @@ class DesignRequestController extends Controller
         Logger::record('submitted', "DR {$designRequest->code} diperbarui oleh ".Auth::user()->roleLabel(), $designRequest);
 
         $message = $request->input('action') === 'submit'
-            ? 'Berhasil submit final ke sales.'
+            ? 'Spesifikasi dan HPP selesai. Design Request siap dibuatkan penawaran.'
             : 'Feedback design request berhasil disimpan.';
 
-        return redirect()->route('drafter.design-requests.index')->with('success', $message);
+        $redirect = Auth::user()->isSales()
+            ? route('sales.design-requests.show', $designRequest)
+            : route('drafter.design-requests.index');
+
+        return redirect()->to($redirect)->with('success', $message);
+    }
+
+    /** Spesifikasi, HPP, dan item penawaran diisi Sales (Administrator tetap bisa membantu). */
+    protected function canEditSpecs(): bool
+    {
+        $user = Auth::user();
+
+        return (bool) $user && ($user->isSales() || $user->isAdministrator());
     }
 
     protected function syncQuotationItems(Request $request, DesignRequest $designRequest, array $items, bool $isCostEditor, bool $isImageEditor): void
@@ -222,12 +234,19 @@ class DesignRequestController extends Controller
 
     protected function ensureAssigned(DesignRequest $designRequest): void
     {
-        abort_unless(
-            Auth::user()->isAdministrator()
-                || Auth::user()->isProduction()
-                || (int) $designRequest->production_pic_id === (int) Auth::id(),
-            403,
-            'Design request ini tidak ditugaskan kepada Anda.'
-        );
+        $user = Auth::user();
+        $userId = (int) Auth::id();
+
+        $allowed = $user->isAdministrator()
+            || $user->isProduction()
+            || (int) $designRequest->production_pic_id === $userId
+            // Sales pemilik request mengisi spesifikasi dan HPP di halaman ini.
+            || ($user->isSales() && (
+                (int) $designRequest->sales_id === $userId
+                || (int) optional($designRequest->lead)->sales_id === $userId
+                || (int) optional($designRequest->customer)->sales_id === $userId
+            ));
+
+        abort_unless($allowed, 403, 'Design request ini tidak ditugaskan kepada Anda.');
     }
 }
