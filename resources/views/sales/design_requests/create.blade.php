@@ -11,7 +11,7 @@
 @endphp
 <div class="sales-ui">
     <form id="designRequestForm" method="POST" action="{{ $isDraft ? route('sales.design-requests.update', $designRequest) : route('sales.design-requests.store') }}" enctype="multipart/form-data"
-        data-upload-progress data-max-file-size="83886080" data-max-files="5" data-redirect="{{ route('sales.design-requests.index') }}">
+        data-upload-progress data-max-file-size="0" data-max-files="0" data-redirect="{{ route('sales.design-requests.index') }}">
         @csrf
         @if($isDraft)@method('PUT')@endif
         <input type="hidden" id="lead_id" name="lead_id" value="{{ old('lead_id', $designRequest?->lead_id ?? $lead?->id) }}">
@@ -117,9 +117,9 @@
 
                 <div class="sales-form-card">
                     <h2 class="sales-form-title">3. Sketsa & Lampiran dari Sales</h2>
-                    <label class="form-label small fw-bold">Upload sketsa (maks. 5 file, 80 MB/file)</label>
-                    <input id="designRequestAttachments" type="file" name="attachments[]" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx">
-                    <div class="form-text">Bisa berupa foto coretan, layout awal, PDF, atau dokumen referensi customer.@if($isDraft) Lampiran yang sudah diunggah pada draf tetap tersimpan; unggahan baru akan ditambahkan.@endif</div>
+                    <label class="form-label small fw-bold">Upload sketsa (jumlah file dan ukuran bebas)</label>
+                    <input id="designRequestAttachments" type="file" name="attachments[]" class="form-control" multiple data-multi-file accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx">
+                    <div class="form-text">Bisa berupa foto coretan, layout awal, PDF, atau dokumen referensi customer. Pilih beberapa file sekaligus, atau tekan &ldquo;Choose Files&rdquo; berulang kali &mdash; file yang sudah dipilih tidak akan tertimpa.@if($isDraft) Lampiran yang sudah diunggah pada draf tetap tersimpan; unggahan baru akan ditambahkan.@endif</div>
                     <x-upload-progress />
                 </div>
 

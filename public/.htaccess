@@ -1,3 +1,24 @@
+# Batas upload dilonggarkan untuk lampiran Design Request.
+# Hanya berlaku bila PHP dijalankan sebagai modul Apache (mod_php), karena
+# public/.user.ini tidak dibaca pada mode tersebut. Pada FastCGI/FPM blok ini
+# dilewati dan .user.ini yang dipakai.
+<IfModule mod_php.c>
+    php_value upload_max_filesize 4096M
+    php_value post_max_size 0
+    php_value max_file_uploads 500
+    php_value memory_limit 512M
+    php_value max_execution_time 0
+    php_value max_input_time -1
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 4096M
+    php_value post_max_size 0
+    php_value max_file_uploads 500
+    php_value memory_limit 512M
+    php_value max_execution_time 0
+    php_value max_input_time -1
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

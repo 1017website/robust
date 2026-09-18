@@ -809,31 +809,34 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertStringNotContainsString("xhr.open('POST', form.action", $script);
     }
 
-    public function test_design_request_accepts_an_eighty_megabyte_attachment(): void
+    /** Lampiran Design Request tidak dibatasi jumlah maupun ukurannya oleh aplikasi. */
+    public function test_design_request_accepts_many_large_attachments(): void
     {
         Storage::fake('public');
         $sales = User::factory()->create(['role' => 'sales']);
         $drafter = User::factory()->create(['role' => 'drafter']);
 
+        // Enam berkas: di atas batas lama (5 file), dengan satu berkas di atas 80 MB.
+        $attachments = [UploadedFile::fake()->create('referensi-besar.pdf', 102400, 'application/pdf')];
+        for ($i = 1; $i <= 5; $i++) {
+            $attachments[] = UploadedFile::fake()->create("sketsa-{$i}.pdf", 120, 'application/pdf');
+        }
+
         $this->actingAs($sales)->post(route('sales.design-requests.store'), [
             'customer_name' => 'Customer Lampiran Besar',
-            'project_name' => 'Project Lampiran 80 MB',
+            'project_name' => 'Project Lampiran Banyak',
             'request_date' => now()->toDateString(),
             'deadline' => now()->addDay()->toDateString(),
             'priority' => 'normal',
             'short_description' => 'Pengujian batas lampiran Design Request.',
             'detail_need' => 'Membutuhkan desain laboratorium dan lampiran referensi besar.',
             'production_pic_id' => $drafter->id,
-            'attachments' => [UploadedFile::fake()->create('referensi-80mb.pdf', 81920, 'application/pdf')],
+            'attachments' => $attachments,
             'action' => 'save',
         ])->assertRedirect(route('sales.design-requests.index'));
 
-        $designRequest = DesignRequest::where('project_name', 'Project Lampiran 80 MB')->firstOrFail();
-        $this->assertDatabaseHas('documents', [
-            'documentable_type' => DesignRequest::class,
-            'documentable_id' => $designRequest->id,
-            'category' => 'sales_sketch',
-        ]);
+        $designRequest = DesignRequest::where('project_name', 'Project Lampiran Banyak')->firstOrFail();
+        $this->assertSame(6, $designRequest->documents()->where('category', 'sales_sketch')->count());
     }
 
     public function test_design_request_upload_has_progress_ui_and_returns_json_for_xhr(): void
@@ -847,7 +850,8 @@ class August2026CrmRevisionTest extends TestCase
             ->assertOk()
             ->assertSee('data-upload-progress-panel', false)
             ->assertSee('data-upload-percent', false)
-            ->assertSee('data-max-file-size="'.(80 * 1024 * 1024).'"', false)
+            ->assertSee('data-max-file-size="0"', false)
+            ->assertSee('data-max-files="0"', false)
             ->assertSee('js/upload-progress.js', false);
 
         $response = $this->actingAs($sales)

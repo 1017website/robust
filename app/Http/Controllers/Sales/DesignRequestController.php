@@ -333,8 +333,10 @@ class DesignRequestController extends Controller
                 $q->where('is_active', true)->orWhereNull('is_active');
             }))],
             'production_note' => ['nullable', 'string', 'max:300'],
-            'attachments' => ['nullable', 'array', 'max:5'],
-            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx', 'max:81920'],
+            // Jumlah berkas dan ukuran per berkas tidak dibatasi aplikasi; batas
+            // sesungguhnya mengikuti konfigurasi PHP (lihat public/.user.ini).
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp,heic,doc,docx,xls,xlsx'],
             'sales_id' => [
                 Rule::requiredIf(fn () => ! Auth::user()->isSales() && empty($request->input('lead_id'))),
                 'nullable',
