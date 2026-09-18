@@ -839,6 +839,35 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertSame(6, $designRequest->documents()->where('category', 'sales_sketch')->count());
     }
 
+    /** Melanjutkan draf harus memperlihatkan lampiran yang sudah tersimpan. */
+    public function test_design_request_draft_edit_lists_previously_uploaded_attachments(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+
+        $this->actingAs($sales)->post(route('sales.design-requests.store'), [
+            'customer_name' => 'Customer Draf Lampiran',
+            'project_name' => 'Project Draf Lampiran',
+            'request_date' => now()->toDateString(),
+            'deadline' => now()->addDay()->toDateString(),
+            'priority' => 'normal',
+            'short_description' => 'Draf dengan lampiran tersimpan.',
+            'detail_need' => 'Membutuhkan desain laboratorium beserta sketsa awal.',
+            'production_pic_id' => $drafter->id,
+            'attachments' => [UploadedFile::fake()->create('sketsa-awal.pdf', 120, 'application/pdf')],
+            'action' => 'save',
+        ])->assertRedirect(route('sales.design-requests.index'));
+
+        $designRequest = DesignRequest::where('project_name', 'Project Draf Lampiran')->firstOrFail();
+        $this->assertSame('draft', $designRequest->status);
+
+        $this->actingAs($sales)->get(route('sales.design-requests.edit', $designRequest))
+            ->assertOk()
+            ->assertSee('Lampiran yang sudah diunggah (1)')
+            ->assertSee('sketsa-awal.pdf');
+    }
+
     public function test_design_request_upload_has_progress_ui_and_returns_json_for_xhr(): void
     {
         Storage::fake('public');

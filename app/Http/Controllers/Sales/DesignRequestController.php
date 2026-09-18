@@ -103,6 +103,7 @@ class DesignRequestController extends Controller
         abort_unless($designRequest->status === 'draft', 403, 'Hanya Design Request berstatus draf yang dapat diubah.');
 
         $drafters = User::assignableDraftersQuery()->get();
+        $designRequest->load('documents');
 
         return view('sales.design_requests.create', [
             'designRequest' => $designRequest,

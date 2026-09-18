@@ -8,6 +8,10 @@
     $selectedOutputs = old('outputs', $designRequest?->outputs ?? ['layout_2d', 'rendering_3d', 'boq', 'cost_estimation']);
     $selectedMasterSource = old('master_source', $lead ? 'lead:'.$lead->id : '');
     $defaultUrgency = in_array($designRequest?->priority ?? $lead?->priority, ['high', 'urgent'], true) ? 'urgent' : 'normal';
+    // Lampiran sales yang sudah tersimpan pada draf, agar terlihat saat draf dilanjutkan.
+    $existingSketches = $designRequest
+        ? $designRequest->documents->where('category', 'sales_sketch')->sortByDesc('created_at')
+        : collect();
 @endphp
 <div class="sales-ui">
     <form id="designRequestForm" method="POST" action="{{ $isDraft ? route('sales.design-requests.update', $designRequest) : route('sales.design-requests.store') }}" enctype="multipart/form-data"
@@ -117,6 +121,22 @@
 
                 <div class="sales-form-card">
                     <h2 class="sales-form-title">3. Sketsa & Lampiran dari Sales</h2>
+                    @if($isDraft && $existingSketches->isNotEmpty())
+                        <div class="mb-3">
+                            <div class="form-label small fw-bold mb-1">Lampiran yang sudah diunggah ({{ $existingSketches->count() }})</div>
+                            <ul class="list-group list-group-flush">
+                                @foreach($existingSketches as $document)
+                                    <li class="list-group-item d-flex align-items-center justify-content-between gap-2 px-0 py-1 border-0 bg-transparent">
+                                        <span class="small text-truncate">
+                                            <i class="bi bi-paperclip me-1"></i>{{ $document->name }}{{ $document->file_type ? '.'.$document->file_type : '' }}
+                                            <span class="text-muted-2">&mdash; {{ $document->humanSize() }} &middot; {{ $document->created_at?->translatedFormat('d M Y H:i') }}</span>
+                                        </span>
+                                        <a href="{{ asset('storage/'.$document->file_path) }}" target="_blank" rel="noopener" class="btn btn-sm btn-soft flex-shrink-0"><i class="bi bi-download"></i></a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     <label class="form-label small fw-bold">Upload sketsa (jumlah file dan ukuran bebas)</label>
                     <input id="designRequestAttachments" type="file" name="attachments[]" class="form-control" multiple data-multi-file accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx">
                     <div class="form-text">Bisa berupa foto coretan, layout awal, PDF, atau dokumen referensi customer. Pilih beberapa file sekaligus, atau tekan &ldquo;Choose Files&rdquo; berulang kali &mdash; file yang sudah dipilih tidak akan tertimpa.@if($isDraft) Lampiran yang sudah diunggah pada draf tetap tersimpan; unggahan baru akan ditambahkan.@endif</div>
