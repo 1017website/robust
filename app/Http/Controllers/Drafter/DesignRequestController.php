@@ -117,7 +117,7 @@ class DesignRequestController extends Controller
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.margin' => ['nullable', 'numeric', 'min:0'],
             'items.*.is_optional' => ['nullable', 'boolean'],
-            'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
         ]);
 
         DB::transaction(function () use ($designRequest, $data, $request, $isCostEditor, $isImageEditor) {

@@ -36,7 +36,7 @@
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Logo Perusahaan</label>
                         <input type="file" name="company_logo" class="form-control" accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml">
-                        <div class="form-text">Rekomendasi PNG/SVG transparan. Maksimal 2MB.</div>
+                        <div class="form-text">Rekomendasi PNG/SVG transparan. Tanpa batas ukuran, tetapi file kecil membuat halaman lebih cepat.</div>
                         <div class="brand-preview mt-3">
                             @if($settings['company_logo'])
                                 <img src="{{ $settings['company_logo'] }}" alt="Logo perusahaan">
@@ -54,7 +54,7 @@
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Favicon</label>
                         <input type="file" name="company_favicon" class="form-control" accept=".ico,.png,.jpg,.jpeg,.webp,.svg,image/x-icon,image/png,image/jpeg,image/webp,image/svg+xml">
-                        <div class="form-text">Bisa ICO/PNG/SVG. Maksimal 1MB.</div>
+                        <div class="form-text">Bisa ICO/PNG/SVG. Tanpa batas ukuran, tetapi file kecil membuat halaman lebih cepat.</div>
                         <div class="favicon-preview mt-3">
                             @if($settings['company_favicon'])
                                 <img src="{{ $settings['company_favicon'] }}" alt="Favicon">

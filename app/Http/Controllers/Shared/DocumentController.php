@@ -68,7 +68,7 @@ class DocumentController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => ['required', 'file'],
             'replaces_document_id' => ['nullable', 'exists:documents,id'],
             'revision_note' => ['nullable', 'string', 'max:1000'],
         ]);

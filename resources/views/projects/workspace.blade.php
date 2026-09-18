@@ -138,8 +138,8 @@
                         <label class="form-label d-flex justify-content-between align-items-center"><span>Perkiraan Progress</span><output class="progress-range-value" id="productionProgressValue">{{ old('production_progress', $workflow->production_progress ?? 0) }}%</output></label>
                         <input class="form-range mb-3" id="productionProgress" type="range" name="production_progress" min="0" max="100" step="5" value="{{ old('production_progress', $workflow->production_progress ?? 0) }}">
                         <label class="form-label">Catatan Progress</label><textarea name="production_note" class="form-control mb-3" rows="2" placeholder="Contoh: rangka selesai, masuk proses finishing.">{{ old('production_note', $workflow->production_note) }}</textarea>
-                        <label class="form-label">Foto / Dokumen Progress</label><input class="form-control mb-2" type="file" name="progress_files[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
-                        <div class="form-text mb-3">Maksimal 5 file, masing-masing 20 MB.</div>
+                        <label class="form-label">Foto / Dokumen Progress</label><input class="form-control mb-2" type="file" name="progress_files[]" multiple data-multi-file accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
+                        <div class="form-text mb-3">Bisa pilih beberapa file sekaligus; tekan tombol pilih file berulang kali untuk menambah. Tanpa batas jumlah dan ukuran.</div>
                         <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="production_report_completed" value="1" id="productionComplete" @checked($workflow->production_report_completed)><label class="form-check-label fw-semibold" for="productionComplete">Laporan produksi lengkap</label></div>
                         <label class="form-label">Checklist Produksi (PDF)</label><input class="form-control mb-3" type="file" name="production_report" accept="application/pdf,.pdf">
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Produksi</button>
@@ -269,9 +269,9 @@
             <div class="workflow-card mb-3">
                 <div class="card-head"><h2>Tambah Design Revision</h2></div>
                 <form method="POST" action="{{ route('design-revisions.store', $project) }}" enctype="multipart/form-data" class="row g-3"
-                    data-upload-progress data-max-file-size="83886080" data-max-files="1" data-redirect="{{ route('project-workspace.show', $project) }}#design-revisions">@csrf
+                    data-upload-progress data-max-file-size="0" data-max-files="0" data-redirect="{{ route('project-workspace.show', $project) }}#design-revisions">@csrf
                     <div class="col-md-3"><label class="form-label">Tanggal Revisi</label><input type="date" class="form-control" name="revision_date" value="{{ old('revision_date', now()->format('Y-m-d')) }}" required></div>
-                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required><div class="form-text">Maksimal 80 MB per file. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.</div></div>
+                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required><div class="form-text">Tanpa batas ukuran. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.</div></div>
                     <div class="col-md-5"><label class="form-label">Keterangan Perubahan</label><textarea class="form-control" name="notes" rows="2" required>{{ old('notes') }}</textarea></div>
                     <div class="col-12"><x-upload-progress /></div>
                     <div class="col-12"><button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Simpan Revision {{ $project->designRevisions->count() + 1 }}</button></div>

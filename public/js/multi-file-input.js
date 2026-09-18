@@ -7,7 +7,8 @@
  * berkas tetap ikut terkirim saat form disubmit.
  *
  * Pemakaian: tambahkan atribut data-multi-file pada <input type="file" multiple>.
- * Daftar berkas terpilih dirender otomatis tepat di bawah input.
+ * Daftar berkas terpilih dirender otomatis tepat di bawah input; beri
+ * data-multi-file-list="off" bila halaman sudah punya panel daftarnya sendiri.
  */
 (function () {
     'use strict';
@@ -30,9 +31,10 @@
         if (input.dataset.multiFileBound === '1') return;
         input.dataset.multiFileBound = '1';
 
+        const showList = input.dataset.multiFileList !== 'off';
         const list = document.createElement('div');
         list.className = 'mt-2 d-none';
-        input.insertAdjacentElement('afterend', list);
+        if (showList) input.insertAdjacentElement('afterend', list);
 
         const files = [];
 
@@ -44,6 +46,8 @@
         }
 
         function render() {
+            if (!showList) return;
+
             list.replaceChildren();
 
             if (!files.length) {

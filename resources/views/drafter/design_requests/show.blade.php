@@ -77,7 +77,7 @@
                                     @if($it->quotation_image_path)
                                         <div class="mb-2"><img src="{{ asset('storage/'.$it->quotation_image_path) }}" alt="{{ $it->name }}" style="max-height:140px;max-width:100%;object-fit:contain"><small class="text-muted-2 d-block mt-1">Untuk mengganti gambar, unggah file baru. File lama tidak dihapus.</small></div>
                                     @endif
-                                    @if($isSpecEditor)<input type="file" name="items[{{ $i }}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm"><small class="text-muted-2">JPG/PNG/WebP, maksimal 10 MB.</small>@else<small class="text-muted-2">Gambar item dikelola oleh Sales.</small>@endif
+                                    @if($isSpecEditor)<input type="file" name="items[{{ $i }}][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm"><small class="text-muted-2">JPG/PNG/WebP, tanpa batas ukuran.</small>@else<small class="text-muted-2">Gambar item dikelola oleh Sales.</small>@endif
                                 </div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[{{ $i }}][qty]" type="text" inputmode="decimal" data-qty value="{{ $it->qty }}" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[{{ $i }}][unit]" value="{{ $it->unit }}" class="form-control form-control-sm"></div>

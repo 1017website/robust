@@ -753,7 +753,7 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertSame(1, DesignRequest::withTrashed()->where('code', $auto->code)->count());
     }
 
-    public function test_design_revision_matches_design_request_upload_limit_and_progress(): void
+    public function test_design_revision_matches_design_request_upload_freedom_and_progress(): void
     {
         Storage::fake('public');
         $administrator = User::factory()->create(['role' => 'administrator']);
@@ -766,15 +766,16 @@ class August2026CrmRevisionTest extends TestCase
             'total_value' => 50000000,
         ]);
 
-        // Panel progres dan batas 80 MB tampil pada form revisi di workspace.
+        // Panel progres tampil tanpa batas ukuran, sebagaimana lampiran Design Request.
         $this->actingAs($administrator)->get(route('project-workspace.show', $project))
             ->assertOk()
             ->assertSee('data-upload-progress', false)
-            ->assertSee('data-max-file-size="'.(80 * 1024 * 1024).'"', false)
+            ->assertSee('data-max-file-size="0"', false)
+            ->assertSee('data-max-files="0"', false)
             ->assertSee('data-upload-progress-panel', false)
-            ->assertSee('Maksimal 80 MB per file');
+            ->assertSee('Tanpa batas ukuran.');
 
-        // Berkas 80 MB diterima, sebagaimana lampiran Design Request.
+        // Berkas besar diterima.
         $this->actingAs($administrator)
             ->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])
             ->post(route('design-revisions.store', $project), [
@@ -789,14 +790,21 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertSame('revisi-80mb.dwg', $revision->original_name);
         $this->assertTrue(Storage::disk('public')->exists($revision->file_path));
 
-        // Di atas batas tetap ditolak.
+        // Ukuran tidak lagi dibatasi; berkas yang lebih besar pun diterima.
         $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
             'revision_date' => now()->toDateString(),
-            'notes' => 'Berkas melebihi batas.',
-            'revision_file' => UploadedFile::fake()->create('terlalu-besar.dwg', 81921, 'application/acad'),
+            'notes' => 'Berkas jauh lebih besar.',
+            'revision_file' => UploadedFile::fake()->create('lebih-besar.dwg', 204800, 'application/acad'),
+        ])->assertRedirect();
+
+        // Format di luar daftar tetap ditolak.
+        $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
+            'revision_date' => now()->toDateString(),
+            'notes' => 'Format tidak didukung.',
+            'revision_file' => UploadedFile::fake()->create('catatan.txt', 1, 'text/plain'),
         ])->assertUnprocessable()->assertJsonValidationErrors('revision_file');
 
-        $this->assertSame(1, DesignRevision::where('project_id', $project->id)->count());
+        $this->assertSame(2, DesignRevision::where('project_id', $project->id)->count());
     }
 
     public function test_shared_upload_script_reads_the_form_action_attribute(): void

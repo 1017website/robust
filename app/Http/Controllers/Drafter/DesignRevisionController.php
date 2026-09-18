@@ -19,8 +19,8 @@ class DesignRevisionController extends Controller
         $data = $request->validate([
             'revision_date' => ['required', 'date'],
             'notes' => ['required', 'string', 'max:5000'],
-            // Disamakan dengan lampiran Design Request: 80 MB per berkas.
-            'revision_file' => ['required', 'file', 'max:81920', 'extensions:pdf,dwg,dxf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar'],
+            // Disamakan dengan lampiran Design Request: ukuran tidak dibatasi aplikasi.
+            'revision_file' => ['required', 'file', 'extensions:pdf,dwg,dxf,doc,docx,xls,xlsx,jpg,jpeg,png,zip,rar'],
         ]);
 
         $file = $request->file('revision_file');

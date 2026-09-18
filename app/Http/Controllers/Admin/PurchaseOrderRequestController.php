@@ -300,7 +300,7 @@ class PurchaseOrderRequestController extends Controller
         $this->authorizeAccess($purchaseOrderRequest);
         $data = $request->validate([
             'code' => ['nullable', 'required_without:customer_po_file', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($purchaseOrderRequest->id)],
-            'customer_po_file' => ['nullable', 'required_without:code', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+            'customer_po_file' => ['nullable', 'required_without:code', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
         ], $this->validationMessages());
 
         $attributes = ['code' => $data['code'] ?? $purchaseOrderRequest->code];
@@ -494,7 +494,7 @@ class PurchaseOrderRequestController extends Controller
             'customer_division' => ['nullable', 'string', 'max:255'],
             'request_date' => $required('date'),
             'customer_po_number' => ['nullable', 'string', 'max:100'],
-            'customer_po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+            'customer_po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
             'delivery_address' => ['nullable', 'string', 'max:1500'],
             'delivery_pic_name' => ['nullable', 'string', 'max:255'],
             'delivery_pic_phone' => ['nullable', 'string', 'max:50'],

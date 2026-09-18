@@ -95,7 +95,7 @@
                     <div class="col-md-12">
                         <label for="customerPoFile" class="form-label small fw-semibold">Upload Dokumen PO</label>
                         <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
-                        <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Maksimal 5 MB.</div>
+                        <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Tanpa batas ukuran.</div>
                         @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         @if($requestPo?->customer_po_file)
                             <div class="form-text">Lampiran saat ini: <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank">lihat file</a>. Unggah file baru hanya jika ingin mengganti.</div>

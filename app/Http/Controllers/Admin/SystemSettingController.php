@@ -34,8 +34,8 @@ class SystemSettingController extends Controller
         $data = $request->validate([
             'company_name' => ['required', 'string', 'max:80'],
             'company_tagline' => ['nullable', 'string', 'max:140'],
-            'company_logo' => ['nullable', 'file', 'max:2048', 'mimes:png,jpg,jpeg,webp,svg'],
-            'company_favicon' => ['nullable', 'file', 'max:1024', 'mimes:ico,png,jpg,jpeg,webp,svg'],
+            'company_logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,svg'],
+            'company_favicon' => ['nullable', 'file', 'mimes:ico,png,jpg,jpeg,webp,svg'],
             'remove_logo' => ['nullable', 'boolean'],
             'remove_favicon' => ['nullable', 'boolean'],
             'sales_monthly_target' => ['nullable', 'numeric', 'min:0'],

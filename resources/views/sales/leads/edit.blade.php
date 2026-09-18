@@ -194,13 +194,13 @@
                     <h2 class="lead-card-title"><span class="lead-icon sblue"><i class="bi bi-file-earmark-arrow-up"></i></span>Dokumen Pendukung <span class="text-muted-2 fw-normal">(Opsional)</span></h2>
                     <div class="lead-upload-grid">
                         <label class="lead-upload-box">
-                            <input type="file" name="documents[]" id="leadDocuments" multiple accept=".pdf,.jpg,.jpeg,.png" class="d-none" data-max-files="5">
+                            <input type="file" name="documents[]" id="leadDocuments" multiple data-multi-file data-multi-file-list="off" accept=".pdf,.jpg,.jpeg,.png" class="d-none">
                             <i class="bi bi-cloud-arrow-up"></i>
                             <strong>Klik atau drag & drop file di sini</strong>
-                            <span>PDF, JPG, PNG (Max 10MB)</span>
+                            <span>PDF, JPG, PNG &middot; tanpa batas jumlah dan ukuran</span>
                         </label>
                         <div class="lead-file-panel">
-                            <div class="lead-file-head"><span>File yang diunggah</span><b id="leadFileCount">0/5</b></div>
+                            <div class="lead-file-head"><span>File yang diunggah</span><b id="leadFileCount">0</b></div>
                             <div class="lead-file-list" id="leadFileList">
                                 <div class="lead-empty-file">Belum ada file baru yang dipilih</div>
                             </div>
@@ -287,8 +287,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileCount = document.getElementById('leadFileCount');
     if (fileInput && fileList) {
         fileInput.addEventListener('change', function () {
-            const files = Array.from(fileInput.files).slice(0, parseInt(fileInput.dataset.maxFiles || 5));
-            if (fileCount) fileCount.textContent = `${files.length}/5`;
+            const files = Array.from(fileInput.files);
+            if (fileCount) fileCount.textContent = `${files.length}`;
             if (!files.length) {
                 fileList.innerHTML = '<div class="lead-empty-file">Belum ada file baru yang dipilih</div>';
                 return;

@@ -30,9 +30,9 @@ class ProjectWorkflowController extends Controller
             'production_progress' => ['nullable', 'integer', 'min:0', 'max:100'],
             'production_note' => ['nullable', 'string', 'max:2000'],
             'production_report_completed' => ['nullable', 'boolean'],
-            'production_report' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
-            'progress_files' => ['nullable', 'array', 'max:5'],
-            'progress_files.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,webp', 'max:20480'],
+            'production_report' => ['nullable', 'file', 'mimes:pdf'],
+            'progress_files' => ['nullable', 'array'],
+            'progress_files.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png,webp'],
         ]);
 
         $workflow = $project->workflow()->firstOrCreate();
@@ -100,7 +100,7 @@ class ProjectWorkflowController extends Controller
 
         $data = $request->validate([
             'qc_completed' => ['nullable', 'boolean'],
-            'qc_document' => ['nullable', 'file', 'mimes:pdf', 'max:20480'],
+            'qc_document' => ['nullable', 'file', 'mimes:pdf'],
             'qc_checklist' => ['nullable', 'array'],
             'qc_note' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -141,14 +141,14 @@ class ProjectWorkflowController extends Controller
         $data = $request->validate([
             'delivery_status' => ['nullable', Rule::in(array_keys(ProjectWorkflow::deliveryStatuses()))],
             'delivery_scheduled_at' => ['nullable', 'date'],
-            'pod' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:20480'],
+            'pod' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp'],
             'customer_receiver_name' => ['nullable', 'string', 'max:255'],
             'customer_received_at' => ['nullable', 'date'],
             'delivery_note' => ['nullable', 'string', 'max:2000'],
             'delivery_out_completed' => ['nullable', 'boolean'],
-            'delivery_out_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'delivery_out_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
             'delivery_returned_completed' => ['nullable', 'boolean'],
-            'delivery_returned_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'delivery_returned_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
         ]);
         $outCompleted = $request->boolean('delivery_out_completed');
         $returnedCompleted = $request->boolean('delivery_returned_completed');

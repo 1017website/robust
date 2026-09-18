@@ -102,7 +102,7 @@
                 @endif
                 <label for="customerPoFile" class="form-label small fw-semibold">{{ $requestPo->customer_po_file ? 'Ganti Dokumen PO' : 'Upload Dokumen PO' }}</label>
                 <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
-                <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Maksimal 5 MB. File lama tetap tersimpan jika tidak memilih file baru.</div>
+                <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Tanpa batas ukuran. File lama tetap tersimpan jika tidak memilih file baru.</div>
                 @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 <button type="submit" class="btn btn-primary mt-3">Simpan Nomor &amp; Dokumen</button>
             </form>

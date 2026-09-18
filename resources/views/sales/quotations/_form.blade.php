@@ -133,7 +133,7 @@
                     <div id="quotationFileBox" class="mt-3 {{ $quotationMode === 'upload' ? '' : 'd-none' }}">
                         <label class="form-label small fw-semibold">File Penawaran {{ $quotation?->uploadedFile() ? '(ganti bila perlu)' : '*' }}</label>
                         <input id="quotationFile" type="file" name="quotation_file" class="form-control" accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,.jpg,.jpeg,.png" @required($quotationMode === 'upload' && ! $quotation?->uploadedFile())>
-                        <div class="form-text">XLSX/CSV akan tampil sebagai tabel; PDF dan gambar tampil langsung. Maksimal 20 MB.</div>
+                        <div class="form-text">XLSX/CSV akan tampil sebagai tabel; PDF dan gambar tampil langsung. Tanpa batas ukuran.</div>
                         @if($quotation?->uploadedFile())
                             <a class="btn btn-soft btn-sm mt-2" target="_blank" href="{{ route('documents.preview', $quotation->uploadedFile()) }}"><i class="bi bi-eye me-1"></i>Preview file tersimpan</a>
                         @endif
@@ -141,8 +141,8 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label small fw-semibold">Dokumen Pendukung Penawaran</label>
-                    <input type="file" name="documents[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-                    <div class="form-text">Opsional. Maksimal 5 file per penyimpanan, masing-masing 10 MB. Format: PDF, Word, Excel, JPG, atau PNG.</div>
+                    <input type="file" name="documents[]" class="form-control" multiple data-multi-file accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                    <div class="form-text">Opsional. Bisa pilih beberapa file sekaligus; tekan tombol pilih file berulang kali untuk menambah. Tanpa batas jumlah dan ukuran. Format: PDF, Word, Excel, JPG, atau PNG.</div>
                     @if($quotation?->documents?->isNotEmpty())
                         <div class="border rounded-3 p-3 mt-2">
                             <div class="small fw-semibold mb-2">Dokumen yang sudah tersimpan</div>
@@ -344,7 +344,7 @@ function addItem(data={}){
             </div>
             <input id="${imageInputId}" name="items[${i}][quotation_image]" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="d-none it-image-input">
             <label for="${imageInputId}" class="btn btn-soft btn-sm w-100 mt-1 it-image-button"><i class="bi bi-upload me-1"></i><span class="it-image-action">${hasImage ? 'Ganti gambar' : 'Tambah gambar'}</span></label>
-            <small class="it-image-origin d-block text-muted-2 mt-1">${hasImage ? imageOrigin : 'JPG, PNG, atau WebP · maks. 5 MB'}</small>
+            <small class="it-image-origin d-block text-muted-2 mt-1">${hasImage ? imageOrigin : 'JPG, PNG, atau WebP'}</small>
             <label class="form-check quotation-optional-check mt-2"><input type="checkbox" name="items[${i}][is_optional]" value="1" class="form-check-input" ${data.is_optional ? 'checked' : ''}><span class="form-check-label fw-semibold">Item alternatif</span></label>
             <small class="d-block text-muted-2">Tidak dihitung ke total penawaran.</small>
         </td>

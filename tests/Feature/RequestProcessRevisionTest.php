@@ -131,9 +131,12 @@ class RequestProcessRevisionTest extends TestCase
         $this->assertNotSame($firstPath, $request->fresh()->customer_po_file);
         Storage::disk('public')->assertExists($request->fresh()->customer_po_file);
 
+        // Ukuran tidak dibatasi aplikasi; berkas besar tetap diterima.
         $this->put($route, [
-            'customer_po_file' => UploadedFile::fake()->create('po.pdf', 5121, 'application/pdf'),
-        ])->assertSessionHasErrors('customer_po_file');
+            'customer_po_file' => UploadedFile::fake()->create('po-besar.pdf', 51200, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+
+        // Format di luar daftar tetap ditolak.
         $this->put($route, [
             'customer_po_file' => UploadedFile::fake()->create('po.txt', 1, 'text/plain'),
         ])->assertSessionHasErrors('customer_po_file');

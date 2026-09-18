@@ -176,8 +176,8 @@ class LeadController extends Controller
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
             'initial_note' => ['nullable', 'string'],
-            'documents' => ['nullable', 'array', 'max:5'],
-            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'documents' => ['nullable', 'array'],
+            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png'],
             'sales_id' => [
                 Rule::requiredIf(fn () => ! Auth::user()->isSales()),
                 'nullable',
