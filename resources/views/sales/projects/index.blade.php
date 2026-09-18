@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Projects')
+@section('title', 'Request Process')
 @section('content')
 @php($showPrices = auth()->user()->canViewPrices())
-<x-page-header title="Projects" subtitle="Project hasil penawaran yang menang">
+<x-page-header title="Request Process" subtitle="Request process hasil penawaran yang menang">
     @if(auth()->user()->canCreateProject())
-        <a href="{{ route('sales.projects.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Project Baru</a>
+        <a href="{{ route('sales.projects.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Request Process Baru</a>
     @endif
 </x-page-header>
 <div class="card-r">

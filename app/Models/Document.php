@@ -21,6 +21,17 @@ class Document extends Model
     public function parent(): BelongsTo { return $this->belongsTo(Document::class, 'parent_document_id'); }
     public function revisions(): HasMany { return $this->hasMany(Document::class, 'parent_document_id')->orderByDesc('revision_number'); }
 
+    /**
+     * Dokumen Design Request tidak pernah bisa dihapus (revisi lewat unggah baru),
+     * dan produksi tidak mengelola dokumen. Sisanya tetap diverifikasi controller.
+     */
+    public function canBeDeletedBy(?User $user): bool
+    {
+        return $user
+            && $this->documentable_type !== DesignRequest::class
+            && ! $user->isProduction();
+    }
+
     public function revisionLabel(): string
     {
         if (! $this->parent_document_id) {

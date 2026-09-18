@@ -48,7 +48,7 @@ class August2026CrmRevisionTest extends TestCase
         }
 
         $this->actingAs($sales)->get(route('admin.invoices.index'))->assertOk();
-        $this->actingAs($sales)->get(route('admin.users.index'))->assertOk();
+        $this->actingAs($sales)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAs($sales)->get(route('administration.project-monitoring.index'))->assertOk();
         $this->actingAs($sales)->get(route('admin.pra-leads.index'))->assertOk();
         $this->actingAs($sales)->get(route('admin.system-settings.index'))->assertForbidden();

@@ -20,17 +20,21 @@ class SalesAdminRestorationTest extends TestCase
         foreach (['dashboard', 'pipeline.index', 'admin.pra-leads.index', 'admin.assignment.index',
             'admin.purchase-order-requests.index', 'admin.invoices.index', 'sales.customers.index',
             'administration.project-monitoring.index', 'activities.index', 'calendar.index',
-            'documents.index', 'admin.users.index', 'profile.edit'] as $route) {
+            'documents.index', 'profile.edit'] as $route) {
             $this->actingAs($admin)->get(route($route))->assertOk();
         }
         $this->get(route('admin.system-settings.index'))->assertForbidden();
         $this->get(route('admin.item-masters.index'))->assertForbidden();
+
+        // Manage User hanya untuk Administrator; sales tidak mengelola akun pengguna.
         $superadmin = User::factory()->create(['role' => 'administrator']);
+        $this->get(route('admin.users.index'))->assertForbidden();
         $this->delete(route('admin.users.destroy', $superadmin))->assertForbidden();
         $this->post(route('admin.users.store'), [
             'name' => 'Forbidden Admin', 'email' => 'forbidden-admin@example.test',
             'role' => 'administrator', 'password' => 'test-password', 'password_confirmation' => 'test-password',
-        ])->assertSessionHasErrors('role');
+        ])->assertForbidden();
+        $this->assertDatabaseMissing('users', ['email' => 'forbidden-admin@example.test']);
     }
 
     public function test_administrator_assigns_merged_sales_role_from_manage_user(): void

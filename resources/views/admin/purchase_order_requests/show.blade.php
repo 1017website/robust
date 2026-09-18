@@ -93,7 +93,10 @@
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 @if($requestPo->customer_po_file)
-                    <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank" rel="noopener" class="btn btn-soft btn-sm mb-3">Lihat Dokumen PO</a>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank" rel="noopener" class="btn btn-soft btn-sm">Lihat Dokumen PO</a>
+                        <button type="submit" name="action" value="remove_document" class="btn btn-soft btn-sm text-danger" formnovalidate onclick="return confirm('Hapus dokumen PO ini? File akan dihapus permanen.')"><i class="bi bi-trash me-1"></i>Hapus Dokumen PO</button>
+                    </div>
                 @else
                     <p class="small text-muted-2">Belum ada dokumen PO. Pilih file untuk melampirkannya.</p>
                 @endif

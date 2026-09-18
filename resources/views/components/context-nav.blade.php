@@ -2,7 +2,7 @@
     $routeName = request()->route()?->getName() ?? '';
     $isIndex = str_ends_with($routeName, '.index') || in_array($routeName, ['dashboard', 'profile.edit'], true);
     $sections = [
-        'admin.purchase-order-requests.' => ['admin.purchase-order-requests.index', 'Request Process'],
+        'admin.purchase-order-requests.' => ['admin.purchase-order-requests.index', 'Project'],
         'admin.system-settings.' => ['admin.system-settings.index', 'System Settings'],
         'admin.pra-leads.' => ['admin.pra-leads.index', 'Pra Leads'],
         'admin.assignment.' => ['admin.assignment.index', 'Assignment'],
@@ -11,11 +11,11 @@
         'sales.request-masuk.' => ['sales.request-masuk.index', 'Request Masuk'],
         'sales.quotations.' => ['sales.quotations.index', 'Penawaran'],
         'sales.customers.' => ['sales.customers.index', 'Customers'],
-        'sales.projects.' => ['sales.projects.index', 'Projects'],
+        'sales.projects.' => ['sales.projects.index', 'Request Process'],
         'sales.leads.' => ['sales.leads.index', 'Leads'],
         'spv.quotation-approvals.' => ['spv.quotation-approvals.index', 'Monitoring Penawaran'],
         'drafter.design-requests.' => ['drafter.design-requests.index', 'Design Request'],
-        'drafter.projects.' => ['drafter.projects.index', 'Projects'],
+        'drafter.projects.' => ['drafter.projects.index', 'Request Process'],
         'drafter.tasks.' => ['drafter.tasks.index', 'Tasks'],
         'drafter.calendar.' => ['drafter.calendar.index', 'Calendar'],
         'drafter.reports.' => ['drafter.reports.index', 'Reports'],

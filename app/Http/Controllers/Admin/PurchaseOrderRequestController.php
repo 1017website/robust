@@ -13,6 +13,7 @@ use App\Services\ProjectProvisioner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -303,10 +304,25 @@ class PurchaseOrderRequestController extends Controller
         ], $this->validationMessages());
 
         $attributes = ['code' => $data['code'] ?? $purchaseOrderRequest->code];
-        if ($request->hasFile('customer_po_file')) {
+        $removed = false;
+
+        // Hapus dokumen PO saat file salah diunggah atau batal dipakai.
+        if ($request->input('action') === 'remove_document' && $purchaseOrderRequest->customer_po_file) {
+            Storage::disk('public')->delete($purchaseOrderRequest->customer_po_file);
+            $attributes['customer_po_file'] = null;
+            $removed = true;
+        } elseif ($request->hasFile('customer_po_file')) {
             $attributes['customer_po_file'] = $request->file('customer_po_file')->store('purchase-order-requests', 'public');
         }
+
         $purchaseOrderRequest->update($attributes);
+
+        if ($removed) {
+            Logger::record('updated', "Dokumen PO {$purchaseOrderRequest->code} dihapus", $purchaseOrderRequest);
+
+            return back()->with('success', 'Dokumen PO berhasil dihapus.');
+        }
+
         Logger::record('updated', "Nomor dan dokumen PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
         return back()->with('success', 'Nomor RPO dan dokumen PO berhasil disimpan.');

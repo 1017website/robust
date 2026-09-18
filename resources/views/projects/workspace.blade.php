@@ -121,7 +121,7 @@
                 <div class="row g-2">
                     @php($productionReferenceDocuments = $directProduction ? ($project->quotation?->documents?->where('category', 'quotation_support') ?? collect()) : $fabricationDocuments)
                     @forelse($productionReferenceDocuments as $document)
-                        <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ route('documents.preview', $document) }}"><i class="bi bi-eye me-1"></i>Preview</a></div></div>
+                        <div class="col-md-6 col-xl-4"><div class="attachment-box h-100"><div class="fw-semibold">{{ $document->name }}</div><div class="small text-muted-2">{{ $document->revisionLabel() }} - {{ $document->uploader?->name ?? '-' }} - {{ $document->created_at?->format('d/m/Y H:i') }}</div><a class="btn btn-sm btn-soft mt-2" target="_blank" href="{{ route('documents.preview', $document) }}"><i class="bi bi-eye me-1"></i>Preview</a><x-document-delete-button :document="$document" class="btn btn-sm btn-soft text-danger mt-2" /></div></div>
                     @empty
                         <div class="col-12"><x-empty :text="$directProduction ? 'Tidak ada dokumen tambahan. Gunakan spesifikasi item penawaran sebagai acuan produksi.' : 'Gambar fabrikasi belum diunggah.'" /></div>
                     @endforelse
@@ -155,7 +155,7 @@
                     @if($productionProgressDocuments->isNotEmpty())
                         <div class="mt-3"><div class="small fw-bold mb-2">Dokumentasi Progress</div>
                         @foreach($productionProgressDocuments as $document)
-                            <div class="attachment-box mb-2"><div class="small fw-semibold text-truncate">{{ $document->name }}.{{ $document->file_type }}</div><div class="small text-muted-2">{{ $document->uploader?->name ?? '-' }} · {{ $document->created_at?->format('d/m/Y H:i') }}</div><a target="_blank" href="{{ route('documents.preview', $document) }}" class="btn btn-sm btn-soft mt-2">Preview</a> <a href="{{ route('documents.download', $document) }}" class="btn btn-sm btn-soft mt-2">Unduh</a></div>
+                            <div class="attachment-box mb-2"><div class="small fw-semibold text-truncate">{{ $document->name }}.{{ $document->file_type }}</div><div class="small text-muted-2">{{ $document->uploader?->name ?? '-' }} · {{ $document->created_at?->format('d/m/Y H:i') }}</div><a target="_blank" href="{{ route('documents.preview', $document) }}" class="btn btn-sm btn-soft mt-2">Preview</a> <a href="{{ route('documents.download', $document) }}" class="btn btn-sm btn-soft mt-2">Unduh</a><x-document-delete-button :document="$document" class="btn btn-sm btn-soft text-danger mt-2" /></div>
                         @endforeach
                         </div>
                     @endif

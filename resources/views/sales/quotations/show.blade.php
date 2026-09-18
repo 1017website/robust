@@ -50,7 +50,7 @@
                         <div class="fw-semibold"><i class="bi {{ $document->category === 'quotation_file' ? 'bi-file-earmark-check' : 'bi-file-earmark-text' }} text-primary me-1"></i>{{ $document->name }}.{{ $document->file_type }}</div>
                         <div class="small text-muted-2">{{ $document->category === 'quotation_file' ? 'File penawaran utama · ' : '' }}{{ $document->humanSize() }} · {{ $document->uploader?->name ?: 'System' }} · {{ $document->created_at?->format('d M Y H:i') }}</div>
                     </div>
-                    <div class="d-flex gap-2"><a href="{{ route('documents.preview', $document) }}" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-eye me-1"></i>Preview</a><a href="{{ route('documents.download', $document) }}" class="btn btn-soft btn-sm" download><i class="bi bi-download"></i></a></div>
+                    <div class="d-flex gap-2"><a href="{{ route('documents.preview', $document) }}" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-eye me-1"></i>Preview</a><a href="{{ route('documents.download', $document) }}" class="btn btn-soft btn-sm" download><i class="bi bi-download"></i></a><x-document-delete-button :document="$document" class="btn btn-soft btn-sm text-danger" /></div>
                 </div>
             @empty
                 <x-empty text="Belum ada dokumen penawaran." />

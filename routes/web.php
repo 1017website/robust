@@ -116,13 +116,12 @@ Route::middleware('auth')->group(function () {
     });
 
     // ---------- Administrator ----------
-    Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
-        // System Settings khusus Administrator / Superadmin
-        Route::middleware('role:administrator')->group(function () {
-            Route::get('/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
-            Route::put('/system-settings/branding', [SystemSettingController::class, 'updateBranding'])->name('system-settings.branding');
-            Route::post('/system-settings/run-command', [SystemSettingController::class, 'runCommand'])->name('system-settings.run-command');
-        });
+    // System Settings dan Manage User khusus Administrator / Superadmin.
+    // Sales tidak mengelola akun pengguna.
+    Route::middleware('role:administrator')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
+        Route::put('/system-settings/branding', [SystemSettingController::class, 'updateBranding'])->name('system-settings.branding');
+        Route::post('/system-settings/run-command', [SystemSettingController::class, 'runCommand'])->name('system-settings.run-command');
 
         // Manage User (CRUD + atur akses/role)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -130,7 +129,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::put('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-
     });
 
     // Master Item dikelola oleh Produksi. Administrator tetap memiliki akses

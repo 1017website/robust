@@ -35,11 +35,11 @@
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
-        $pushItem($menuGroups, 'Request Process', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Project', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
         $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
         $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
-        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
@@ -56,13 +56,13 @@
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
-        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'administration') {
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
-        $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-folder2-open');
+        $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-folder2-open');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
@@ -84,7 +84,7 @@
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'drafter') {
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square');
-        $pushItem($menuGroups, 'Projects', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
+        $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
         $pushItem($menuGroups, 'Tasks', 'drafter.tasks.index', 'drafter.tasks.*', 'bi-ui-checks');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
@@ -98,16 +98,15 @@
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
-        $pushItem($menuGroups, 'Request Process', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
+        $pushItem($menuGroups, 'Project', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
         $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
-        $pushItem($menuGroups, 'Projects', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushLabel($menuGroups, 'SISTEM');
-        $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     }
 

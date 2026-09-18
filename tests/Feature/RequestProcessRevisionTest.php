@@ -138,4 +138,25 @@ class RequestProcessRevisionTest extends TestCase
             'customer_po_file' => UploadedFile::fake()->create('po.txt', 1, 'text/plain'),
         ])->assertSessionHasErrors('customer_po_file');
     }
+
+    public function test_sales_can_delete_wrongly_uploaded_po_document(): void
+    {
+        Storage::fake('public');
+        $owner = User::factory()->create(['role' => 'sales']);
+        $request = PurchaseOrderRequest::create([
+            'code' => 'REMOVE-PO', 'requested_by' => $owner->id, 'status' => 'submitted',
+        ]);
+        $route = route('admin.purchase-order-requests.document', $request);
+        $this->actingAs($owner)->put($route, [
+            'customer_po_file' => UploadedFile::fake()->create('salah-upload.pdf', 100, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+        $path = $request->fresh()->customer_po_file;
+        Storage::disk('public')->assertExists($path);
+
+        $this->actingAs($owner)->put($route, ['code' => 'REMOVE-PO', 'action' => 'remove_document'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull($request->fresh()->customer_po_file);
+        Storage::disk('public')->assertMissing($path);
+        $this->assertSame('REMOVE-PO', $request->fresh()->code);
+    }
 }

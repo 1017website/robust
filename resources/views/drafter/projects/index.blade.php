@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Projects')
+@section('title', 'Request Process')
 @section('content')
 @php($previewUrl = fn($id) => route('drafter.projects.index', array_merge(request()->query(), ['project' => $id])).'#project-detail')
 <div class="drafter-ui">
     <div class="drafter-page-head">
-        <div><h1 class="page-title mb-1">Projects</h1><div class="page-subtitle">Pantau project produksi, deadline, progress dan dokumen pendukung.</div></div>
+        <div><h1 class="page-title mb-1">Request Process</h1><div class="page-subtitle">Pantau request process produksi, deadline, progress dan dokumen pendukung.</div></div>
     </div>
     <div class="drafter-shell">
         <main class="drafter-main">

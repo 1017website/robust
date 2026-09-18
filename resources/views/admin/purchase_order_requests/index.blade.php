@@ -1,8 +1,8 @@
 @extends('layouts.app')
-@section('title', 'Request Process')
+@section('title', 'Project')
 @section('content')
-<x-page-header title="Request Process" subtitle="Monitoring Request Process dari penawaran CRM maupun order existing menuju Accurate">
-    <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Request Process Baru</a>
+<x-page-header title="Project" subtitle="Monitoring project dari penawaran CRM maupun order existing menuju Accurate">
+    <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Project Baru</a>
 </x-page-header>
 
 <div class="card-r">
