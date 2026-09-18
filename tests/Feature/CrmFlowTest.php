@@ -1223,7 +1223,7 @@ class CrmFlowTest extends TestCase
         $specification = "[General]\nType: FH-150 ECO\nManufacturer: PT. Robust Multilab Solusindo\n[Dimensions (W x D x H, mm)]\nOverall Dimension: 1500 x 890 x 2350\n[Utilities]\nElectrical Socket: Single electric socket, IP55\n@ 4 | pcs | 500000";
 
         $this->actingAs($drafter)->post(route('drafter.design-requests.feedback', $designRequest), [
-            'action' => 'review',
+            'action' => 'save',
         ])->assertForbidden();
 
         $this->actingAs($drafter)->post(route('documents.store'), [

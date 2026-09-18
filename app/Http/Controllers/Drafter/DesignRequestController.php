@@ -100,7 +100,7 @@ class DesignRequestController extends Controller
         $isImageEditor = true;
 
         $data = $request->validate([
-            'action' => ['required', 'in:save,review,submit'],
+            'action' => ['required', 'in:save,submit'],
             'cost_material' => ['nullable', 'numeric'],
             'cost_production' => ['nullable', 'numeric'],
             'cost_installation' => ['nullable', 'numeric'],
@@ -125,12 +125,10 @@ class DesignRequestController extends Controller
                 'technical_note' => $data['technical_note'] ?? null,
                 'status' => match ($request->input('action')) {
                     'submit' => 'completed',
-                    'review' => 'review',
                     'save' => in_array($designRequest->status, ['draft', 'assigned', 'drawing_uploaded', 'revision_drawing_uploaded'], true) ? 'costing' : $designRequest->status,
                 },
                 'progress' => match ($request->input('action')) {
                     'submit' => 100,
-                    'review' => max((int) $designRequest->progress, 75),
                     'save' => max((int) $designRequest->progress, 25),
                 },
                 'submitted_at' => $request->input('action') === 'submit' ? now() : $designRequest->submitted_at,
