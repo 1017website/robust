@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,14 +24,24 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (TokenMismatchException $exception, Request $request) {
+        $exceptions->render(function (HttpException $exception, Request $request) {
+            if ($exception->getStatusCode() !== 419 || ! $exception->getPrevious() instanceof TokenMismatchException) {
+                return null;
+            }
+
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Sesi Anda telah diperbarui. Muat ulang halaman lalu coba lagi.',
+                    'message' => 'Sesi tidak cocok atau telah berakhir. Muat ulang halaman lalu coba lagi.',
                 ], 419);
             }
 
-            $message = 'Sesi Anda sempat berakhir. Silakan ulangi tindakan terakhir; data yang sudah tersimpan tetap aman.';
+            $message = 'Sesi tidak cocok atau telah berakhir. Silakan coba lagi dari halaman yang baru dimuat.';
+
+            if ($request->is('login')) {
+                return redirect()->route('login')
+                    ->with('error', $message)
+                    ->withInput($request->only('email'));
+            }
 
             return $request->user()
                 ? redirect()->back()->with('error', $message)
