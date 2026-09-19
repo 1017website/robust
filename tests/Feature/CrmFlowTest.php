@@ -1083,9 +1083,9 @@ class CrmFlowTest extends TestCase
         $this->assertSame('po_created', $poRequest->fresh()->status);
         $this->assertSame('request_po_created', $quotation->fresh()->status);
         $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
-        // Request Process memakai kode PRJ sendiri, tidak meminjam nomor Project.
-        $this->assertStringStartsWith('PRJ-', $project->code);
-        $this->assertNotSame('PRJ-MANUAL-001', $project->code);
+        // Request Process memakai Nomor Proyek milik Project-nya.
+        $this->assertSame($poRequest->projectNumber(), $project->code);
+        $this->assertSame('PRJ-MANUAL-001', $project->code);
         $this->assertSame($drafter->id, $project->project_manager_id);
 
         $this->actingAs($admin)->post(route('admin.invoices.store'), [

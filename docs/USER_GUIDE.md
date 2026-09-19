@@ -369,6 +369,8 @@ Project dibuat dari penawaran yang telah dimenangkan/customer setuju.
 3. Klik **Tambah Project**.
 4. Pilih penawaran Won/Customer Setuju yang belum memiliki Request Process.
 5. Isi nama project, kategori, prioritas, status awal, tanggal mulai, dan target selesai.
+   **Kode Project** boleh dikosongkan — sistem memakai Nomor Proyek dari Project terkait
+   supaya kedua modul memakai nomor yang sama.
 6. Pilih Project Manager.
 7. Tambahkan tim internal, vendor, lokasi, scope of work, metode kerja, skema pembayaran, dan catatan bila diperlukan.
 8. Klik **Simpan Project**.

@@ -24,10 +24,10 @@ class ProjectProvisioner
         $drafterId = $designRequest?->production_pic_id;
         $startDate = $requestPo->accurate_po_date ?: today();
         $targetDate = $requestPo->expected_delivery_date;
-        // Hanya record lama yang punya nomor proyek terpisah; sisanya memakai kode PRJ otomatis
-        // supaya Request Process tidak berbagi nomor dengan Project.
-        $requestedCode = trim((string) $requestPo->project_number);
-        $code = $requestedCode !== '' && ! Project::where('code', $requestedCode)->exists()
+        // Request Process memakai Nomor Proyek milik Project-nya; kode PRJ otomatis hanya
+        // dipakai bila nomor itu sudah terpakai Request Process lain.
+        $requestedCode = trim($requestPo->projectNumber());
+        $code = $requestedCode !== '' && ! Project::withTrashed()->where('code', $requestedCode)->exists()
             ? $requestedCode
             : CodeGenerator::next(Project::class, 'PRJ', 4, true);
 

@@ -18,12 +18,11 @@
     </form>
     <div class="table-wrap">
         <table class="table-r">
-            <thead><tr><th>No Request</th><th>No Proyek</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>No Proyek</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($requests as $r)
                 <tr>
-                    <td class="fw-semibold">{{ $r->code }}</td>
-                    <td>{{ $r->projectNumber() ?: '—' }}</td>
+                    <td class="fw-semibold">{{ $r->projectNumber() ?: '—' }}</td>
                     <td>{{ $r->quotation?->code ?: '—' }} @if($r->quotation?->isExternal())<span class="badge text-bg-info ms-1">Non-CRM</span>@endif</td>
                     <td>{{ $r->customer_name ?: ($r->quotation?->customer_name ?: '—') }}</td>
                     <td>{{ $r->quotation?->project_name ?: '—' }}</td>
@@ -38,7 +37,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9"><x-empty text="Belum ada Project." /></td></tr>
+                <tr><td colspan="8"><x-empty text="Belum ada Project." /></td></tr>
             @endforelse
             </tbody>
         </table>

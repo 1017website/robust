@@ -97,6 +97,25 @@ class RequestProcessRequiresProjectTest extends TestCase
         $this->assertNotNull($quotation->fresh()->project);
     }
 
+    public function test_request_process_reuses_the_project_number_as_its_code(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $quotation = $this->wonQuotation($sales);
+
+        $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'crm',
+            'quotation_id' => $quotation->id,
+            'code' => 'PRJ-SHARED-001',
+            'customer_name' => $quotation->customer_name,
+            'request_date' => today()->format('Y-m-d'),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $requestPo = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
+
+        $this->assertSame('PRJ-SHARED-001', $requestPo->projectNumber());
+        $this->assertSame('PRJ-SHARED-001', $quotation->fresh()->project->code);
+    }
+
     public function test_a_draft_is_saved_without_starting_anything(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);

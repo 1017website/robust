@@ -70,8 +70,8 @@ class ProjectController extends Controller
             'note' => ['nullable', 'string'],
         ]);
 
-        $quotation = $this->eligibleQuotationQuery()->findOrFail($data['quotation_id']);
-        $data['code'] = ($data['code'] ?? null) ?: CodeGenerator::next(Project::class, 'PRJ', 4, true);
+        $quotation = $this->eligibleQuotationQuery()->with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
+        $data['code'] = ($data['code'] ?? null) ?: $this->nextProjectCode($quotation);
         $data['customer_id'] = $quotation->customer_id;
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
         $data['tax_amount'] = $quotation->tax_amount;
@@ -110,6 +110,20 @@ class ProjectController extends Controller
         $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
 
         return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
+    }
+
+    /**
+     * Request Process memakai Nomor Proyek milik Project-nya. Kode PRJ otomatis hanya
+     * dipakai bila nomor itu sudah terpakai Request Process lain.
+     */
+    protected function nextProjectCode(Quotation $quotation): string
+    {
+        $projectNumber = trim((string) $quotation->purchaseOrderRequest?->projectNumber());
+
+        // Kode unik di level database, jadi Request Process terhapus pun masih memegangnya.
+        return $projectNumber !== '' && ! Project::withTrashed()->where('code', $projectNumber)->exists()
+            ? $projectNumber
+            : CodeGenerator::next(Project::class, 'PRJ', 4, true);
     }
 
     protected function eligibleQuotationQuery(): Builder
