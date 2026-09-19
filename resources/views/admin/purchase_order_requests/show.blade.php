@@ -35,10 +35,6 @@
             <div class="card-head"><h2>Data Input Accurate</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
                 @csrf @method('PUT')
-                <input type="hidden" name="status" value="{{ $requestPo->status }}">
-                <input type="hidden" name="accurate_po_number" value="{{ $requestPo->accurate_po_number }}">
-                <input type="hidden" name="accurate_po_date" value="{{ $requestPo->accurate_po_date?->format('Y-m-d') }}">
-                <input type="hidden" name="accurate_note" value="{{ $requestPo->accurate_note }}">
                 <div class="row g-3">
                     <div class="col-md-12"><label class="form-label small fw-semibold">Alamat Pengiriman / Lokasi Project</label><textarea name="delivery_address" rows="2" class="form-control">{{ old('delivery_address', $requestPo->delivery_address) }}</textarea></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">PIC Penerima / Project</label><input name="delivery_pic_name" value="{{ old('delivery_pic_name', $requestPo->delivery_pic_name) }}" class="form-control"></div>
@@ -118,29 +114,27 @@
         </div>
         @elseif(auth()->user()->canManageBackOffice())
         <div class="card-r">
-            <div class="card-head"><h2>Update Accurate</h2></div>
-            <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
-                @csrf @method('PUT')
-                <input type="hidden" name="delivery_address" value="{{ $requestPo->delivery_address }}">
-                <input type="hidden" name="delivery_pic_name" value="{{ $requestPo->delivery_pic_name }}">
-                <input type="hidden" name="delivery_pic_phone" value="{{ $requestPo->delivery_pic_phone }}">
-                <input type="hidden" name="npwp_name" value="{{ $requestPo->npwp_name }}">
-                <input type="hidden" name="npwp_number" value="{{ $requestPo->npwp_number }}">
-                <input type="hidden" name="payment_term" value="{{ $requestPo->payment_term }}">
-                <input type="hidden" name="expected_delivery_date" value="{{ $requestPo->expected_delivery_date?->format('Y-m-d') }}">
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold">Status *</label>
-                    <select name="status" class="form-select" required>
-                        @foreach($requestPo->selectableStatuses() as $k=>$v)
-                            <option value="{{ $k }}" @selected($requestPo->status === $k)>{{ $v }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">No PO Accurate</label><input name="accurate_po_number" value="{{ old('accurate_po_number', $requestPo->accurate_po_number) }}" class="form-control"></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Tanggal PO Accurate</label><input type="date" name="accurate_po_date" value="{{ old('accurate_po_date', $requestPo->accurate_po_date?->format('Y-m-d')) }}" class="form-control"></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Catatan Accurate</label><textarea name="accurate_note" rows="3" class="form-control">{{ old('accurate_note', $requestPo->accurate_note) }}</textarea></div>
-                <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Update Status Accurate</button>
-            </form>
+            <div class="card-head"><h2>Status Project</h2><x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div>
+            <p class="small text-muted-2">
+                Status berjalan sendiri: <strong>Berjalan</strong> sejak Project diajukan, dan otomatis menjadi
+                <strong>Lunas</strong> begitu seluruh termin invoice terbayar. Tidak perlu diperbarui manual.
+            </p>
+            @if($requestPo->status === 'cancelled')
+                <form method="POST" action="{{ route('admin.purchase-order-requests.status', $requestPo) }}">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="reactivate">
+                    <button class="btn btn-soft w-100"><i class="bi bi-arrow-counterclockwise me-1"></i>Aktifkan Kembali</button>
+                </form>
+            @elseif($requestPo->status !== 'paid')
+                <form method="POST" action="{{ route('admin.purchase-order-requests.status', $requestPo) }}" onsubmit="return confirm('Batalkan Project ini? Produksi yang sudah berjalan di Request Process tidak ikut dibatalkan.')">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="action" value="cancel">
+                    <div class="mb-3"><label class="form-label small fw-semibold">Alasan Pembatalan</label><textarea name="reason" rows="2" class="form-control" placeholder="Opsional, tersimpan sebagai catatan"></textarea></div>
+                    <button class="btn btn-soft w-100 text-danger"><i class="bi bi-x-circle me-1"></i>Batalkan Project</button>
+                </form>
+            @else
+                <div class="form-text">Project sudah lunas dan tidak dapat dibatalkan.</div>
+            @endif
         </div>
         @endif
         @php($workflow = $requestPo->quotation?->project?->workflow)

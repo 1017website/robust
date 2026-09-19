@@ -248,16 +248,12 @@ class PurchaseOrderRequestController extends Controller
         ]);
     }
 
-    public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
+    public function update(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
     {
         abort_unless(Auth::user()->canManageBackOffice(), 403, 'Update proses Project hanya untuk Administrator dan Sales.');
         abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project harus diajukan terlebih dahulu.');
 
         $data = $request->validate([
-            'status' => ['required', 'in:'.implode(',', array_keys($purchaseOrderRequest->selectableStatuses()))],
-            'accurate_po_number' => ['nullable', 'required_if:status,po_created', 'string', 'max:100'],
-            'accurate_po_date' => ['nullable', 'required_if:status,po_created', 'date'],
-            'accurate_note' => ['nullable', 'string', 'max:1500'],
             'delivery_address' => ['nullable', 'string', 'max:1500'],
             'delivery_pic_name' => ['nullable', 'string', 'max:255'],
             'delivery_pic_phone' => ['nullable', 'string', 'max:50'],
@@ -267,39 +263,56 @@ class PurchaseOrderRequestController extends Controller
             'expected_delivery_date' => ['nullable', 'date'],
         ]);
 
-        $actor = $request->user();
+        // Status tidak lagi diisi manual di sini: Berjalan ditetapkan saat Project diajukan,
+        // Lunas mengikuti pelunasan invoice, dan Dibatalkan punya tombolnya sendiri.
+        $purchaseOrderRequest->update([
+            'delivery_address' => $data['delivery_address'] ?? null,
+            'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
+            'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
+            'npwp_name' => $data['npwp_name'] ?? null,
+            'npwp_number' => $data['npwp_number'] ?? null,
+            'payment_term' => $data['payment_term'] ?? null,
+            'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+        ]);
 
-        $project = DB::transaction(function () use ($data, $purchaseOrderRequest, $projectProvisioner, $actor) {
-            $purchaseOrderRequest->update([
-                'status' => $data['status'],
-                'accurate_po_number' => $data['accurate_po_number'] ?? null,
-                'accurate_po_date' => $data['accurate_po_date'] ?? null,
-                'accurate_note' => $data['accurate_note'] ?? null,
-                'delivery_address' => $data['delivery_address'] ?? null,
-                'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
-                'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,
-                'npwp_name' => $data['npwp_name'] ?? null,
-                'npwp_number' => $data['npwp_number'] ?? null,
-                'payment_term' => $data['payment_term'] ?? null,
-                'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-                'processed_at' => $data['status'] === 'cancelled' ? $purchaseOrderRequest->processed_at : now(),
-            ]);
+        Logger::record('updated', "Data Project {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
-            return $data['status'] === 'po_created'
-                ? $projectProvisioner->fromAccuratePurchaseOrder($purchaseOrderRequest->fresh(), $actor)
-                : null;
-        });
+        return back()->with('success', 'Data Project berhasil diperbarui.');
+    }
 
-        Logger::record('updated', "Status Project {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
+    /** Pembatalan dan pengaktifan kembali: satu-satunya perubahan status yang manual. */
+    public function updateStatus(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
+    {
+        abort_unless(Auth::user()->canManageBackOffice(), 403, 'Pembatalan Project hanya untuk Administrator dan Sales.');
+        abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project belum dapat dibatalkan.');
 
-        return back()->with(
-            'success',
-            $project
-                ? ($project->quotation?->design_request_id
-                    ? "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan diteruskan ke Drafter."
-                    : "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.")
-                : 'Project berhasil diperbarui.'
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['cancel', 'reactivate'])],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $cancelling = $data['action'] === 'cancel';
+
+        if ($cancelling && $purchaseOrderRequest->status === 'paid') {
+            return back()->with('error', 'Project yang sudah lunas tidak dapat dibatalkan.');
+        }
+
+        $purchaseOrderRequest->update([
+            'status' => $cancelling ? 'cancelled' : 'po_created',
+            'accurate_note' => ($data['reason'] ?? null) ?: $purchaseOrderRequest->accurate_note,
+        ]);
+
+        Logger::record(
+            'updated',
+            $cancelling
+                ? "Project {$purchaseOrderRequest->code} dibatalkan"
+                : "Project {$purchaseOrderRequest->code} diaktifkan kembali",
+            $purchaseOrderRequest
         );
+
+        return back()->with('success', $cancelling
+            ? 'Project dibatalkan.'
+            : 'Project diaktifkan kembali dan berstatus Berjalan.');
     }
 
     public function updateDocument(Request $request, PurchaseOrderRequest $purchaseOrderRequest)

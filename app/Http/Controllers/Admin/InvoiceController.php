@@ -87,7 +87,7 @@ class InvoiceController extends Controller
             foreach (array_values($data['terms']) as $index => $term) {
                 $invoice->terms()->create($term + ['term_number' => $index + 1, 'status' => 'planned']);
             }
-            $requestPo->update(['status' => 'invoicing']);
+            // Project tetap Berjalan saat invoice terbit; statusnya baru berubah setelah lunas.
             return $invoice;
         });
         Logger::record('created', "Invoice {$invoice->code} diterbitkan", $invoice);
@@ -128,7 +128,12 @@ class InvoiceController extends Controller
             $paid = (float) $invoice->terms()->sum('paid_amount');
             $status = $paid >= (float) $invoice->grand_total ? 'paid' : ($paid > 0 ? 'partial' : 'issued');
             $invoice->update(['paid_total' => $paid, 'status' => $status]);
-            $invoice->purchaseOrderRequest()->update(['status' => $status === 'paid' ? 'paid' : 'invoicing']);
+
+            // Pelunasan invoice otomatis menutup Project; koreksi pembayaran membukanya lagi.
+            // Project yang dibatalkan tidak ikut terpengaruh.
+            if ($invoice->purchaseOrderRequest?->status !== 'cancelled') {
+                $invoice->purchaseOrderRequest()->update(['status' => $status === 'paid' ? 'paid' : 'po_created']);
+            }
         });
         return back()->with('success', 'Termin pembayaran berhasil diperbarui.');
     }

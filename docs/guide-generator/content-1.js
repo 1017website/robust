@@ -153,11 +153,12 @@ module.exports = {
         'Panel Data Order menampilkan nomor proyek, customer, sales, nilai penawaran, dan status terkini.',
         'Panel Data Input Accurate berisi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, dan estimasi kirim. Lengkapi lalu tekan Simpan Data Accurate.',
         'Panel Checklist Kelengkapan dapat disesuaikan: centang yang sudah beres, hapus item yang tidak diperlukan lewat ikon tempat sampah, atau tambahkan item sendiri. Tekan Simpan Checklist.',
-        'Panel Update Accurate di kanan dipakai untuk mengganti status, mengisi No PO Accurate, Tanggal PO Accurate, dan catatan.',
+        'Kartu Status Project di kanan hanya menampilkan status berjalan dan tombol Batalkan Project; status selebihnya bergerak otomatis.',
         'Tombol Export PDF menghasilkan dokumen Request PO untuk arsip atau lampiran.',
       ],
       n: `PO diinput di Accurate lebih dulu, lalu nomornya dicatat saat Project dibuat. Project langsung berstatus
-        <b>Berjalan</b> dan Request Process terbentuk otomatis, diteruskan ke Drafter atau langsung ke Produksi.`,
+        <b>Berjalan</b> dan Request Process terbentuk otomatis, diteruskan ke Drafter atau langsung ke Produksi.
+        Status menjadi <b>Lunas</b> sendiri setelah seluruh termin invoice terbayar; hanya pembatalan yang manual.`,
     },
 
     'invoices': {

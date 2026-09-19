@@ -58,13 +58,16 @@ class SalesAdminRestorationTest extends TestCase
             'accurate_po_number' => 'ACC-ROLE-001',
             'accurate_po_date' => today(),
         ]);
-        $accurate = ['status' => 'paid', 'accurate_po_number' => 'ACC-ROLE-001', 'accurate_po_date' => today()->format('Y-m-d')];
         $this->actingAs($sales)->get(route('admin.purchase-order-requests.create'))->assertOk();
-        $this->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
-        $this->put(route('admin.purchase-order-requests.update', $po), $accurate)->assertRedirect()->assertSessionHasNoErrors();
-        $this->actingAs($admin)->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
-        $this->put(route('admin.purchase-order-requests.update', $po), $accurate)->assertSessionHasNoErrors()->assertRedirect();
-        $this->assertSame('paid', $po->fresh()->status);
+        $this->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Batalkan Project');
+        $this->put(route('admin.purchase-order-requests.status', $po), ['action' => 'cancel'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('cancelled', $po->fresh()->status);
+
+        $this->actingAs($admin)->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Aktifkan Kembali');
+        $this->put(route('admin.purchase-order-requests.status', $po), ['action' => 'reactivate'])
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('po_created', $po->fresh()->status);
     }
 
     public function test_restoration_migration_changes_only_confirmed_account(): void

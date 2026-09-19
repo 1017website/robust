@@ -406,10 +406,13 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
      **Draft**, tidak divalidasi, dan belum masuk proses Accurate. Buka kembali lewat
      tombol **Lanjutkan & Ajukan** pada daftar atau detail Request PO untuk melengkapi
      dan mengajukannya. Draf tidak dapat diekspor PDF maupun ditagihkan.
-10. Administrator atau Sales membuka detail Request PO setelah diproses di Accurate dan mengubah status:
-    - Berjalan.
-    - Lunas.
-    - Dibatalkan.
+10. Status Project berjalan sendiri dan **tidak perlu diperbarui manual**:
+    - **Berjalan** — ditetapkan saat Project diajukan.
+    - **Lunas** — otomatis begitu seluruh termin invoice terbayar. Koreksi pembayaran
+      mengembalikannya ke Berjalan.
+    - **Dibatalkan** — satu-satunya yang manual, lewat tombol **Batalkan Project** pada
+      kartu Status Project. Project yang sudah lunas tidak dapat dibatalkan, dan yang sudah
+      dibatalkan dapat diaktifkan kembali.
 
     Tidak ada lagi fase menunggu Accurate. PO diinput di Accurate **lebih dulu**, lalu
     nomornya dicatat saat Project dibuat, sehingga Project langsung berstatus **Berjalan**
@@ -421,7 +424,8 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
 
     Record lama yang masih berstatus Diajukan/Diproses di Accurate tetap terbaca dan
     dihitung sebagai Project berjalan, tetapi status itu tidak dapat dipilih lagi.
-11. Isi nomor, tanggal, dan catatan PO Accurate.
+11. Nomor dan tanggal PO Accurate cukup diisi sekali saat Project dibuat; kartu Status Project
+    tidak lagi menanyakannya ulang.
 
 File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/XLSX.
 

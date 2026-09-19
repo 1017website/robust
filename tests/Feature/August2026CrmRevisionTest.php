@@ -357,7 +357,7 @@ class August2026CrmRevisionTest extends TestCase
 
         $this->actingAs($administrator)->get(route('admin.purchase-order-requests.show', $draft))
             ->assertOk()
-            ->assertSee('Update Accurate')
+            ->assertSee('Status Project')
             ->assertDontSee('Draf Belum Diajukan');
         $this->actingAs($administrator)->get(route('admin.purchase-order-requests.index'))
             ->assertOk()

@@ -1669,18 +1669,11 @@ class CrmFlowTest extends TestCase
             'request_date' => today()->format('Y-m-d'),
         ])->assertRedirect();
 
+        // Project langsung berjalan begitu diajukan, Request Process ikut terbentuk saat itu juga.
         $requestPo = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
-        $this->actingAs($admin)->put(route('admin.purchase-order-requests.update', $requestPo), [
-            'status' => 'po_created',
-            'accurate_po_number' => 'ACC-DIRECT-001',
-            'accurate_po_date' => today()->format('Y-m-d'),
-        ])->assertRedirect();
+        $this->assertSame('po_created', $requestPo->status);
 
         $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
-        $this->assertSame(
-            "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.",
-            session('success')
-        );
         $this->assertSame('ongoing', $project->status);
         $this->assertSame(30, (int) $project->progress);
         $this->assertNull($project->project_manager_id);

@@ -152,6 +152,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'show'])->name('purchase-order-requests.show');
         Route::get('/request-po/{purchaseOrderRequest}/pdf', [PurchaseOrderRequestController::class, 'downloadPdf'])->name('purchase-order-requests.pdf');
         Route::put('/request-po/{purchaseOrderRequest}', [PurchaseOrderRequestController::class, 'update'])->name('purchase-order-requests.update');
+        Route::put('/request-po/{purchaseOrderRequest}/status', [PurchaseOrderRequestController::class, 'updateStatus'])->name('purchase-order-requests.status');
     });
 
     Route::middleware('role:administrator,sales_admin')->prefix('admin')->name('admin.')->group(function () {
