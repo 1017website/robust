@@ -237,8 +237,8 @@ module.exports = {
       s: [
         'Periksa rincian item, spesifikasi, subtotal, diskon, PPN, biaya tambahan, dan grand total.',
         'Unduh dokumen lewat tombol PDF atau Excel untuk dikirim ke customer.',
-        'Tekan Tandai Dikirim ke Customer setelah dokumen benar-benar dikirim.',
-        'Setelah customer merespons, tekan Won bila setuju atau Lost bila menolak.',
+        'Tekan Tandai Dikirim setelah dokumen benar-benar dikirim.',
+        'Setelah customer merespons, buka dropdown Respon Customer lalu pilih Customer Setuju atau Customer Tidak Setuju.',
         'Bila customer setuju, lanjutkan dengan membuat Request PO.',
       ],
     },

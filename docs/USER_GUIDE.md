@@ -347,10 +347,12 @@ Form penawaran terdiri dari empat langkah:
 2. Pilih penawaran berstatus **Approved SPV**.
 3. Klik **Download PDF**.
 4. Kirim PDF melalui metode yang telah dipilih.
-5. Klik tindakan **Tandai Dikirim ke Customer**.
-6. Setelah ada jawaban, pilih:
+5. Klik tindakan **Tandai Dikirim**.
+6. Setelah ada jawaban, buka dropdown **Respon Customer** lalu pilih:
    - **Customer Setuju** dan tambahkan catatan bila perlu.
    - **Customer Tidak Setuju** dan catat alasan atau hasil negosiasi.
+
+Dropdown **Respon Customer** baru muncul setelah penawaran ditandai dikirim.
 
 PDF belum dapat diunduh sebelum penawaran disetujui SPV.
 

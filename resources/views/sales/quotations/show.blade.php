@@ -15,9 +15,14 @@
     @if($quotation->status === 'ready')
         <form method="POST" action="{{ route('sales.quotations.sent-to-customer',$quotation) }}" class="d-inline">@csrf<button class="btn btn-soft btn-sm"><i class="bi bi-send me-1"></i>Tandai Dikirim</button></form>
     @endif
-    @if(in_array($quotation->status,['ready','sent_to_customer','sent','negotiation']))
-        <form method="POST" action="{{ route('sales.quotations.won',$quotation) }}" class="d-inline">@csrf<button class="btn btn-success btn-sm"><i class="bi bi-check2-circle me-1"></i>Customer Setuju</button></form>
-        <form method="POST" action="{{ route('sales.quotations.lost',$quotation) }}" class="d-inline">@csrf<button class="btn btn-soft btn-sm text-danger">Customer Tidak Setuju</button></form>
+    @if(in_array($quotation->status,['sent_to_customer','sent','negotiation']))
+        <div class="dropdown">
+            <button class="btn btn-soft btn-sm" data-bs-toggle="dropdown"><i class="bi bi-chat-square-text me-1"></i>Respon Customer</button>
+            <div class="dropdown-menu dropdown-menu-end">
+                <form method="POST" action="{{ route('sales.quotations.won',$quotation) }}">@csrf<button class="dropdown-item text-success"><i class="bi bi-check2-circle me-2"></i>Customer Setuju</button></form>
+                <form method="POST" action="{{ route('sales.quotations.lost',$quotation) }}">@csrf<button class="dropdown-item text-danger"><i class="bi bi-x-circle me-2"></i>Customer Tidak Setuju</button></form>
+            </div>
+        </div>
     @endif
     @if($quotation->canCreatePurchaseOrderRequest())
         <a href="{{ route('admin.purchase-order-requests.create',['quotation'=>$quotation->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i>Buat Project</a>
