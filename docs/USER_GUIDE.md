@@ -388,8 +388,9 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
 5. Isi nomor PO customer dan unggah buktinya jika tersedia.
 6. Lengkapi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, serta estimasi tanggal pengiriman.
 7. Kolom bertanda bintang (*) wajib diisi sebelum Request PO diajukan: Nama Customer,
-   Tanggal Request, serta penawaran CRM atau data PO Non-CRM sesuai sumber yang dipilih.
-   **Nomor Proyek** tidak wajib — kosongkan untuk memakai nomor otomatis.
+   **No PO Accurate**, **Tanggal PO Accurate**, Tanggal Request, serta penawaran CRM atau
+   data PO Non-CRM sesuai sumber yang dipilih. **Nomor Proyek** tidak wajib — kosongkan
+   untuk memakai nomor otomatis. Belum punya nomor PO Accurate? Simpan dulu sebagai draf.
 8. Atur **Checklist Kelengkapan** sesuai kebutuhan order:
    - Tujuh item bawaan muncul otomatis (penawaran final, PO customer, data customer,
      alamat pengiriman, PIC penerima, termin pembayaran, dan kesiapan input Accurate).
@@ -406,15 +407,20 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
      tombol **Lanjutkan & Ajukan** pada daftar atau detail Request PO untuk melengkapi
      dan mengajukannya. Draf tidak dapat diekspor PDF maupun ditagihkan.
 10. Administrator atau Sales membuka detail Request PO setelah diproses di Accurate dan mengubah status:
-    - Diajukan ke Accurate.
-    - Diproses di Accurate.
-    - PO Accurate Dibuat.
+    - Berjalan.
     - Lunas.
     - Dibatalkan.
+
+    Tidak ada lagi fase menunggu Accurate. PO diinput di Accurate **lebih dulu**, lalu
+    nomornya dicatat saat Project dibuat, sehingga Project langsung berstatus **Berjalan**
+    dan Request Process terbentuk otomatis.
 
     Fase produksi, installasi, dan pengiriman tidak lagi dicatat di sini, melainkan di
     **Request Process**. Panel **Progress Request Process** pada detail Project menampilkannya
     sebagai informasi saja.
+
+    Record lama yang masih berstatus Diajukan/Diproses di Accurate tetap terbaca dan
+    dihitung sebagai Project berjalan, tetapi status itu tidak dapat dipilih lagi.
 11. Isi nomor, tanggal, dan catatan PO Accurate.
 
 File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/XLSX.
@@ -684,6 +690,6 @@ Gunakan data demo dan lakukan latihan berikut secara berurutan:
 9. SPV melakukan Approve.
 10. Sales mengunduh PDF, menandai sudah dikirim, lalu mencatat Customer Setuju.
 11. Sales membuat Project.
-12. Sales membuat Request PO; Administrator mengubah status hingga PO Accurate Dibuat.
+12. PO diinput di Accurate, lalu Sales membuat Project dengan mencatat nomor PO tersebut.
 
 Jika seluruh langkah berhasil, pengguna sudah memahami alur inti ROBUST Sales CRM.

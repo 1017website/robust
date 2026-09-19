@@ -139,7 +139,7 @@ module.exports = {
         di Accurate.`,
       s: [
         'Cari berdasarkan nomor request, nomor PO customer, nomor PO Accurate, atau nama customer.',
-        'Filter Status memisahkan Draft, Diajukan ke Accurate, Diproses di Accurate, PO Accurate Dibuat, Lunas, dan Dibatalkan. Fase produksi sampai pengiriman dilacak di Request Process.',
+        'Filter Status memisahkan Draft, Berjalan, Lunas, dan Dibatalkan. Fase produksi sampai pengiriman dilacak di Request Process.',
         'Baris berstatus Draft menampilkan ikon pensil untuk melanjutkan pengisian.',
         'Klik Detail untuk membuka Request PO dan memprosesnya.',
       ],
@@ -156,8 +156,8 @@ module.exports = {
         'Panel Update Accurate di kanan dipakai untuk mengganti status, mengisi No PO Accurate, Tanggal PO Accurate, dan catatan.',
         'Tombol Export PDF menghasilkan dokumen Request PO untuk arsip atau lampiran.',
       ],
-      n: `Saat status diubah menjadi <b>PO Accurate Dibuat</b>, sistem otomatis membuat Project dan meneruskannya
-        ke Drafter atau langsung ke Produksi. No PO Accurate dan Tanggal PO Accurate wajib diisi pada status ini.`,
+      n: `PO diinput di Accurate lebih dulu, lalu nomornya dicatat saat Project dibuat. Project langsung berstatus
+        <b>Berjalan</b> dan Request Process terbentuk otomatis, diteruskan ke Drafter atau langsung ke Produksi.`,
     },
 
     'invoices': {

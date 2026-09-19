@@ -159,6 +159,8 @@ class August2026CrmRevisionTest extends TestCase
             'external_order_value' => 88000000,
             'external_sales_id' => $sales->id,
             'code' => 'PRJ-EXT-0088',
+            'accurate_po_number' => 'ACC-EXT-0088',
+            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Customer Existing',
             'request_date' => now()->toDateString(),
             'customer_po_number' => 'PO-CUST-0088',
@@ -218,6 +220,8 @@ class August2026CrmRevisionTest extends TestCase
             'external_project_name' => 'Order Checklist Kustom',
             'external_order_value' => 12000000,
             'code' => 'PRJ-CHECKLIST-001',
+            'accurate_po_number' => 'ACC-CHK-001',
+            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Checklist Kustom',
             'request_date' => now()->toDateString(),
             'checklist_present' => 1,
@@ -337,13 +341,15 @@ class August2026CrmRevisionTest extends TestCase
             'external_order_value' => 45000000,
             'external_sales_id' => $sales->id,
             'code' => 'PRJ-DRAFT-0001',
+            'accurate_po_number' => 'ACC-DRAFT-0001',
+            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Draft Pending',
             'request_date' => now()->toDateString(),
             'action' => 'submit',
         ])->assertRedirect(route('admin.purchase-order-requests.show', $draft));
 
         $draft->refresh();
-        $this->assertSame('submitted', $draft->status);
+        $this->assertSame('po_created', $draft->status);
         $this->assertSame('PRJ-DRAFT-0001', $draft->code);
         $this->assertNotNull($draft->quotation_id);
         $this->assertSame(45000000.0, (float) $draft->quotation->grand_total);
@@ -399,13 +405,15 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
             'project_number' => 'PRJ-READY-0001',
+            'accurate_po_number' => 'ACC-READY-0001',
+            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Siap Dikirim',
             'request_date' => now()->toDateString(),
         ])->assertRedirect();
 
         $this->assertDatabaseHas('purchase_order_requests', [
             'quotation_id' => $quotation->id,
-            'status' => 'submitted',
+            'status' => 'po_created',
         ]);
     }
 
@@ -432,7 +440,7 @@ class August2026CrmRevisionTest extends TestCase
             'customer_name' => $quotation->customer_name,
             'requested_by' => $sales->id,
             'request_date' => today(),
-            'status' => 'submitted',
+            'status' => 'po_created',
         ]);
 
         // Belum ada Project sama sekali: belum boleh ditagihkan.
@@ -950,12 +958,14 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
             'project_number' => 'PRJ-RESERVE-0001',
+            'accurate_po_number' => 'ACC-RESERVE-0001',
+            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Reserve Draft',
             'request_date' => now()->toDateString(),
             'action' => 'submit',
         ])->assertRedirect();
 
-        $this->assertSame('submitted', $draft->fresh()->status);
+        $this->assertSame('po_created', $draft->fresh()->status);
         $this->assertSame('request_po_created', $quotation->fresh()->status);
     }
 }

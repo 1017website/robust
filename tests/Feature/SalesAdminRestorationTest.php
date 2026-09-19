@@ -51,13 +51,20 @@ class SalesAdminRestorationTest extends TestCase
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $admin = User::factory()->create(['role' => 'sales_admin']);
-        $po = PurchaseOrderRequest::create(['code' => 'ROLE-PO', 'requested_by' => $sales->id, 'status' => 'submitted']);
+        $po = PurchaseOrderRequest::create([
+            'code' => 'ROLE-PO',
+            'requested_by' => $sales->id,
+            'status' => 'po_created',
+            'accurate_po_number' => 'ACC-ROLE-001',
+            'accurate_po_date' => today(),
+        ]);
+        $accurate = ['status' => 'paid', 'accurate_po_number' => 'ACC-ROLE-001', 'accurate_po_date' => today()->format('Y-m-d')];
         $this->actingAs($sales)->get(route('admin.purchase-order-requests.create'))->assertOk();
         $this->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
-        $this->put(route('admin.purchase-order-requests.update', $po), ['status' => 'processing_accurate'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->put(route('admin.purchase-order-requests.update', $po), $accurate)->assertRedirect()->assertSessionHasNoErrors();
         $this->actingAs($admin)->get(route('admin.purchase-order-requests.show', $po))->assertOk()->assertSee('Update Status Accurate');
-        $this->put(route('admin.purchase-order-requests.update', $po), ['status' => 'processing_accurate'])->assertSessionHasNoErrors()->assertRedirect();
-        $this->assertSame('processing_accurate', $po->fresh()->status);
+        $this->put(route('admin.purchase-order-requests.update', $po), $accurate)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame('paid', $po->fresh()->status);
     }
 
     public function test_restoration_migration_changes_only_confirmed_account(): void

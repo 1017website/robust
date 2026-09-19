@@ -57,7 +57,7 @@ class PipelineController extends Controller
             ],
             [
                 'label' => 'Project Open',
-                'count' => PurchaseOrderRequest::visibleTo($user)->whereIn('status', ['submitted', 'processing_accurate'])->count(),
+                'count' => PurchaseOrderRequest::visibleTo($user)->whereIn('status', PurchaseOrderRequest::openStatuses())->count(),
                 'route' => ($canOpenAdmin || $isSales) ? route('admin.purchase-order-requests.index') : '#',
                 'icon' => 'bi-receipt',
             ],
@@ -79,7 +79,7 @@ class PipelineController extends Controller
             ->get();
 
         $requestPoPipeline = PurchaseOrderRequest::with('quotation.sales')
-            ->whereIn('status', ['submitted', 'processing_accurate'])
+            ->whereIn('status', PurchaseOrderRequest::openStatuses())
             ->latest()
             ->limit(10)
             ->get();
@@ -93,7 +93,9 @@ class PipelineController extends Controller
                 ->where('status', 'draft')
                 ->where('updated_at', '<', now()->subDays(2))
                 ->count(),
-            'po_overdue' => PurchaseOrderRequest::whereIn('status', ['submitted', 'processing_accurate'])
+            // Project berjalan yang nomor PO Accurate-nya belum tercatat lebih dari 3 hari.
+            'po_overdue' => PurchaseOrderRequest::whereIn('status', PurchaseOrderRequest::openStatuses())
+                ->where(fn ($query) => $query->whereNull('accurate_po_number')->orWhere('accurate_po_number', ''))
                 ->whereDate('request_date', '<', now()->subDays(3)->toDateString())
                 ->count(),
         ];

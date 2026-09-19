@@ -298,7 +298,7 @@ module.exports = {
         'Lengkapi kolom bertanda bintang.',
         'Tekan Ajukan Request PO, atau Simpan Draf (Pending) bila masih ada yang kurang.',
       ],
-      n: 'Draf tidak membuat record baru saat diajukan — Request PO yang sama berubah statusnya menjadi Diajukan ke Accurate.',
+      n: 'Draf tidak membuat record baru saat diajukan — Request PO yang sama berubah statusnya menjadi Berjalan.',
     },
 
     'rpo-show': {

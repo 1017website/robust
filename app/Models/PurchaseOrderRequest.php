@@ -155,32 +155,42 @@ class PurchaseOrderRequest extends Model
     /**
      * Status proses setelah Project diajukan (dipakai pada form update Accurate).
      *
-     * Hanya memuat fase administratif: PO customer masuk sampai pelunasan. Fase
-     * produksi, installasi, dan pengiriman dilacak di Request Process melalui
-     * ProjectWorkflow agar tidak ada dua tempat mencatat fase yang sama.
+     * Modul ini mencatat PO yang sudah terbit di Accurate, jadi tidak ada lagi fase
+     * menunggu Accurate. Fase produksi sampai pengiriman dilacak di Request Process
+     * melalui ProjectWorkflow agar tidak ada dua tempat mencatat fase yang sama.
      */
     public static function processStatuses(): array
     {
         return [
-            'submitted' => 'Diajukan ke Accurate',
-            'processing_accurate' => 'Diproses di Accurate',
-            'po_created' => 'PO Accurate Dibuat',
+            'po_created' => 'Berjalan',
             'paid' => 'Lunas',
             'cancelled' => 'Dibatalkan',
         ];
     }
 
     /**
-     * Status lama yang kini menjadi tanggung jawab Request Process. Tidak dapat
-     * dipilih lagi, tetapi tetap punya label agar data historis terbaca.
+     * Status lama yang sudah tidak dipakai: fase menunggu Accurate kini tidak ada,
+     * dan fase produksi menjadi tanggung jawab Request Process. Tidak dapat dipilih
+     * lagi, tetapi tetap punya label agar data historis terbaca.
      */
     public static function legacyStatuses(): array
     {
         return [
+            'submitted' => 'Diajukan ke Accurate (status lama)',
+            'processing_accurate' => 'Diproses di Accurate (status lama)',
             'production' => 'Produksi (status lama)',
             'installation' => 'Installasi (status lama)',
             'invoicing' => 'Invoicing (status lama)',
         ];
+    }
+
+    /** Project yang masih berjalan: sudah diajukan, belum lunas maupun dibatalkan. */
+    public static function openStatuses(): array
+    {
+        return array_values(array_diff(
+            array_keys(self::statuses()),
+            ['draft', 'paid', 'cancelled']
+        ));
     }
 
     /** Opsi status yang boleh dipilih, termasuk status lama yang sedang dipakai record ini. */

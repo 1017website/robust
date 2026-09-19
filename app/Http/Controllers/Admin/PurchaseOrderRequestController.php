@@ -74,7 +74,7 @@ class PurchaseOrderRequestController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ProjectProvisioner $projectProvisioner)
     {
         $asDraft = $this->wantsDraft($request);
         $data = $this->validatedData($request, true, $asDraft);
@@ -94,7 +94,7 @@ class PurchaseOrderRequestController extends Controller
             }
         }
 
-        $poRequest = DB::transaction(function () use ($data, $isExternal, $asDraft, $quotation) {
+        $poRequest = DB::transaction(function () use ($data, $isExternal, $asDraft, $quotation, $projectProvisioner) {
             if ($isExternal && ! $asDraft) {
                 $quotation = $this->createExternalQuotation($data);
             }
@@ -102,12 +102,15 @@ class PurchaseOrderRequestController extends Controller
             $poRequest = PurchaseOrderRequest::create($this->attributes($data, $quotation) + [
                 'code' => $data['code'] ?? $this->nextRequestCode(),
                 'requested_by' => Auth::id(),
-                'status' => $asDraft ? 'draft' : 'submitted',
+                'status' => $asDraft ? 'draft' : 'po_created',
+                'processed_at' => $asDraft ? null : now(),
             ]);
 
             if (! $asDraft && $quotation && $quotation->status !== 'request_po_created') {
                 $quotation->update(['status' => 'request_po_created']);
             }
+
+            $this->provisionProject($poRequest, $asDraft, $projectProvisioner);
 
             return $poRequest;
         });
@@ -126,11 +129,11 @@ class PurchaseOrderRequestController extends Controller
             ->route('admin.purchase-order-requests.show', $poRequest)
             ->with('success', $asDraft
                 ? 'Draf Project tersimpan. Lengkapi datanya kapan saja lalu ajukan.'
-                : 'Project berhasil dibuat. Lanjutkan proses PO di Accurate.');
+                : 'Project berhasil dibuat dan langsung berjalan. Request Process sudah dibuat untuk memulai produksi.');
     }
 
     /** Menyimpan ulang draf, atau mengajukannya setelah lengkap. */
-    public function updateDraft(Request $request, PurchaseOrderRequest $purchaseOrderRequest)
+    public function updateDraft(Request $request, PurchaseOrderRequest $purchaseOrderRequest, ProjectProvisioner $projectProvisioner)
     {
         $this->authorizeAccess($purchaseOrderRequest);
         abort_unless($purchaseOrderRequest->isDraft(), 403, 'Hanya Project berstatus draf yang dapat diubah.');
@@ -158,7 +161,7 @@ class PurchaseOrderRequestController extends Controller
             $quotation = null;
         }
 
-        DB::transaction(function () use ($data, $isExternal, $asDraft, $purchaseOrderRequest, &$quotation) {
+        DB::transaction(function () use ($data, $isExternal, $asDraft, $purchaseOrderRequest, &$quotation, $projectProvisioner) {
             if ($isExternal && ! $asDraft && ! $quotation) {
                 $quotation = $this->createExternalQuotation($data);
             }
@@ -173,12 +176,15 @@ class PurchaseOrderRequestController extends Controller
 
             $purchaseOrderRequest->update($this->attributes($data, $quotation) + [
                 'code' => $data['code'] ?? $purchaseOrderRequest->code,
-                'status' => $asDraft ? 'draft' : 'submitted',
+                'status' => $asDraft ? 'draft' : 'po_created',
+                'processed_at' => $asDraft ? null : now(),
             ]);
 
             if (! $asDraft && $quotation && $quotation->status !== 'request_po_created') {
                 $quotation->update(['status' => 'request_po_created']);
             }
+
+            $this->provisionProject($purchaseOrderRequest, $asDraft, $projectProvisioner);
         });
 
         Logger::record(
@@ -191,7 +197,7 @@ class PurchaseOrderRequestController extends Controller
             ->route('admin.purchase-order-requests.show', $purchaseOrderRequest)
             ->with('success', $asDraft
                 ? 'Draf Project tersimpan.'
-                : 'Project berhasil diajukan. Lanjutkan proses PO di Accurate.');
+                : 'Project berhasil diajukan dan langsung berjalan. Request Process sudah dibuat untuk memulai produksi.');
     }
 
     /**
@@ -276,7 +282,7 @@ class PurchaseOrderRequestController extends Controller
                 'npwp_number' => $data['npwp_number'] ?? null,
                 'payment_term' => $data['payment_term'] ?? null,
                 'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-                'processed_at' => in_array($data['status'], ['processing_accurate', 'po_created', 'production', 'installation', 'invoicing', 'paid'], true) ? now() : $purchaseOrderRequest->processed_at,
+                'processed_at' => $data['status'] === 'cancelled' ? $purchaseOrderRequest->processed_at : now(),
             ]);
 
             return $data['status'] === 'po_created'
@@ -332,6 +338,19 @@ class PurchaseOrderRequestController extends Controller
     protected function nextRequestCode(): string
     {
         return app(PurchaseOrderNumberGenerator::class)->next();
+    }
+
+    /**
+     * Project yang diajukan langsung berjalan atas dasar PO yang sudah terbit di
+     * Accurate, jadi Request Process dibentuk saat itu juga. Draf belum memicu apa pun.
+     */
+    protected function provisionProject(PurchaseOrderRequest $poRequest, bool $asDraft, ProjectProvisioner $projectProvisioner): void
+    {
+        if ($asDraft || ! $poRequest->fresh()->quotation) {
+            return;
+        }
+
+        $projectProvisioner->fromAccuratePurchaseOrder($poRequest->fresh(), Auth::user());
     }
 
     protected function wantsDraft(Request $request): bool
@@ -445,6 +464,8 @@ class PurchaseOrderRequestController extends Controller
             'quotation_id' => $quotation?->id,
             'customer_id' => $quotation?->customer_id,
             'customer_name' => $data['customer_name'] ?? null,
+            'accurate_po_number' => $data['accurate_po_number'] ?? null,
+            'accurate_po_date' => $data['accurate_po_date'] ?? null,
             'customer_area' => $data['customer_area'] ?? null,
             'customer_division' => $data['customer_division'] ?? null,
             'request_date' => $data['request_date'] ?? null,
@@ -484,6 +505,10 @@ class PurchaseOrderRequestController extends Controller
             'code' => ['nullable', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($current?->id)],
             'purchase_source' => ['required', Rule::in(['crm', 'external'])],
             'customer_name' => $required('string', 'max:255'),
+            // Project dicatat dari PO yang sudah terbit di Accurate, jadi nomornya wajib
+            // saat diajukan. Belum punya nomornya? Simpan dulu sebagai draf.
+            'accurate_po_number' => $required('string', 'max:100'),
+            'accurate_po_date' => $required('date'),
             'customer_area' => ['nullable', 'string', 'max:255'],
             'customer_division' => ['nullable', 'string', 'max:255'],
             'request_date' => $required('date'),

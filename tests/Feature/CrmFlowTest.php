@@ -1068,6 +1068,8 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
             'code' => 'PRJ-MANUAL-001',
+            'accurate_po_number' => 'ACC-MANUAL-001',
+            'accurate_po_date' => now()->format('Y-m-d'),
             'customer_name' => $customer->name,
             'customer_area' => 'Area Pengujian',
             'customer_division' => 'Laboratorium',
@@ -1661,6 +1663,8 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
             'code' => 'PRJ-DIRECT-001',
+            'accurate_po_number' => 'ACC-DIRECT-001',
+            'accurate_po_date' => now()->format('Y-m-d'),
             'customer_name' => $customer->name,
             'request_date' => today()->format('Y-m-d'),
         ])->assertRedirect();
