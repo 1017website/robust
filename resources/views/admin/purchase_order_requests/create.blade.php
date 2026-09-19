@@ -154,10 +154,27 @@ function syncPurchaseSource(){
 }
 purchaseSourceInputs.forEach(el=>el.addEventListener('change',syncPurchaseSource));
 syncPurchaseSource();
+// Isian yang ditarik otomatis dari penawaran terpilih. Ganti penawaran berapa kali pun
+// tetap memperbarui isinya; hanya field yang sudah diketik manual yang dipertahankan.
+const autofillMap={customerName:'customer',customerArea:'area',customerDivision:'division',deliveryAddress:'address',deliveryPic:'pic',deliveryPhone:'phone'};
+const autofillFields=Object.entries(autofillMap)
+    .map(([id,key])=>({el:document.getElementById(id),key}))
+    .filter(row=>row.el);
+
+// Nilai bawaan dari server (old input atau draf) dihitung sebagai isian manual.
+autofillFields.forEach(({el})=>{
+    el.dataset.autofilled='';
+    el.addEventListener('input',()=>{ el.dataset.autofilled=''; });
+});
+
 quotationSelect?.addEventListener('change', function(){
-    const option=this.options[this.selectedIndex]; if(!option?.value) return;
-    const values={customerName:'customer',customerArea:'area',customerDivision:'division',deliveryAddress:'address',deliveryPic:'pic',deliveryPhone:'phone'};
-    Object.entries(values).forEach(([id,key])=>{ const el=document.getElementById(id); if(el && !el.value) el.value=option.dataset[key]||''; });
+    const option=this.options[this.selectedIndex];
+    if(!option?.value) return;
+    autofillFields.forEach(({el,key})=>{
+        if(el.value && !el.dataset.autofilled) return;
+        el.value=option.dataset[key]||'';
+        el.dataset.autofilled='1';
+    });
 });
 </script>@endpush
 @endsection
