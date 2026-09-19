@@ -388,9 +388,8 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
 5. Isi nomor PO customer dan unggah buktinya jika tersedia.
 6. Lengkapi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, serta estimasi tanggal pengiriman.
 7. Kolom bertanda bintang (*) wajib diisi sebelum Request PO diajukan: Nama Customer,
-   **No PO Accurate**, **Tanggal PO Accurate**, Tanggal Request, serta penawaran CRM atau
-   data PO Non-CRM sesuai sumber yang dipilih. **Nomor Proyek** tidak wajib — kosongkan
-   untuk memakai nomor otomatis. Belum punya nomor PO Accurate? Simpan dulu sebagai draf.
+   Tanggal Request, serta penawaran CRM atau data PO Non-CRM sesuai sumber yang dipilih.
+   **Nomor Proyek** tidak wajib — kosongkan untuk memakai nomor otomatis.
 8. Atur **Checklist Kelengkapan** sesuai kebutuhan order:
    - Tujuh item bawaan muncul otomatis (penawaran final, PO customer, data customer,
      alamat pengiriman, PIC penerima, termin pembayaran, dan kesiapan input Accurate).
@@ -414,9 +413,9 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
       kartu Status Project. Project yang sudah lunas tidak dapat dibatalkan, dan yang sudah
       dibatalkan dapat diaktifkan kembali.
 
-    Tidak ada lagi fase menunggu Accurate. PO diinput di Accurate **lebih dulu**, lalu
-    nomornya dicatat saat Project dibuat, sehingga Project langsung berstatus **Berjalan**
-    dan Request Process terbentuk otomatis.
+    Tidak ada lagi fase menunggu Accurate maupun kolom PO Accurate yang perlu diisi.
+    Project langsung berstatus **Berjalan** begitu diajukan, dan Request Process terbentuk
+    otomatis supaya produksi bisa mulai berjalan.
 
     Fase produksi, installasi, dan pengiriman tidak lagi dicatat di sini, melainkan di
     **Request Process**. Panel **Progress Request Process** pada detail Project menampilkannya
@@ -424,8 +423,8 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
 
     Record lama yang masih berstatus Diajukan/Diproses di Accurate tetap terbaca dan
     dihitung sebagai Project berjalan, tetapi status itu tidak dapat dipilih lagi.
-11. Nomor dan tanggal PO Accurate cukup diisi sekali saat Project dibuat; kartu Status Project
-    tidak lagi menanyakannya ulang.
+11. Nomor dan tanggal PO Accurate tidak lagi diminta di mana pun. Record lama yang sudah
+    terlanjur mengisinya tetap menampilkannya di daftar Project dan PDF.
 
 File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/XLSX.
 

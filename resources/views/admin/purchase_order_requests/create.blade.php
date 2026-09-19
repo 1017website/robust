@@ -81,16 +81,6 @@
                 </div>
                 <div class="row g-3">
                     <div class="col-md-12"><label class="form-label small fw-semibold">Nama Customer <span class="text-danger">*</span></label><input id="customerName" name="customer_name" value="{{ $value('customer_name', $quotation?->customer_name) }}" class="form-control" required></div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">No PO Accurate <span class="text-danger">*</span></label>
-                        <input name="accurate_po_number" value="{{ $value('accurate_po_number') }}" class="form-control @error('accurate_po_number') is-invalid @enderror" maxlength="100" placeholder="Nomor PO yang sudah terbit di Accurate">
-                        @error('accurate_po_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Tanggal PO Accurate <span class="text-danger">*</span></label>
-                        <input type="date" name="accurate_po_date" value="{{ old('accurate_po_date', $requestPo?->accurate_po_date?->format('Y-m-d')) }}" class="form-control @error('accurate_po_date') is-invalid @enderror">
-                        @error('accurate_po_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Area / Lokasi Customer</label><input id="customerArea" name="customer_area" value="{{ $value('customer_area', $quotation?->customer?->area ?: $quotation?->customer?->city) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Divisi Customer</label><input id="customerDivision" name="customer_division" value="{{ $value('customer_division', $quotation?->customer?->division) }}" class="form-control"></div>
                     <div class="col-md-4">
@@ -136,13 +126,12 @@
             <div class="card-r">
                 <div class="card-head"><h2>Alur</h2></div>
                 <ol class="small mb-0 ps-3">
-                    <li>Input PO di Accurate lebih dulu sampai nomornya terbit.</li>
                     <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
-                    <li>Lengkapi data customer, nomor PO Accurate, dan pengiriman.</li>
+                    <li>Lengkapi data customer, nomor PO customer, dan pengiriman.</li>
                     <li>Ajukan Project; statusnya langsung Berjalan dan Request Process terbentuk otomatis.</li>
-                    <li>Setelah pengiriman selesai dan invoice lunas, ubah status menjadi Lunas.</li>
+                    <li>Status menjadi Lunas sendiri setelah seluruh termin invoice terbayar.</li>
                 </ol>
-                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan. Belum punya nomor PO Accurate? Simpan dulu sebagai draf. Fase produksi sampai pengiriman dicatat di Request Process, bukan di sini.</div>
+                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan. Fase produksi sampai pengiriman dicatat di Request Process, bukan di sini.</div>
             </div>
             <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
             <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>

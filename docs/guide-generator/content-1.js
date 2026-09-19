@@ -156,9 +156,9 @@ module.exports = {
         'Kartu Status Project di kanan hanya menampilkan status berjalan dan tombol Batalkan Project; status selebihnya bergerak otomatis.',
         'Tombol Export PDF menghasilkan dokumen Request PO untuk arsip atau lampiran.',
       ],
-      n: `PO diinput di Accurate lebih dulu, lalu nomornya dicatat saat Project dibuat. Project langsung berstatus
-        <b>Berjalan</b> dan Request Process terbentuk otomatis, diteruskan ke Drafter atau langsung ke Produksi.
-        Status menjadi <b>Lunas</b> sendiri setelah seluruh termin invoice terbayar; hanya pembatalan yang manual.`,
+      n: `Project langsung berstatus <b>Berjalan</b> begitu diajukan, dan Request Process terbentuk otomatis,
+        diteruskan ke Drafter atau langsung ke Produksi. Status menjadi <b>Lunas</b> sendiri setelah seluruh
+        termin invoice terbayar; hanya pembatalan yang manual.`,
     },
 
     'invoices': {

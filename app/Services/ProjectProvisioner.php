@@ -55,8 +55,8 @@ class ProjectProvisioner
             'project_manager_id' => $drafterId,
             'internal_team' => $drafterId ? [(string) $drafterId] : [],
             'note' => $isDirectProduction
-                ? 'Project tanpa Request Gambar, otomatis diteruskan langsung ke Produksi setelah PO Accurate terbit: '.($requestPo->accurate_po_number ?: $requestPo->code)
-                : 'Project otomatis dibuat setelah PO Accurate terbit: '.($requestPo->accurate_po_number ?: $requestPo->code),
+                ? 'Tanpa Request Gambar, otomatis diteruskan langsung ke Produksi dari Project '.$requestPo->projectNumber()
+                : 'Otomatis dibuat dari Project '.$requestPo->projectNumber(),
             'progress' => $isDirectProduction ? 30 : 0,
             'created_by' => $creator?->id ?: $requestPo->requested_by,
         ]);
@@ -64,7 +64,7 @@ class ProjectProvisioner
             'production_status' => $isDirectProduction ? 'production' : 'stock',
         ]);
 
-        Logger::record('created', "Project {$project->code} otomatis dibuat dari PO Accurate {$requestPo->accurate_po_number}", $project);
+        Logger::record('created', "Request Process {$project->code} otomatis dibuat dari Project {$requestPo->projectNumber()}", $project);
 
         return $project;
     }

@@ -1068,8 +1068,6 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
             'code' => 'PRJ-MANUAL-001',
-            'accurate_po_number' => 'ACC-MANUAL-001',
-            'accurate_po_date' => now()->format('Y-m-d'),
             'customer_name' => $customer->name,
             'customer_area' => 'Area Pengujian',
             'customer_division' => 'Laboratorium',
@@ -1080,8 +1078,6 @@ class CrmFlowTest extends TestCase
         $poRequest = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
         $this->actingAs($admin)->put(route('admin.purchase-order-requests.update', $poRequest), [
             'status' => 'po_created',
-            'accurate_po_number' => 'ACC-PO-TEST',
-            'accurate_po_date' => now()->format('Y-m-d'),
         ])->assertRedirect();
 
         $this->assertSame('po_created', $poRequest->fresh()->status);
@@ -1663,8 +1659,6 @@ class CrmFlowTest extends TestCase
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
             'code' => 'PRJ-DIRECT-001',
-            'accurate_po_number' => 'ACC-DIRECT-001',
-            'accurate_po_date' => now()->format('Y-m-d'),
             'customer_name' => $customer->name,
             'request_date' => today()->format('Y-m-d'),
         ])->assertRedirect();

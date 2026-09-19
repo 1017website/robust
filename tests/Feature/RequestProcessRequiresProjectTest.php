@@ -83,8 +83,6 @@ class RequestProcessRequiresProjectTest extends TestCase
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
             'customer_name' => $quotation->customer_name,
-            'accurate_po_number' => 'ACC-RUN-001',
-            'accurate_po_date' => today()->format('Y-m-d'),
             'request_date' => today()->format('Y-m-d'),
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -99,19 +97,11 @@ class RequestProcessRequiresProjectTest extends TestCase
         $this->assertNotNull($quotation->fresh()->project);
     }
 
-    public function test_accurate_po_number_is_required_on_submit_but_not_on_draft(): void
+    public function test_a_draft_is_saved_without_starting_anything(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $quotation = $this->wonQuotation($sales);
 
-        $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
-            'purchase_source' => 'crm',
-            'quotation_id' => $quotation->id,
-            'customer_name' => $quotation->customer_name,
-            'request_date' => today()->format('Y-m-d'),
-        ])->assertSessionHasErrors(['accurate_po_number', 'accurate_po_date']);
-
-        // Draf tetap bisa disimpan tanpa nomor PO Accurate.
         $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
@@ -122,6 +112,18 @@ class RequestProcessRequiresProjectTest extends TestCase
         $draft = PurchaseOrderRequest::where('quotation_id', $quotation->id)->firstOrFail();
         $this->assertTrue($draft->isDraft());
         $this->assertNull($quotation->fresh()->project);
+    }
+
+    public function test_the_form_no_longer_asks_for_accurate_po_details(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()
+            ->assertDontSee('No PO Accurate')
+            ->assertDontSee('Tanggal PO Accurate')
+            ->assertDontSee('name="accurate_po_number"', false)
+            ->assertDontSee('name="accurate_po_date"', false);
     }
 
     public function test_waiting_for_accurate_statuses_are_retired_but_still_readable(): void

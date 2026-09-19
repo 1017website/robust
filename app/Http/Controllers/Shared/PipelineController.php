@@ -93,9 +93,8 @@ class PipelineController extends Controller
                 ->where('status', 'draft')
                 ->where('updated_at', '<', now()->subDays(2))
                 ->count(),
-            // Project berjalan yang nomor PO Accurate-nya belum tercatat lebih dari 3 hari.
+            // Project yang masih berjalan lebih dari 3 hari sejak dicatat.
             'po_overdue' => PurchaseOrderRequest::whereIn('status', PurchaseOrderRequest::openStatuses())
-                ->where(fn ($query) => $query->whereNull('accurate_po_number')->orWhere('accurate_po_number', ''))
                 ->whereDate('request_date', '<', now()->subDays(3)->toDateString())
                 ->count(),
         ];

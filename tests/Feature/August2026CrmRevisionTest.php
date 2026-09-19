@@ -159,8 +159,6 @@ class August2026CrmRevisionTest extends TestCase
             'external_order_value' => 88000000,
             'external_sales_id' => $sales->id,
             'code' => 'PRJ-EXT-0088',
-            'accurate_po_number' => 'ACC-EXT-0088',
-            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Customer Existing',
             'request_date' => now()->toDateString(),
             'customer_po_number' => 'PO-CUST-0088',
@@ -179,8 +177,6 @@ class August2026CrmRevisionTest extends TestCase
 
         $this->actingAs($administrator)->put(route('admin.purchase-order-requests.update', $requestPo), [
             'status' => 'po_created',
-            'accurate_po_number' => 'ACC-PO-0088',
-            'accurate_po_date' => now()->toDateString(),
             'delivery_address' => 'Jakarta Selatan',
         ])->assertRedirect();
 
@@ -220,8 +216,6 @@ class August2026CrmRevisionTest extends TestCase
             'external_project_name' => 'Order Checklist Kustom',
             'external_order_value' => 12000000,
             'code' => 'PRJ-CHECKLIST-001',
-            'accurate_po_number' => 'ACC-CHK-001',
-            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Checklist Kustom',
             'request_date' => now()->toDateString(),
             'checklist_present' => 1,
@@ -341,8 +335,6 @@ class August2026CrmRevisionTest extends TestCase
             'external_order_value' => 45000000,
             'external_sales_id' => $sales->id,
             'code' => 'PRJ-DRAFT-0001',
-            'accurate_po_number' => 'ACC-DRAFT-0001',
-            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Draft Pending',
             'request_date' => now()->toDateString(),
             'action' => 'submit',
@@ -405,8 +397,6 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
             'project_number' => 'PRJ-READY-0001',
-            'accurate_po_number' => 'ACC-READY-0001',
-            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Siap Dikirim',
             'request_date' => now()->toDateString(),
         ])->assertRedirect();
@@ -958,8 +948,6 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'crm',
             'quotation_id' => $quotation->id,
             'project_number' => 'PRJ-RESERVE-0001',
-            'accurate_po_number' => 'ACC-RESERVE-0001',
-            'accurate_po_date' => now()->toDateString(),
             'customer_name' => 'PT Reserve Draft',
             'request_date' => now()->toDateString(),
             'action' => 'submit',

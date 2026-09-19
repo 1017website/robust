@@ -477,8 +477,6 @@ class PurchaseOrderRequestController extends Controller
             'quotation_id' => $quotation?->id,
             'customer_id' => $quotation?->customer_id,
             'customer_name' => $data['customer_name'] ?? null,
-            'accurate_po_number' => $data['accurate_po_number'] ?? null,
-            'accurate_po_date' => $data['accurate_po_date'] ?? null,
             'customer_area' => $data['customer_area'] ?? null,
             'customer_division' => $data['customer_division'] ?? null,
             'request_date' => $data['request_date'] ?? null,
@@ -518,10 +516,6 @@ class PurchaseOrderRequestController extends Controller
             'code' => ['nullable', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($current?->id)],
             'purchase_source' => ['required', Rule::in(['crm', 'external'])],
             'customer_name' => $required('string', 'max:255'),
-            // Project dicatat dari PO yang sudah terbit di Accurate, jadi nomornya wajib
-            // saat diajukan. Belum punya nomornya? Simpan dulu sebagai draf.
-            'accurate_po_number' => $required('string', 'max:100'),
-            'accurate_po_date' => $required('date'),
             'customer_area' => ['nullable', 'string', 'max:255'],
             'customer_division' => ['nullable', 'string', 'max:255'],
             'request_date' => $required('date'),
