@@ -309,9 +309,10 @@ module.exports = {
       s: [
         'Ubah Nama Perusahaan dan Tagline yang tampil di sidebar serta dokumen cetak.',
         'Unggah logo perusahaan dan favicon.',
+        'Atur Nomor Awal Urutan pada Penomoran PO untuk menyambung nomor yang sudah berjalan di Accurate.',
         'Panel perintah sistem dipakai untuk pemeliharaan teknis seperti membersihkan cache.',
       ],
-      n: 'Logo maksimal 2 MB dan favicon maksimal 1 MB.',
+      n: 'Logo maksimal 2 MB dan favicon maksimal 1 MB. Nomor PO berformat urutan + bulan + tahun, contoh 010926, dan urutannya dimulai ulang tiap awal bulan.',
     },
 
     'search': {

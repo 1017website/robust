@@ -459,6 +459,19 @@ Administrator tidak dapat menonaktifkan atau menghapus akunnya sendiri. Sistem j
 3. Unggah logo maksimal 2 MB dan favicon maksimal 1 MB.
 4. Klik **Simpan Branding**.
 
+#### Mengatur penomoran PO — khusus Administrator
+
+Nomor PO dibuat otomatis dengan format **urutan + bulan + tahun**. Contoh `010926` berarti
+urutan ke-1, bulan 09, tahun 2026. Urutan dimulai ulang dari 01 setiap awal bulan.
+
+1. Buka **System Settings**, bagian **Penomoran PO**.
+2. Isi **Nomor Awal Urutan**, misalnya `48` bila penomoran di Accurate sudah sampai 47.
+3. Klik **Simpan Penomoran**.
+
+Nomor awal berlaku **sekali**: dipakai pada PO berikutnya, lalu urutan berjalan normal dan
+kembali ke 01 pada bulan berikutnya. Isi nilai baru kapan saja bila perlu melompat lagi.
+Pratinjau nomor PO berikutnya ditampilkan di samping kolom isian.
+
 Bagian **Maintenance Command** hanya dijalankan oleh pengguna teknis yang memahami dampaknya.
 
 ### 5.2 Sales

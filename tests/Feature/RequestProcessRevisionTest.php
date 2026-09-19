@@ -95,14 +95,15 @@ class RequestProcessRevisionTest extends TestCase
 
     public function test_automatic_number_skips_a_number_already_entered_manually(): void
     {
+        $period = date('my');
         $sales = User::factory()->create(['role' => 'sales']);
         $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
-            'action' => 'draft', 'code' => 'RPO-'.date('Y').'-0002',
+            'action' => 'draft', 'code' => '02'.$period,
         ])->assertSessionHasNoErrors();
         $this->post(route('admin.purchase-order-requests.store'), [
             'action' => 'draft',
         ])->assertSessionHasNoErrors();
-        $this->assertSame('RPO-'.date('Y').'-0003', PurchaseOrderRequest::latest('id')->first()->code);
+        $this->assertSame('03'.$period, PurchaseOrderRequest::latest('id')->first()->code);
     }
 
     public function test_sales_can_upload_and_replace_po_after_submission_but_drafter_cannot(): void

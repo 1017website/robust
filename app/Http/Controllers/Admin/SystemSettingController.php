@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Services\Logger;
+use App\Services\PurchaseOrderNumberGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -22,6 +23,9 @@ class SystemSettingController extends Controller
             'company_logo' => SystemSetting::assetUrl('company_logo'),
             'company_favicon' => SystemSetting::assetUrl('company_favicon'),
             'sales_monthly_target' => (float) SystemSetting::value('sales_monthly_target', 0),
+            'po_number_start_counter' => app(PurchaseOrderNumberGenerator::class)->startCounter(),
+            'po_number_start_applied' => app(PurchaseOrderNumberGenerator::class)->startApplied(),
+            'po_number_preview' => app(PurchaseOrderNumberGenerator::class)->preview(),
         ];
 
         $commands = $this->allowedCommands();
@@ -66,6 +70,34 @@ class SystemSettingController extends Controller
         Logger::record('updated', 'Branding sistem diperbarui dari menu System Settings');
 
         return back()->with('success', 'Branding perusahaan berhasil diperbarui. Jika favicon belum berubah, refresh browser dengan Ctrl+F5.');
+    }
+
+    public function updateNumbering(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'po_number_start_counter' => ['required', 'integer', 'min:1', 'max:999'],
+        ], [
+            'po_number_start_counter.required' => 'Nomor awal PO wajib diisi.',
+            'po_number_start_counter.integer' => 'Nomor awal PO harus berupa angka.',
+            'po_number_start_counter.min' => 'Nomor awal PO minimal 1.',
+            'po_number_start_counter.max' => 'Nomor awal PO maksimal 999.',
+        ]);
+
+        $generator = app(PurchaseOrderNumberGenerator::class);
+        $changed = $generator->startCounter() !== (int) $data['po_number_start_counter'];
+
+        SystemSetting::putValue(PurchaseOrderNumberGenerator::START_KEY, $data['po_number_start_counter'], 'number');
+
+        // Nomor awal berlaku sekali. Mengubah nilainya mengaktifkannya kembali.
+        if ($changed) {
+            SystemSetting::putValue(PurchaseOrderNumberGenerator::APPLIED_KEY, '0', 'boolean');
+        }
+
+        Logger::record('updated', "Nomor awal PO diatur ke {$data['po_number_start_counter']} dari menu System Settings");
+
+        return back()->with('success', $changed
+            ? 'Nomor awal PO disimpan dan akan dipakai pada PO berikutnya.'
+            : 'Nomor awal PO tidak berubah.');
     }
 
     public function runCommand(Request $request): RedirectResponse

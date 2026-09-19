@@ -34,7 +34,7 @@
                 <div class="mb-3">
                     <label for="requestCode" class="form-label small fw-semibold">Nomor PO</label>
                     <input id="requestCode" name="code" value="{{ $value('code') }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" aria-describedby="requestCodeHelp">
-                    <div id="requestCodeHelp" class="form-text">Isi nomor sendiri. Kosongkan untuk memakai nomor otomatis; nomor harus unik.</div>
+                    <div id="requestCodeHelp" class="form-text">Kosongkan untuk memakai nomor otomatis berformat urutan + bulan + tahun, contoh <code>010926</code>. Isi sendiri bila perlu nomor khusus; nomor harus unik.</div>
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="row g-2 mb-3">

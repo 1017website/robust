@@ -10,6 +10,7 @@ use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Services\OperationalDocumentPdf;
 use App\Services\ProjectProvisioner;
+use App\Services\PurchaseOrderNumberGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -330,12 +331,7 @@ class PurchaseOrderRequestController extends Controller
 
     protected function nextRequestCode(): string
     {
-        $sequence = PurchaseOrderRequest::count() + 1;
-        do {
-            $code = sprintf('RPO-%s-%04d', date('Y'), $sequence++);
-        } while (PurchaseOrderRequest::where('code', $code)->exists());
-
-        return $code;
+        return app(PurchaseOrderNumberGenerator::class)->next();
     }
 
     protected function wantsDraft(Request $request): bool

@@ -121,6 +121,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrator')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
         Route::put('/system-settings/branding', [SystemSettingController::class, 'updateBranding'])->name('system-settings.branding');
+        Route::put('/system-settings/numbering', [SystemSettingController::class, 'updateNumbering'])->name('system-settings.numbering');
         Route::post('/system-settings/run-command', [SystemSettingController::class, 'runCommand'])->name('system-settings.run-command');
 
         // Manage User (CRUD + atur akses/role)

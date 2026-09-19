@@ -77,6 +77,41 @@
                 </div>
             </form>
         </div>
+
+        <div class="card-r">
+            <div class="card-head">
+                <h2>Penomoran PO</h2>
+                <span class="pill">Format CCMMYY</span>
+            </div>
+            <p class="small text-muted-2">
+                Nomor PO dibuat otomatis dengan format <strong>urutan + bulan + tahun</strong>.
+                Contoh <code>010926</code> berarti urutan ke-1, bulan 09, tahun 2026.
+                Urutan dimulai ulang dari 01 setiap awal bulan.
+            </p>
+            <form method="POST" action="{{ route('admin.system-settings.numbering') }}">
+                @csrf
+                @method('PUT')
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Nomor Awal Urutan</label>
+                        <input type="number" name="po_number_start_counter" min="1" max="999" class="form-control @error('po_number_start_counter') is-invalid @enderror" value="{{ old('po_number_start_counter', $settings['po_number_start_counter']) }}" required>
+                        @error('po_number_start_counter')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-7">
+                        <div class="text-muted-2 small">Nomor PO berikutnya</div>
+                        <div class="fw-bold fs-5 fw-num">{{ $settings['po_number_preview'] }}</div>
+                    </div>
+                </div>
+                <div class="form-text mt-2">
+                    @if($settings['po_number_start_applied'])
+                        Nomor awal sudah terpakai. Isi nilai baru bila ingin melompat ke urutan lain, misalnya saat menyambung penomoran yang sudah berjalan di Accurate.
+                    @else
+                        Nomor awal ini akan dipakai pada PO berikutnya, lalu urutan berjalan normal.
+                    @endif
+                </div>
+                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i> Simpan Penomoran</button>
+            </form>
+        </div>
     </div>
 
     <div class="col-lg-5">
