@@ -100,7 +100,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                     <div>
                         <h3>{{ $directProduction ? 'Dokumen Referensi Produksi' : 'Gambar Fabrikasi' }}</h3>
-                        <small class="text-muted-2">{{ $directProduction ? 'Penawaran ini tidak melalui Request Gambar. Produksi menggunakan item, spesifikasi, dan dokumen penawaran sebagai acuan.' : 'Drafter mengunggah gambar final setelah PO Accurate terbit. Produksi dapat mengunduh file aktif dari sini.' }}</small>
+                        <small class="text-muted-2">{{ $directProduction ? 'Penawaran ini tidak melalui Request Gambar. Produksi menggunakan item, spesifikasi, dan dokumen penawaran sebagai acuan.' : 'Drafter mengunggah gambar final setelah Project berjalan. Produksi dapat mengunduh file aktif dari sini.' }}</small>
                     </div>
                     <x-status-badge
                         :status="$directProduction || $fabricationDocuments->isNotEmpty() ? 'completed' : 'pending'"

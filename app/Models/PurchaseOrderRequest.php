@@ -58,7 +58,7 @@ class PurchaseOrderRequest extends Model
         }
 
         // Invoice hanya boleh terbit setelah barang benar-benar sampai: Project sudah
-        // terbentuk (PO Accurate dibuat) dan Delivery menandai pengiriman selesai.
+        // terbentuk (Project berjalan) dan Delivery menandai pengiriman selesai.
         return $this->quotation?->project?->workflow?->delivery_status === 'completed';
     }
 
@@ -79,7 +79,7 @@ class PurchaseOrderRequest extends Model
             'delivery_address' => 'Alamat pengiriman / lokasi project sudah jelas',
             'pic_contact' => 'PIC penerima barang / project sudah jelas',
             'payment_term' => 'Termin pembayaran sudah jelas',
-            'accurate_ready' => 'Data siap diinput ke Accurate',
+            'accurate_ready' => 'Data order sudah lengkap',
         ];
     }
 
@@ -153,11 +153,11 @@ class PurchaseOrderRequest extends Model
     }
 
     /**
-     * Status proses setelah Project diajukan (dipakai pada form update Accurate).
+     * Status Project setelah diajukan.
      *
-     * Modul ini mencatat PO yang sudah terbit di Accurate, jadi tidak ada lagi fase
-     * menunggu Accurate. Fase produksi sampai pengiriman dilacak di Request Process
-     * melalui ProjectWorkflow agar tidak ada dua tempat mencatat fase yang sama.
+     * Modul ini mencatat PO yang sudah terbit, jadi tidak ada lagi fase menunggu.
+     * Fase produksi sampai pengiriman dilacak di Request Process melalui
+     * ProjectWorkflow agar tidak ada dua tempat mencatat fase yang sama.
      */
     public static function processStatuses(): array
     {
@@ -169,15 +169,15 @@ class PurchaseOrderRequest extends Model
     }
 
     /**
-     * Status lama yang sudah tidak dipakai: fase menunggu Accurate kini tidak ada,
+     * Status lama yang sudah tidak dipakai: fase menunggu kini tidak ada,
      * dan fase produksi menjadi tanggung jawab Request Process. Tidak dapat dipilih
      * lagi, tetapi tetap punya label agar data historis terbaca.
      */
     public static function legacyStatuses(): array
     {
         return [
-            'submitted' => 'Diajukan ke Accurate (status lama)',
-            'processing_accurate' => 'Diproses di Accurate (status lama)',
+            'submitted' => 'Diajukan (status lama)',
+            'processing_accurate' => 'Diproses (status lama)',
             'production' => 'Produksi (status lama)',
             'installation' => 'Installasi (status lama)',
             'invoicing' => 'Invoicing (status lama)',

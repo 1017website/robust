@@ -77,8 +77,8 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $y -= 22;
         $page .= $this->detailPanel($y, 140, [
             ['No. PO Customer', $requestPo->customer_po_number],
-            ['No. PO Accurate', $requestPo->accurate_po_number],
-            ['Tanggal PO Accurate', $requestPo->accurate_po_date?->format('d/m/Y')],
+            ['No. PO', $requestPo->accurate_po_number],
+            ['Tanggal PO', $requestPo->accurate_po_date?->format('d/m/Y')],
             ['Area / Lokasi', $requestPo->customer_area],
             ['Divisi Customer', $requestPo->customer_division],
             ['Estimasi Pengiriman', $requestPo->expected_delivery_date?->format('d/m/Y')],
@@ -513,7 +513,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             $lineY -= 11;
         }
         if ($requestPo->accurate_note) {
-            $content .= $this->text(self::LEFT + 14, $top - 90, 'ACCURATE: '.$this->truncate($requestPo->accurate_note, 58), 6.8, true, [0.08, 0.35, 0.62]);
+            $content .= $this->text(self::LEFT + 14, $top - 90, 'CATATAN: '.$this->truncate($requestPo->accurate_note, 58), 6.8, true, [0.08, 0.35, 0.62]);
         }
 
         $x = self::LEFT + 316;
@@ -614,7 +614,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $requestPo = $invoice->purchaseOrderRequest;
         $info = [
             ['No. PO Customer', $requestPo?->customer_po_number],
-            ['No. PO Accurate', $requestPo?->accurate_po_number],
+            ['No. PO', $requestPo?->accurate_po_number],
             ['Termin', $requestPo?->payment_term],
             ['Diterbitkan oleh', $invoice->creator?->name],
         ];

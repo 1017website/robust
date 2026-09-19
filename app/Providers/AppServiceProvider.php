@@ -67,9 +67,8 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 if ($user->canManageBackOffice() || $user->isSales()) {
-                    $submittedPo = PurchaseOrderRequest::visibleTo($user)->where('status', 'submitted')->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'admin.purchase-order-requests.*', $submittedPo, 'Project baru', 'Data PO perlu diproses ke Accurate.', route('admin.purchase-order-requests.index', ['status' => 'submitted']), 'bi-receipt', 'text-success');
-
+                    // Notifikasi "perlu diproses" dihapus: Project langsung berjalan saat diajukan,
+                    // jadi tidak ada lagi antrean yang menunggu tindakan di modul ini.
                     $readyInvoices = $user->canManageBackOffice() && $hasExpandedOperationalWorkflow
                         ? PurchaseOrderRequest::whereDoesntHave('invoice')
                             ->whereHas('quotation.project.workflow', fn ($workflow) => $workflow->where('delivery_status', 'completed'))
@@ -95,7 +94,7 @@ class AppServiceProvider extends ServiceProvider
                             ->where('category', 'fabrication_drawing')
                             ->where('is_current', true))
                         ->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $fabricationProjects, 'Gambar fabrikasi diperlukan', 'PO Accurate sudah terbit. Lengkapi gambar fabrikasi untuk Produksi.', route('drafter.projects.index'), 'bi-rulers', 'text-warning');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $fabricationProjects, 'Gambar fabrikasi diperlukan', 'Project sudah berjalan. Lengkapi gambar fabrikasi untuk Produksi.', route('drafter.projects.index'), 'bi-rulers', 'text-warning');
                 }
 
                 if ($user->isProduction()) {

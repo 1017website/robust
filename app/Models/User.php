@@ -60,7 +60,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Proses Accurate pada Project dan penerbitan Invoice.
+     * Pengelolaan Project dan penerbitan Invoice.
      */
     public function canManageBackOffice(): bool
     {

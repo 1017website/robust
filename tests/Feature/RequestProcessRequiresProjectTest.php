@@ -132,7 +132,7 @@ class RequestProcessRequiresProjectTest extends TestCase
         $this->assertArrayNotHasKey('processing_accurate', PurchaseOrderRequest::processStatuses());
 
         // Record lama tetap terbaca dan masih dihitung sebagai Project berjalan.
-        $this->assertSame('Diajukan ke Accurate (status lama)', PurchaseOrderRequest::statuses()['submitted']);
+        $this->assertSame('Diajukan (status lama)', PurchaseOrderRequest::statuses()['submitted']);
         $this->assertContains('submitted', PurchaseOrderRequest::openStatuses());
         $this->assertContains('po_created', PurchaseOrderRequest::openStatuses());
         $this->assertNotContains('paid', PurchaseOrderRequest::openStatuses());

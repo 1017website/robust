@@ -32,7 +32,7 @@
 
         @unless($requestPo->isDraft())
         <div class="card-r">
-            <div class="card-head"><h2>Data Input Accurate</h2></div>
+            <div class="card-head"><h2>Data Pengiriman &amp; Penagihan</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
                 @csrf @method('PUT')
                 <div class="row g-3">
@@ -45,7 +45,7 @@
                     <div class="col-md-6"><label class="form-label small fw-semibold">Estimasi Tanggal Kirim</label><input type="date" name="expected_delivery_date" value="{{ old('expected_delivery_date', $requestPo->expected_delivery_date?->format('Y-m-d')) }}" class="form-control"></div>
                 </div>
 
-                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Data Accurate</button>
+                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Data</button>
             </form>
         </div>
         @endunless
@@ -109,7 +109,7 @@
         @if($requestPo->isDraft())
         <div class="card-r">
             <div class="card-head"><h2>Draf Belum Diajukan</h2></div>
-            <p class="small text-muted-2 mb-3">Project ini masih tersimpan sebagai draf. Data belum diteruskan ke Accurate dan belum bisa diproses menjadi Project atau Invoice.</p>
+            <p class="small text-muted-2 mb-3">Project ini masih tersimpan sebagai draf. Data belum diajukan dan belum bisa diproses menjadi Request Process atau Invoice.</p>
             <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary w-100"><i class="bi bi-pencil-square me-1"></i>Lanjutkan Pengisian</a>
         </div>
         @elseif(auth()->user()->canManageBackOffice())

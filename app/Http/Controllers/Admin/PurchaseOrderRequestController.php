@@ -354,8 +354,8 @@ class PurchaseOrderRequestController extends Controller
     }
 
     /**
-     * Project yang diajukan langsung berjalan atas dasar PO yang sudah terbit di
-     * Accurate, jadi Request Process dibentuk saat itu juga. Draf belum memicu apa pun.
+     * Project yang diajukan langsung berjalan atas dasar PO yang sudah terbit, jadi
+     * Request Process dibentuk saat itu juga. Draf belum memicu apa pun.
      */
     protected function provisionProject(PurchaseOrderRequest $poRequest, bool $asDraft, ProjectProvisioner $projectProvisioner): void
     {

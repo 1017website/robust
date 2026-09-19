@@ -120,7 +120,7 @@ class Quotation extends Model
 
     /**
      * Request Process hanya boleh dibuat setelah Project (Request PO) diajukan, karena
-     * produksi berjalan atas dasar PO yang sudah tercatat di Accurate. Draf dan Project
+     * produksi berjalan atas dasar PO yang sudah tercatat. Draf dan Project
      * yang dibatalkan belum dihitung sebagai dasar yang sah.
      */
     public function canCreateProject(): bool

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Monitoring Pipeline')
 @section('content')
-<x-page-header title="Monitoring Pipeline" subtitle="Pantauan end-to-end dari Pra Lead sampai Project Accurate" />
+<x-page-header title="Monitoring Pipeline" subtitle="Pantauan end-to-end dari Pra Lead sampai Project selesai" />
 
 <div class="row g-3 mb-3">
     @foreach($cards as $card)

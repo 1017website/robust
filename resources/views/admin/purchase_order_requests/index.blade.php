@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Project')
 @section('content')
-<x-page-header title="Project" subtitle="Monitoring project dari penawaran CRM maupun order existing menuju Accurate">
+<x-page-header title="Project" subtitle="Monitoring project dari penawaran CRM maupun order existing">
     <a href="{{ route('admin.purchase-order-requests.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Project Baru</a>
 </x-page-header>
 
@@ -18,7 +18,7 @@
     </form>
     <div class="table-wrap">
         <table class="table-r">
-            <thead><tr><th>No Request</th><th>No Proyek</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO Accurate</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>No Request</th><th>No Proyek</th><th>Penawaran</th><th>Customer</th><th>Project</th><th>Sales</th><th>No PO</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($requests as $r)
                 <tr>

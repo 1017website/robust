@@ -104,7 +104,7 @@
                 </div>
                 <div class="form-text mt-2">
                     @if($settings['po_number_start_applied'])
-                        Nomor awal sudah terpakai. Isi nilai baru bila ingin melompat ke urutan lain, misalnya saat menyambung penomoran yang sudah berjalan di Accurate.
+                        Nomor awal sudah terpakai. Isi nilai baru bila ingin melompat ke urutan lain, misalnya saat menyambung penomoran yang sudah berjalan sebelumnya.
                     @else
                         Nomor awal ini akan dipakai pada PO berikutnya, lalu urutan berjalan normal.
                     @endif

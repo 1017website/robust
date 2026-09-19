@@ -20,7 +20,7 @@
 @endphp
 <x-page-header
     :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Project Baru'"
-    subtitle="Catat PO customer untuk dimonitor sampai PO resmi terbit di Accurate">
+    subtitle="Catat PO customer dan jalankan project sampai lunas">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
 </x-page-header>
 
@@ -69,7 +69,7 @@
                 </div>
 
                 <div id="externalQuotationFields" class="mb-3 {{ $purchaseSource === 'external' ? '' : 'd-none' }}">
-                    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>CRM akan membuat catatan penawaran eksternal otomatis agar alur Accurate, Project, dan Invoice tetap terhubung.</div>
+                    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>CRM akan membuat catatan penawaran eksternal otomatis agar alur Project dan Invoice tetap terhubung.</div>
                     <div class="row g-3">
                         <div class="col-md-8"><label class="form-label small fw-semibold">Nama Project / Order <span class="text-danger">*</span></label><input name="external_project_name" value="{{ old('external_project_name', $requestPo?->quotation?->project_name) }}" class="form-control" placeholder="Nama project pada PO customer" required></div>
                         <div class="col-md-4"><label class="form-label small fw-semibold">No Penawaran Eksternal</label><input name="external_quotation_number" value="{{ old('external_quotation_number') }}" class="form-control" placeholder="Opsional"></div>
@@ -104,7 +104,7 @@
             </div>
 
             <div class="card-r">
-                <div class="card-head"><h2>Data untuk Input Accurate</h2></div>
+                <div class="card-head"><h2>Data Pengiriman &amp; Penagihan</h2></div>
                 <div class="row g-3">
                     <div class="col-md-12"><label class="form-label small fw-semibold">Alamat Pengiriman / Lokasi Project</label><textarea id="deliveryAddress" name="delivery_address" rows="2" class="form-control">{{ $value('delivery_address', $quotation?->customer?->address) }}</textarea></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">PIC Penerima / Project</label><input id="deliveryPic" name="delivery_pic_name" value="{{ $value('delivery_pic_name', $quotation?->customer?->primaryPic?->name ?: $quotation?->pic_name) }}" class="form-control"></div>
@@ -113,7 +113,7 @@
                     <div class="col-md-6"><label class="form-label small fw-semibold">Nomor NPWP</label><input name="npwp_number" value="{{ $value('npwp_number') }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Termin Pembayaran</label><input name="payment_term" value="{{ $value('payment_term') }}" class="form-control" placeholder="Contoh: DP 50%, Pelunasan 50% sebelum kirim"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Estimasi Tanggal Kirim</label><input type="date" name="expected_delivery_date" value="{{ old('expected_delivery_date', $requestPo?->expected_delivery_date?->format('Y-m-d')) }}" class="form-control"></div>
-                    <div class="col-md-12"><label class="form-label small fw-semibold">Catatan Internal</label><textarea name="admin_note" rows="4" class="form-control" placeholder="Catatan untuk proses input PO di Accurate">{{ $value('admin_note') }}</textarea></div>
+                    <div class="col-md-12"><label class="form-label small fw-semibold">Catatan Internal</label><textarea name="admin_note" rows="4" class="form-control" placeholder="Catatan internal untuk tim">{{ $value('admin_note') }}</textarea></div>
                 </div>
             </div>
         </div>
@@ -121,7 +121,7 @@
             <div class="card-r">
                 <div class="card-head"><h2>Checklist Kelengkapan</h2></div>
                 <x-checklist-editor :items="$checklistItems" id-prefix="chk_create" />
-                <div class="form-text">Checklist membantu memastikan data siap sebelum diinput ke Accurate.</div>
+                <div class="form-text">Checklist membantu memastikan data order sudah lengkap sebelum Project diajukan.</div>
             </div>
             <div class="card-r">
                 <div class="card-head"><h2>Alur</h2></div>
@@ -135,7 +135,7 @@
             </div>
             <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
             <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>
-            <div class="form-text mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum diteruskan ke Accurate.</div>
+            <div class="form-text mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum dijalankan.</div>
         </div>
     </div>
 </form>

@@ -33,7 +33,7 @@
 </x-page-header>
 
 @if(auth()->user()->canCreateProject() && in_array($quotation->status, \App\Models\Quotation::wonStatuses(), true) && ! $quotation->project && ! $quotation->canCreateProject())
-    <div class="alert alert-light border small"><i class="bi bi-info-circle me-1"></i>Request Process baru dapat dibuat setelah Project diajukan, karena produksi berjalan atas dasar PO yang tercatat di Accurate.</div>
+    <div class="alert alert-light border small"><i class="bi bi-info-circle me-1"></i>Request Process baru dapat dibuat setelah Project diajukan, karena produksi berjalan atas dasar PO yang sudah tercatat.</div>
 @endif
 
 <div class="row g-3">

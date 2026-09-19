@@ -88,7 +88,7 @@ class DocumentController extends Controller
                         && in_array($documentable->quotation?->purchaseOrderRequest?->status, [
                             'po_created', 'production', 'installation', 'invoicing', 'paid',
                         ], true));
-                abort_unless($canUploadFabrication, 422, 'Gambar fabrikasi baru dapat diunggah setelah PO Accurate dibuat.');
+                abort_unless($canUploadFabrication, 422, 'Gambar fabrikasi baru dapat diunggah setelah Project berjalan.');
             }
         }
 

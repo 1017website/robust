@@ -49,22 +49,21 @@ class PraLeadSidebarAccessTest extends TestCase
         }
     }
 
-    public function test_po_badge_matches_sales_visibility_and_status(): void
+    /** Daftar Project hanya menampilkan record milik sales sendiri atau penawarannya. */
+    public function test_project_list_matches_sales_visibility_and_status(): void
     {
         $sales = User::factory()->create();
         $other = User::factory()->create();
-        $admin = User::factory()->create(['role' => 'administrator']);
-        PurchaseOrderRequest::create(['code' => 'OTHER-PO', 'requested_by' => $other->id, 'status' => 'submitted']);
-        $this->assertSame(1, $this->counts($sales)['admin.purchase-order-requests.*'] ?? 0);
+        PurchaseOrderRequest::create(['code' => 'OTHER-PO', 'requested_by' => $other->id, 'status' => 'po_created']);
         $this->actingAs($sales)->get(route('admin.purchase-order-requests.index'))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 1);
 
-        PurchaseOrderRequest::create(['code' => 'OWN-PO', 'requested_by' => $sales->id, 'status' => 'submitted']);
+        PurchaseOrderRequest::create(['code' => 'OWN-PO', 'requested_by' => $sales->id, 'status' => 'po_created']);
         PurchaseOrderRequest::create(['code' => 'DRAFT-PO', 'requested_by' => $sales->id, 'status' => 'draft']);
         $quote = Quotation::create(['customer_name' => 'Customer', 'project_name' => 'Project', 'sales_id' => $sales->id]);
-        PurchaseOrderRequest::create(['code' => 'QUOTE-PO', 'quotation_id' => $quote->id, 'requested_by' => $other->id, 'status' => 'submitted']);
-        $this->assertSame(3, $this->counts($sales)['admin.purchase-order-requests.*']);
-        $this->assertSame(3, $this->counts($admin)['admin.purchase-order-requests.*']);
-        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index', ['status' => 'submitted']))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 3);
+        PurchaseOrderRequest::create(['code' => 'QUOTE-PO', 'quotation_id' => $quote->id, 'requested_by' => $other->id, 'status' => 'po_created']);
+
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index'))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 4);
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.index', ['status' => 'po_created']))->assertOk()->assertViewHas('requests', fn ($rows) => $rows->total() === 3);
     }
 
     public function test_design_badges_exclude_unassigned_other_and_deleted_records(): void

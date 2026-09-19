@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
  * Nomor PO berformat CCMMYY, contoh 010926 = urutan 01, bulan 09, tahun 2026.
  *
  * Counter direset setiap bulan. Nomor awal dapat diatur sekali lewat System Settings
- * untuk menyambung penomoran yang sudah berjalan di Accurate; setelah terpakai, nomor
+ * untuk menyambung penomoran yang sudah berjalan sebelumnya; setelah terpakai, nomor
  * awal tidak berlaku lagi sampai nilainya diubah kembali oleh Administrator.
  */
 class PurchaseOrderNumberGenerator
