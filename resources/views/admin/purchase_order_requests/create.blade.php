@@ -20,7 +20,7 @@
 @endphp
 <x-page-header
     :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Project Baru'"
-    subtitle="Buat request monitoring untuk dilanjutkan menjadi PO di Accurate">
+    subtitle="Catat PO customer untuk dimonitor sampai PO resmi terbit di Accurate">
     <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
 </x-page-header>
 
@@ -32,7 +32,7 @@
             <div class="card-r">
                 <div class="card-head"><h2>Sumber Project</h2></div>
                 <div class="mb-3">
-                    <label for="requestCode" class="form-label small fw-semibold">Nomor RPO</label>
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor PO</label>
                     <input id="requestCode" name="code" value="{{ $value('code') }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" aria-describedby="requestCodeHelp">
                     <div id="requestCodeHelp" class="form-text">Isi nomor sendiri. Kosongkan untuk memakai nomor otomatis; nomor harus unik.</div>
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -128,11 +128,12 @@
                 <div class="card-head"><h2>Alur</h2></div>
                 <ol class="small mb-0 ps-3">
                     <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
-                    <li>Lengkapi data customer, PO, dan pengiriman.</li>
+                    <li>Lengkapi data customer, nomor PO, dan pengiriman.</li>
                     <li>Ajukan Project atau simpan sebagai draf jika belum lengkap.</li>
-                    <li>PO resmi dibuat di Accurate.</li>
+                    <li>Input PO di Accurate, lalu catat nomor dan tanggalnya lewat Update Accurate.</li>
+                    <li>Request Process otomatis terbentuk saat status menjadi PO Accurate Dibuat, dan produksi mulai berjalan.</li>
                 </ol>
-                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan.</div>
+                <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan. Fase produksi sampai pengiriman dicatat di Request Process, bukan di sini.</div>
             </div>
             <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
             <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>

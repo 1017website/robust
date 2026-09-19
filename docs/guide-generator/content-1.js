@@ -139,7 +139,7 @@ module.exports = {
         di Accurate.`,
       s: [
         'Cari berdasarkan nomor request, nomor PO customer, nomor PO Accurate, atau nama customer.',
-        'Filter Status memisahkan Draft, Diajukan ke Accurate, Diproses di Accurate, PO Accurate Dibuat, Produksi, Installasi, Invoicing, Lunas, dan Dibatalkan.',
+        'Filter Status memisahkan Draft, Diajukan ke Accurate, Diproses di Accurate, PO Accurate Dibuat, Lunas, dan Dibatalkan. Fase produksi sampai pengiriman dilacak di Request Process.',
         'Baris berstatus Draft menampilkan ikon pensil untuk melanjutkan pengisian.',
         'Klik Detail untuk membuka Request PO dan memprosesnya.',
       ],

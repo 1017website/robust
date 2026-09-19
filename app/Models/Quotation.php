@@ -118,10 +118,16 @@ class Quotation extends Model
             && ! $this->purchaseOrderRequest()->exists();
     }
 
+    /**
+     * Request Process hanya boleh dibuat setelah Project (Request PO) diajukan, karena
+     * produksi berjalan atas dasar PO yang sudah tercatat di Accurate. Draf dan Project
+     * yang dibatalkan belum dihitung sebagai dasar yang sah.
+     */
     public function canCreateProject(): bool
     {
         return in_array($this->status, self::wonStatuses(), true)
-            && ! $this->project()->exists();
+            && ! $this->project()->exists()
+            && $this->purchaseOrderRequest()->whereNotIn('status', ['draft', 'cancelled'])->exists();
     }
 
     public function isUploaded(): bool

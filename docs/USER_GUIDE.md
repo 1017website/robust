@@ -360,10 +360,14 @@ PDF belum dapat diunduh sebelum penawaran disetujui SPV.
 
 Project dibuat dari penawaran yang telah dimenangkan/customer setuju.
 
+> **Prasyarat:** menu **Project** (Request PO) harus sudah diajukan lebih dulu untuk penawaran
+> tersebut. Produksi berjalan atas dasar PO yang tercatat di Accurate, sehingga penawaran yang
+> belum punya Project — atau Project-nya masih draf — belum muncul di daftar pilihan.
+
 1. Login sebagai **Sales**.
-2. Buka menu **Projects**.
+2. Buka menu **Request Process**.
 3. Klik **Tambah Project**.
-4. Pilih penawaran Won/Customer Setuju yang belum memiliki project.
+4. Pilih penawaran Won/Customer Setuju yang belum memiliki Request Process.
 5. Isi nama project, kategori, prioritas, status awal, tanggal mulai, dan target selesai.
 6. Pilih Project Manager.
 7. Tambahkan tim internal, vendor, lokasi, scope of work, metode kerja, skema pembayaran, dan catatan bila diperlukan.
@@ -405,7 +409,12 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
     - Diajukan ke Accurate.
     - Diproses di Accurate.
     - PO Accurate Dibuat.
+    - Lunas.
     - Dibatalkan.
+
+    Fase produksi, installasi, dan pengiriman tidak lagi dicatat di sini, melainkan di
+    **Request Process**. Panel **Progress Request Process** pada detail Project menampilkannya
+    sebagai informasi saja.
 11. Isi nomor, tanggal, dan catatan PO Accurate.
 
 File PO customer maksimal 5 MB dengan format PDF, JPG, PNG, DOC/DOCX, atau XLS/XLSX.
@@ -574,7 +583,7 @@ Gunakan **Reports** untuk memantau performa penjualan atau produksi. Pada lapora
 | Approved SPV | Disetujui | Sales download PDF dan mengirim |
 | Ditolak SPV | Tidak disetujui | Sales membaca alasan dan memperbaiki bila relevan |
 | Dikirim ke Customer | Penawaran sudah dikirim | Catat respons customer |
-| Customer Setuju | Deal berhasil | Buat Project dan Request PO |
+| Customer Setuju | Deal berhasil | Buat Project (Request PO) dulu, lalu Request Process |
 | Customer Tidak Setuju | Deal tidak berhasil | Catat alasan dan tindak lanjut |
 | Request PO Dibuat | Proses diteruskan ke PO | Pantau proses Accurate |
 

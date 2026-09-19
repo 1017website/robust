@@ -247,7 +247,7 @@ class PurchaseOrderRequestController extends Controller
         abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project harus diajukan terlebih dahulu.');
 
         $data = $request->validate([
-            'status' => ['required', 'in:'.implode(',', array_keys(PurchaseOrderRequest::processStatuses()))],
+            'status' => ['required', 'in:'.implode(',', array_keys($purchaseOrderRequest->selectableStatuses()))],
             'accurate_po_number' => ['nullable', 'required_if:status,po_created', 'string', 'max:100'],
             'accurate_po_date' => ['nullable', 'required_if:status,po_created', 'date'],
             'accurate_note' => ['nullable', 'string', 'max:1500'],
@@ -325,7 +325,7 @@ class PurchaseOrderRequestController extends Controller
 
         Logger::record('updated', "Nomor dan dokumen PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
-        return back()->with('success', 'Nomor RPO dan dokumen PO berhasil disimpan.');
+        return back()->with('success', 'Nomor PO dan dokumen PO berhasil disimpan.');
     }
 
     protected function nextRequestCode(): string
@@ -540,10 +540,10 @@ class PurchaseOrderRequestController extends Controller
     protected function validationMessages(): array
     {
         return [
-            'code.unique' => 'Nomor RPO sudah digunakan. Gunakan nomor lain.',
-            'code.max' => 'Nomor RPO maksimal 100 karakter.',
-            'code.required_without' => 'Isi nomor RPO atau pilih dokumen PO yang akan diunggah.',
-            'customer_po_file.required_without' => 'Pilih dokumen PO atau isi nomor RPO.',
+            'code.unique' => 'Nomor PO sudah digunakan. Gunakan nomor lain.',
+            'code.max' => 'Nomor PO maksimal 100 karakter.',
+            'code.required_without' => 'Isi nomor PO atau pilih dokumen PO yang akan diunggah.',
+            'customer_po_file.required_without' => 'Pilih dokumen PO atau isi nomor PO.',
             'customer_po_file.mimes' => 'Dokumen PO harus berupa PDF, JPG, PNG, Word, atau Excel.',
             'customer_po_file.max' => 'Ukuran dokumen PO maksimal 5 MB.',
         ];

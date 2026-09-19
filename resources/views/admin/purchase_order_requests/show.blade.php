@@ -84,11 +84,11 @@
     </div>
     <div class="col-lg-4">
         <div class="card-r">
-            <div class="card-head"><h2>Nomor RPO &amp; Dokumen PO</h2></div>
+            <div class="card-head"><h2>Nomor PO &amp; Dokumen PO</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.document', $requestPo) }}" enctype="multipart/form-data">
                 @csrf @method('PUT')
                 <div class="mb-3">
-                    <label for="requestCode" class="form-label small fw-semibold">Nomor RPO</label>
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor PO</label>
                     <input id="requestCode" name="code" value="{{ old('code', $requestPo->code) }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" required>
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
@@ -131,7 +131,7 @@
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Status *</label>
                     <select name="status" class="form-select" required>
-                        @foreach(\App\Models\PurchaseOrderRequest::processStatuses() as $k=>$v)
+                        @foreach($requestPo->selectableStatuses() as $k=>$v)
                             <option value="{{ $k }}" @selected($requestPo->status === $k)>{{ $v }}</option>
                         @endforeach
                     </select>
@@ -143,6 +143,19 @@
             </form>
         </div>
         @endif
+        @php($workflow = $requestPo->quotation?->project?->workflow)
+        <div class="card-r">
+            <div class="card-head"><h2>Progress Request Process</h2></div>
+            @if($workflow)
+                <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Produksi</span><span class="fw-semibold">{{ \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? '—' }}</span></div>
+                <div class="progress mb-3" style="height:8px"><div class="progress-bar" style="width: {{ (int) $workflow->production_progress }}%"></div></div>
+                <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">QC</span><span class="fw-semibold">{{ $workflow->qc_completed ? 'Selesai' : 'Belum selesai' }}</span></div>
+                <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Pengiriman</span><span class="fw-semibold">{{ \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? '—' }}</span></div>
+                <div class="form-text mt-2">Hanya tampilan. Fase produksi sampai pengiriman diperbarui oleh tim terkait di <a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}">Request Process</a>.</div>
+            @else
+                <p class="small text-muted-2 mb-0">Request Process belum dibuat untuk Project ini, sehingga fase produksi sampai pengiriman belum berjalan.</p>
+            @endif
+        </div>
         <div class="card-r">
             <div class="card-head"><h2>Progress Checklist</h2></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Kelengkapan</span><strong>{{ $progress['percent'] }}%</strong></div>

@@ -136,24 +136,52 @@ class PurchaseOrderRequest extends Model
         return $this->checklistProgress()['complete'];
     }
 
-    /** Seluruh status termasuk draf yang belum diajukan. */
+    /** Seluruh status termasuk draf yang belum diajukan dan status lama. */
     public static function statuses(): array
     {
-        return ['draft' => 'Draft'] + self::processStatuses();
+        return ['draft' => 'Draft'] + self::processStatuses() + self::legacyStatuses();
     }
 
-    /** Status proses setelah Project diajukan (dipakai pada form update Accurate). */
+    /**
+     * Status proses setelah Project diajukan (dipakai pada form update Accurate).
+     *
+     * Hanya memuat fase administratif: PO customer masuk sampai pelunasan. Fase
+     * produksi, installasi, dan pengiriman dilacak di Request Process melalui
+     * ProjectWorkflow agar tidak ada dua tempat mencatat fase yang sama.
+     */
     public static function processStatuses(): array
     {
         return [
             'submitted' => 'Diajukan ke Accurate',
             'processing_accurate' => 'Diproses di Accurate',
             'po_created' => 'PO Accurate Dibuat',
-            'production' => 'Produksi',
-            'installation' => 'Installasi',
-            'invoicing' => 'Invoicing',
             'paid' => 'Lunas',
             'cancelled' => 'Dibatalkan',
         ];
+    }
+
+    /**
+     * Status lama yang kini menjadi tanggung jawab Request Process. Tidak dapat
+     * dipilih lagi, tetapi tetap punya label agar data historis terbaca.
+     */
+    public static function legacyStatuses(): array
+    {
+        return [
+            'production' => 'Produksi (status lama)',
+            'installation' => 'Installasi (status lama)',
+            'invoicing' => 'Invoicing (status lama)',
+        ];
+    }
+
+    /** Opsi status yang boleh dipilih, termasuk status lama yang sedang dipakai record ini. */
+    public function selectableStatuses(): array
+    {
+        $options = self::processStatuses();
+
+        if (array_key_exists($this->status, self::legacyStatuses())) {
+            $options = [$this->status => self::legacyStatuses()[$this->status]] + $options;
+        }
+
+        return $options;
     }
 }

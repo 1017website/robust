@@ -117,6 +117,8 @@ class ProjectController extends Controller
         return Quotation::with('sales')
             ->whereIn('status', Quotation::wonStatuses())
             ->whereDoesntHave('project')
+            // Sejalan dengan Quotation::canCreateProject(): Project (Request PO) harus sudah diajukan.
+            ->whereHas('purchaseOrderRequest', fn ($query) => $query->whereNotIn('status', ['draft', 'cancelled']))
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest();
     }
