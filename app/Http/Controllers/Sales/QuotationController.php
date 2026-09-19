@@ -132,7 +132,7 @@ class QuotationController extends Controller
     {
         $this->ensureOwner($quotation);
 
-        $quotation->load('items.itemMaster', 'customer', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'documents.uploader', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'approvalHistories.user');
+        $quotation->load('items.itemMaster', 'customer.primaryPic', 'sales', 'designRequest', 'designRequest.lead', 'lead', 'documents.uploader', 'approvedBy', 'rejectedBy', 'purchaseOrderRequest', 'project', 'approvalHistories.user');
 
         return view('sales.quotations.show', compact('quotation'));
     }

@@ -66,6 +66,30 @@
             @endforelse
         </div>
 
+        @if($quotation->customer_note || $quotation->internal_note || $quotation->customer_response_note)
+            <div class="card-r">
+                <div class="card-head"><h2>Catatan</h2></div>
+                @if($quotation->customer_note)
+                    <div class="mb-3">
+                        <div class="text-muted-2 small fw-semibold mb-1">Catatan untuk Customer</div>
+                        <div class="small">{!! nl2br(e($quotation->customer_note)) !!}</div>
+                    </div>
+                @endif
+                @if($quotation->internal_note)
+                    <div class="mb-3">
+                        <div class="text-muted-2 small fw-semibold mb-1">Catatan Internal</div>
+                        <div class="small">{!! nl2br(e($quotation->internal_note)) !!}</div>
+                    </div>
+                @endif
+                @if($quotation->customer_response_note)
+                    <div>
+                        <div class="text-muted-2 small fw-semibold mb-1">Respon Customer</div>
+                        <div class="small">{!! nl2br(e($quotation->customer_response_note)) !!}</div>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="card-r">
             <div class="card-head"><h2>Riwayat Penawaran</h2></div>
             <div class="table-wrap"><table class="table-r"><thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>Status</th><th>Catatan</th></tr></thead><tbody>
@@ -79,16 +103,39 @@
     </div>
 
     <div class="col-lg-4">
-        @unless($quotation->isUploaded())
-            <div class="card-r">
-                <div class="card-head"><h2>Ringkasan Harga</h2></div>
+        <div class="card-r">
+            <div class="card-head"><h2>Ringkasan Harga</h2></div>
+            @unless($quotation->isUploaded())
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Subtotal</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->subtotal) }}</span></div>
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Diskon</span><span class="fw-num text-danger">- {{ \App\Support\Format::rupiah($quotation->discount_amount) }}</span></div>
+                @if($quotation->discount_reason)
+                    <div class="form-text mb-2">Alasan diskon: {{ $quotation->discount_reason }}</div>
+                @endif
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">PPN ({{ rtrim(rtrim(number_format($quotation->tax_percent,2),'0'),'.') }}%)</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->tax_amount) }}</span></div>
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted-2">Biaya Tambahan</span><span class="fw-num">{{ \App\Support\Format::rupiah($quotation->additional_total) }}</span></div><hr>
-                <div class="d-flex justify-content-between"><strong>Grand Total</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($quotation->grand_total) }}</strong></div>
-            </div>
-        @endunless
+            @endunless
+            <div class="d-flex justify-content-between"><strong>Grand Total</strong><strong class="fw-num">{{ \App\Support\Format::rupiah($quotation->grand_total) }}</strong></div>
+            @if($quotation->isUploaded())
+                <div class="form-text mt-2">Penawaran diunggah sebagai file, jadi rincian harga per item tidak tercatat di sistem.</div>
+            @endif
+        </div>
+
+        <div class="card-r">
+            <div class="card-head"><h2>Customer &amp; PIC</h2></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Customer</span><span class="fw-semibold text-end">@if($quotation->customer)<a href="{{ route('sales.customers.show', $quotation->customer) }}">{{ $quotation->customer_name }}</a>@else{{ $quotation->customer_name ?: '—' }}@endif</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Project</span><span class="fw-semibold text-end">{{ $quotation->project_name ?: '—' }}</span></div>
+            @php($pic = $quotation->customer?->primaryPic)
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">PIC</span><span class="fw-semibold text-end">{{ $quotation->pic_name ?: ($pic?->name ?: '—') }}</span></div>
+            @if($pic?->position)
+                <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Jabatan PIC</span><span class="fw-semibold text-end">{{ $pic->position }}</span></div>
+            @endif
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Telepon</span><span class="fw-semibold text-end">{{ $pic?->phone ?: ($quotation->customer?->phone ?: '—') }}</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Email</span><span class="fw-semibold text-end text-break">{{ $pic?->email ?: ($quotation->customer?->email ?: '—') }}</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Kota</span><span class="fw-semibold text-end">{{ $quotation->customer?->city ?: '—' }}</span></div>
+            @if($quotation->customer?->address)
+                <div class="mt-3"><div class="text-muted-2 small">Alamat</div><div class="small">{{ $quotation->customer->address }}</div></div>
+            @endif
+        </div>
         <div class="card-r">
             <div class="card-head"><h2>Pencatatan Penawaran</h2></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Status</span><span class="fw-semibold">{{ $quotation->statusLabel() }}</span></div>
@@ -101,7 +148,19 @@
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Tanggal</span><span class="fw-semibold">{{ $quotation->quote_date?->format('d M Y') }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Berlaku s/d</span><span class="fw-semibold">{{ $quotation->valid_until?->format('d M Y') }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Pengiriman</span><span class="fw-semibold">{{ ucfirst($quotation->delivery_method) }}</span></div>
+            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Prioritas</span><span class="fw-semibold">{{ ['low'=>'Rendah','medium'=>'Sedang','high'=>'Tinggi'][$quotation->priority] ?? ucfirst((string) $quotation->priority) }}</span></div>
+            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Mata Uang</span><span class="fw-semibold">{{ $quotation->currency ?: 'IDR' }}</span></div>
+            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Dikirim</span><span class="fw-semibold">{{ $quotation->sent_at?->format('d M Y H:i') ?: 'Belum dikirim' }}</span></div>
+            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Respon Customer</span><span class="fw-semibold">{{ $quotation->customer_response_at?->format('d M Y H:i') ?: 'Belum ada' }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Sales</span><span class="fw-semibold">{{ $quotation->sales?->name ?: '—' }}</span></div>
+        </div>
+
+        <div class="card-r">
+            <div class="card-head"><h2>Terhubung Dengan</h2></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Lead</span><span class="fw-semibold text-end">@if($quotation->lead)<a href="{{ route('sales.leads.show', $quotation->lead) }}">{{ $quotation->lead->code ?: $quotation->lead->instansi }}</a>@else—@endif</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Design Request</span><span class="fw-semibold text-end">@if($quotation->designRequest)<a href="{{ route('sales.design-requests.show', $quotation->designRequest) }}">{{ $quotation->designRequest->code }}</a>@else Tanpa Design Request @endif</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Project</span><span class="fw-semibold text-end">@if($quotation->purchaseOrderRequest)<a href="{{ route('admin.purchase-order-requests.show', $quotation->purchaseOrderRequest) }}">{{ $quotation->purchaseOrderRequest->projectNumber() }}</a>@else Belum dibuat @endif</span></div>
+            <div class="mb-2 d-flex justify-content-between gap-2"><span class="text-muted-2">Request Process</span><span class="fw-semibold text-end">@if($quotation->project)<a href="{{ route('sales.projects.show', $quotation->project) }}">{{ $quotation->project->code }}</a>@else Belum dibuat @endif</span></div>
         </div>
     </div>
 </div>

@@ -32,7 +32,7 @@
             <div class="card-r">
                 <div class="card-head"><h2>Sumber Project</h2></div>
                 <div class="mb-3">
-                    <label for="requestCode" class="form-label small fw-semibold">Nomor PO</label>
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor Proyek</label>
                     <input id="requestCode" name="code" value="{{ $value('code') }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" aria-describedby="requestCodeHelp">
                     <div id="requestCodeHelp" class="form-text">Kosongkan untuk memakai nomor otomatis berformat urutan + bulan + tahun, contoh <code>010926</code>. Isi sendiri bila perlu nomor khusus; nomor harus unik.</div>
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -80,8 +80,7 @@
                     </div>
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-4"><label class="form-label small fw-semibold">Nomor Proyek <span class="text-danger">*</span></label><input name="project_number" value="{{ $value('project_number') }}" class="form-control" placeholder="Isi manual" required></div>
-                    <div class="col-md-8"><label class="form-label small fw-semibold">Nama Customer <span class="text-danger">*</span></label><input id="customerName" name="customer_name" value="{{ $value('customer_name', $quotation?->customer_name) }}" class="form-control" required></div>
+                    <div class="col-md-12"><label class="form-label small fw-semibold">Nama Customer <span class="text-danger">*</span></label><input id="customerName" name="customer_name" value="{{ $value('customer_name', $quotation?->customer_name) }}" class="form-control" required></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Area / Lokasi Customer</label><input id="customerArea" name="customer_area" value="{{ $value('customer_area', $quotation?->customer?->area ?: $quotation?->customer?->city) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">Divisi Customer</label><input id="customerDivision" name="customer_division" value="{{ $value('customer_division', $quotation?->customer?->division) }}" class="form-control"></div>
                     <div class="col-md-4">
@@ -128,7 +127,7 @@
                 <div class="card-head"><h2>Alur</h2></div>
                 <ol class="small mb-0 ps-3">
                     <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
-                    <li>Lengkapi data customer, nomor PO, dan pengiriman.</li>
+                    <li>Lengkapi data customer, nomor PO customer, dan pengiriman.</li>
                     <li>Ajukan Project atau simpan sebagai draf jika belum lengkap.</li>
                     <li>Input PO di Accurate, lalu catat nomor dan tanggalnya lewat Update Accurate.</li>
                     <li>Request Process otomatis terbentuk saat status menjadi PO Accurate Dibuat, dan produksi mulai berjalan.</li>

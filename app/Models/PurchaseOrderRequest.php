@@ -41,6 +41,16 @@ class PurchaseOrderRequest extends Model
         return $this->status === 'draft';
     }
 
+    /**
+     * Nomor Proyek. Sejak kolom isian digabung, nomor record inilah Nomor Proyek.
+     * Kolom `project_number` dipertahankan agar record lama tetap memakai nomor
+     * yang sudah terlanjur dipakai di dokumen dan invoice.
+     */
+    public function projectNumber(): string
+    {
+        return (string) ($this->project_number ?: $this->code);
+    }
+
     public function canCreateInvoice(): bool
     {
         if (in_array($this->status, ['draft', 'cancelled'], true) || $this->invoice()->exists()) {

@@ -79,7 +79,7 @@ class InvoiceController extends Controller
             $invoice = Invoice::create([
                 'code' => CodeGenerator::next(Invoice::class, 'INV', 4, true), 'purchase_order_request_id' => $requestPo->id,
                 'invoice_date' => $data['invoice_date'], 'customer_name' => $requestPo->customer_name ?: $quotation->customer_name,
-                'project_number' => $requestPo->project_number, 'project_name' => $quotation->project_name,
+                'project_number' => $requestPo->projectNumber(), 'project_name' => $quotation->project_name,
                 'subtotal' => $quotation->subtotal, 'tax_amount' => $quotation->tax_amount,
                 'installation_amount' => $installation, 'grand_total' => $quotation->grand_total,
                 'status' => 'issued', 'note' => $data['note'] ?? null, 'created_by' => Auth::id(),

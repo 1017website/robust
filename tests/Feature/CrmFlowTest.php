@@ -1067,7 +1067,7 @@ class CrmFlowTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
-            'project_number' => 'PRJ-MANUAL-001',
+            'code' => 'PRJ-MANUAL-001',
             'customer_name' => $customer->name,
             'customer_area' => 'Area Pengujian',
             'customer_division' => 'Laboratorium',
@@ -1085,7 +1085,9 @@ class CrmFlowTest extends TestCase
         $this->assertSame('po_created', $poRequest->fresh()->status);
         $this->assertSame('request_po_created', $quotation->fresh()->status);
         $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
-        $this->assertSame('PRJ-MANUAL-001', $project->code);
+        // Request Process memakai kode PRJ sendiri, tidak meminjam nomor Project.
+        $this->assertStringStartsWith('PRJ-', $project->code);
+        $this->assertNotSame('PRJ-MANUAL-001', $project->code);
         $this->assertSame($drafter->id, $project->project_manager_id);
 
         $this->actingAs($admin)->post(route('admin.invoices.store'), [
@@ -1658,7 +1660,7 @@ class CrmFlowTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.purchase-order-requests.store'), [
             'quotation_id' => $quotation->id,
-            'project_number' => 'PRJ-DIRECT-001',
+            'code' => 'PRJ-DIRECT-001',
             'customer_name' => $customer->name,
             'request_date' => today()->format('Y-m-d'),
         ])->assertRedirect();
@@ -1668,10 +1670,13 @@ class CrmFlowTest extends TestCase
             'status' => 'po_created',
             'accurate_po_number' => 'ACC-DIRECT-001',
             'accurate_po_date' => today()->format('Y-m-d'),
-        ])->assertRedirect()
-            ->assertSessionHas('success', "PO Accurate tersimpan. Project PRJ-DIRECT-001 otomatis dibuat dan langsung masuk ke Produksi.");
+        ])->assertRedirect();
 
         $project = Project::where('quotation_id', $quotation->id)->firstOrFail();
+        $this->assertSame(
+            "PO Accurate tersimpan. Project {$project->code} otomatis dibuat dan langsung masuk ke Produksi.",
+            session('success')
+        );
         $this->assertSame('ongoing', $project->status);
         $this->assertSame(30, (int) $project->progress);
         $this->assertNull($project->project_manager_id);

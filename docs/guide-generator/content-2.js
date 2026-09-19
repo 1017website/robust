@@ -271,7 +271,7 @@ module.exports = {
         ['No Penawaran Eksternal', false, 'Nomor penawaran versi luar CRM, sebagai referensi.'],
         ['Total Nilai PO', true, 'Wajib bila sumbernya PO Existing. Isi total akhir termasuk pajak bila berlaku.'],
         ['Sales Penanggung Jawab', true, 'Wajib bila sumbernya PO Existing dan pengisi bukan Sales sendiri.'],
-        ['Nomor Proyek', true, 'Nomor proyek internal, diisi manual.'],
+        ['Nomor Proyek', false, 'Kosongkan untuk nomor otomatis berformat urutan + bulan + tahun, contoh 010926. Isi manual bila perlu nomor khusus; nomor harus unik.'],
         ['Nama Customer', true, 'Nama customer pada PO.'],
         ['Area / Lokasi Customer', false, 'Kota atau lokasi customer.'],
         ['Divisi Customer', false, 'Bagian customer yang memesan.'],

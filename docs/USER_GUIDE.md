@@ -387,9 +387,9 @@ Disarankan membuat Request PO setelah penawaran disetujui customer dan data orde
    - **PO Existing / Non-CRM** untuk order yang penawarannya dibuat di luar CRM; isi nama project, nomor referensi (opsional), nilai PO, dan Sales penanggung jawab.
 5. Isi nomor PO customer dan unggah buktinya jika tersedia.
 6. Lengkapi alamat pengiriman, PIC penerima, NPWP, termin pembayaran, serta estimasi tanggal pengiriman.
-7. Kolom bertanda bintang (*) wajib diisi sebelum Request PO diajukan: Nomor Proyek,
-   Nama Customer, Tanggal Request, serta penawaran CRM atau data PO Non-CRM sesuai
-   sumber yang dipilih.
+7. Kolom bertanda bintang (*) wajib diisi sebelum Request PO diajukan: Nama Customer,
+   Tanggal Request, serta penawaran CRM atau data PO Non-CRM sesuai sumber yang dipilih.
+   **Nomor Proyek** tidak wajib — kosongkan untuk memakai nomor otomatis.
 8. Atur **Checklist Kelengkapan** sesuai kebutuhan order:
    - Tujuh item bawaan muncul otomatis (penawaran final, PO customer, data customer,
      alamat pengiriman, PIC penerima, termin pembayaran, dan kesiapan input Accurate).

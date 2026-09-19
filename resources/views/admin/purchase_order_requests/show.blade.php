@@ -19,7 +19,7 @@
         <div class="card-r">
             <div class="card-head"><h2>Data Order</h2><div class="d-flex gap-2 align-items-center">@if($requestPo->quotation?->isExternal())<span class="badge text-bg-info">PO Existing / Non-CRM</span>@endif<x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div></div>
             <div class="row g-3 small">
-                <div class="col-md-3"><div class="text-muted-2">Nomor Proyek</div><div class="fw-semibold">{{ $requestPo->project_number ?: '—' }}</div></div>
+                <div class="col-md-3"><div class="text-muted-2">Nomor Proyek</div><div class="fw-semibold">{{ $requestPo->projectNumber() ?: '—' }}</div></div>
                 <div class="col-md-3"><div class="text-muted-2">Area / Lokasi</div><div class="fw-semibold">{{ $requestPo->customer_area ?: '—' }}</div></div>
                 <div class="col-md-3"><div class="text-muted-2">Divisi Customer</div><div class="fw-semibold">{{ $requestPo->customer_division ?: '—' }}</div></div>
                 <div class="col-md-4"><div class="text-muted-2">No Penawaran</div><div class="fw-semibold">{{ $requestPo->quotation?->code ?: '—' }}</div></div>
@@ -84,11 +84,11 @@
     </div>
     <div class="col-lg-4">
         <div class="card-r">
-            <div class="card-head"><h2>Nomor PO &amp; Dokumen PO</h2></div>
+            <div class="card-head"><h2>Nomor Proyek &amp; Dokumen PO</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.document', $requestPo) }}" enctype="multipart/form-data">
                 @csrf @method('PUT')
                 <div class="mb-3">
-                    <label for="requestCode" class="form-label small fw-semibold">Nomor PO</label>
+                    <label for="requestCode" class="form-label small fw-semibold">Nomor Proyek</label>
                     <input id="requestCode" name="code" value="{{ old('code', $requestPo->code) }}" class="form-control @error('code') is-invalid @enderror" maxlength="100" required>
                     @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>

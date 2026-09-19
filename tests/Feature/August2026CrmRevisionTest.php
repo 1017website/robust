@@ -158,14 +158,14 @@ class August2026CrmRevisionTest extends TestCase
             'external_quotation_number' => 'EXT-QUO-0088',
             'external_order_value' => 88000000,
             'external_sales_id' => $sales->id,
-            'project_number' => 'PRJ-EXT-0088',
+            'code' => 'PRJ-EXT-0088',
             'customer_name' => 'PT Customer Existing',
             'request_date' => now()->toDateString(),
             'customer_po_number' => 'PO-CUST-0088',
             'delivery_address' => 'Jakarta Selatan',
         ]);
 
-        $requestPo = PurchaseOrderRequest::where('project_number', 'PRJ-EXT-0088')->firstOrFail();
+        $requestPo = PurchaseOrderRequest::where('code', 'PRJ-EXT-0088')->firstOrFail();
         $quotation = $requestPo->quotation;
 
         $response->assertRedirect(route('admin.purchase-order-requests.show', $requestPo));
@@ -193,7 +193,6 @@ class August2026CrmRevisionTest extends TestCase
 
         $this->actingAs($administrator)->get(route('admin.purchase-order-requests.create'))
             ->assertOk()
-            ->assertSee('Nomor Proyek <span class="text-danger">*</span>', false)
             ->assertSee('Nama Customer <span class="text-danger">*</span>', false)
             ->assertSee('Tanggal Request <span class="text-danger">*</span>', false)
             ->assertSee('Kolom bertanda');
@@ -218,7 +217,7 @@ class August2026CrmRevisionTest extends TestCase
             'purchase_source' => 'external',
             'external_project_name' => 'Order Checklist Kustom',
             'external_order_value' => 12000000,
-            'project_number' => 'PRJ-CHECKLIST-001',
+            'code' => 'PRJ-CHECKLIST-001',
             'customer_name' => 'PT Checklist Kustom',
             'request_date' => now()->toDateString(),
             'checklist_present' => 1,
@@ -228,7 +227,7 @@ class August2026CrmRevisionTest extends TestCase
             ],
         ])->assertRedirect();
 
-        $requestPo = PurchaseOrderRequest::where('project_number', 'PRJ-CHECKLIST-001')->firstOrFail();
+        $requestPo = PurchaseOrderRequest::where('code', 'PRJ-CHECKLIST-001')->firstOrFail();
         $items = $requestPo->checklistItems();
 
         $this->assertCount(2, $items);
@@ -337,7 +336,7 @@ class August2026CrmRevisionTest extends TestCase
             'external_project_name' => 'Order Menunggu Data',
             'external_order_value' => 45000000,
             'external_sales_id' => $sales->id,
-            'project_number' => 'PRJ-DRAFT-0001',
+            'code' => 'PRJ-DRAFT-0001',
             'customer_name' => 'PT Draft Pending',
             'request_date' => now()->toDateString(),
             'action' => 'submit',
@@ -345,7 +344,7 @@ class August2026CrmRevisionTest extends TestCase
 
         $draft->refresh();
         $this->assertSame('submitted', $draft->status);
-        $this->assertSame('PRJ-DRAFT-0001', $draft->project_number);
+        $this->assertSame('PRJ-DRAFT-0001', $draft->code);
         $this->assertNotNull($draft->quotation_id);
         $this->assertSame(45000000.0, (float) $draft->quotation->grand_total);
         $this->assertSame(1, PurchaseOrderRequest::where('customer_name', 'PT Draft Pending')->count());
@@ -369,7 +368,7 @@ class August2026CrmRevisionTest extends TestCase
         $this->actingAs($administrator)->post(route('admin.purchase-order-requests.store'), [
             'purchase_source' => 'crm',
             'action' => 'submit',
-        ])->assertSessionHasErrors(['quotation_id', 'project_number', 'customer_name']);
+        ])->assertSessionHasErrors(['quotation_id', 'customer_name']);
     }
 
     public function test_ready_quotation_is_selectable_on_the_request_po_form(): void

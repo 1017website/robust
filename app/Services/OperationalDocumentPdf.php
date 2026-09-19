@@ -66,7 +66,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $page .= $this->metaGrid($y, [
             ['CUSTOMER', $requestPo->customer_name ?: $quotation?->customer_name],
             ['PROJECT', $quotation?->project_name],
-            ['NOMOR PROYEK', $requestPo->project_number],
+            ['NOMOR PROYEK', $requestPo->projectNumber()],
             ['TANGGAL REQUEST', $requestPo->request_date?->format('d/m/Y')],
             ['SALES', $quotation?->sales?->name],
             ['DIBUAT OLEH', $requestPo->requester?->name],

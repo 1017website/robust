@@ -233,7 +233,7 @@ class PurchaseOrderRequestController extends Controller
         $filename = trim((string) preg_replace(
             '/[^\pL\pN._-]+/u',
             '-',
-            $purchaseOrderRequest->project_number ?: $purchaseOrderRequest->code ?: 'request-po'
+            $purchaseOrderRequest->projectNumber() ?: 'request-po'
         ), '-_.').'.pdf';
 
         return response($pdf->makeRequestPo($purchaseOrderRequest), 200, [
@@ -326,7 +326,7 @@ class PurchaseOrderRequestController extends Controller
 
         Logger::record('updated', "Nomor dan dokumen PO {$purchaseOrderRequest->code} diperbarui", $purchaseOrderRequest);
 
-        return back()->with('success', 'Nomor PO dan dokumen PO berhasil disimpan.');
+        return back()->with('success', 'Nomor Proyek dan dokumen PO berhasil disimpan.');
     }
 
     protected function nextRequestCode(): string
@@ -444,7 +444,6 @@ class PurchaseOrderRequestController extends Controller
         return [
             'quotation_id' => $quotation?->id,
             'customer_id' => $quotation?->customer_id,
-            'project_number' => $data['project_number'] ?? null,
             'customer_name' => $data['customer_name'] ?? null,
             'customer_area' => $data['customer_area'] ?? null,
             'customer_division' => $data['customer_division'] ?? null,
@@ -484,7 +483,6 @@ class PurchaseOrderRequestController extends Controller
         $rules = [
             'code' => ['nullable', 'string', 'max:100', Rule::unique('purchase_order_requests', 'code')->ignore($current?->id)],
             'purchase_source' => ['required', Rule::in(['crm', 'external'])],
-            'project_number' => $required('string', 'max:100'),
             'customer_name' => $required('string', 'max:255'),
             'customer_area' => ['nullable', 'string', 'max:255'],
             'customer_division' => ['nullable', 'string', 'max:255'],
@@ -536,10 +534,10 @@ class PurchaseOrderRequestController extends Controller
     protected function validationMessages(): array
     {
         return [
-            'code.unique' => 'Nomor PO sudah digunakan. Gunakan nomor lain.',
-            'code.max' => 'Nomor PO maksimal 100 karakter.',
-            'code.required_without' => 'Isi nomor PO atau pilih dokumen PO yang akan diunggah.',
-            'customer_po_file.required_without' => 'Pilih dokumen PO atau isi nomor PO.',
+            'code.unique' => 'Nomor Proyek sudah digunakan. Gunakan nomor lain.',
+            'code.max' => 'Nomor Proyek maksimal 100 karakter.',
+            'code.required_without' => 'Isi nomor Proyek atau pilih dokumen PO yang akan diunggah.',
+            'customer_po_file.required_without' => 'Pilih dokumen PO atau isi nomor Proyek.',
             'customer_po_file.mimes' => 'Dokumen PO harus berupa PDF, JPG, PNG, Word, atau Excel.',
             'customer_po_file.max' => 'Ukuran dokumen PO maksimal 5 MB.',
         ];
