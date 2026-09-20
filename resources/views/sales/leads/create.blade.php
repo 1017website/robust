@@ -2,11 +2,7 @@
 @section('title', 'Tambah Lead Baru')
 
 @section('content')
-@php
-    $defaultScopes = ['Wall Bench', 'Fume Hood', 'Storage Cabinet', 'Sink Area', 'Meja Praktikum'];
-    $scopeItems = old('scope_items', $defaultScopes);
-@endphp
-<div class="sales-ui lead-layout-page">
+<div class="sales-ui lead-layout-page lead-create-page">
     <form method="POST" action="{{ route('sales.leads.store') }}" enctype="multipart/form-data" class="lead-form-shell">
         @csrf
         <div class="lead-page-head">
@@ -127,22 +123,28 @@
                     </div>
                 </section>
             </div>
-            <div class="col-xl-6">
-                <div class="sales-form-card">
-                    <h2 class="sales-form-title"><i class="bi bi-clipboard-check sgreen rounded p-2 me-2"></i>Kebutuhan Awal</h2>
-                    <div class="mb-3"><label class="form-label small fw-bold">Nama Laboratorium / Proyek *</label><input name="lab_name" value="{{ old('lab_name') }}" class="form-control" required placeholder="Contoh: Laboratorium Kimia"></div>
-                    <label class="form-label small fw-bold">Deskripsi Kebutuhan</label><textarea name="need_description" rows="5" maxlength="500" class="form-control" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description') }}</textarea>
-                    <div class="mt-3"><label class="form-label small fw-bold">Daftar Kebutuhan</label><div class="d-flex flex-wrap gap-2">
+            <div class="lead-form-col">
+                <section class="lead-card">
+                    <h2 class="lead-card-title"><span class="lead-icon sgreen"><i class="bi bi-clipboard-check"></i></span>Kebutuhan Awal</h2>
+                    <div class="mb-3"><label class="form-label lead-label">Nama Laboratorium / Proyek <span>*</span></label><input name="lab_name" value="{{ old('lab_name') }}" class="form-control lead-control" required placeholder="Contoh: Laboratorium Kimia"></div>
+                    <label class="form-label lead-label">Deskripsi Kebutuhan</label><textarea name="need_description" rows="5" maxlength="500" class="form-control lead-control" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description') }}</textarea>
+                    <div class="mt-3"><label class="form-label lead-label">Daftar Kebutuhan</label><div class="lead-scope-options">
                         @foreach(['Wall Bench','Fume Hood','Storage Cabinet','Sink Area','Meja Praktikum','Meja Instrumen','Safety Equipment','Lainnya'] as $item)
-                            <label class="tag-pill"><input type="checkbox" name="scope_items[]" value="{{ $item }}" @checked(in_array($item, old('scope_items', [])))> {{ $item }}</label>
+                            <label class="lead-scope-option"><input type="checkbox" name="scope_items[]" value="{{ $item }}" @checked(in_array($item, old('scope_items', [])))><span>{{ $item }}</span></label>
                         @endforeach
                     </div></div>
-                </div>
-                <div class="sales-form-card">
-                    <h2 class="sales-form-title"><i class="bi bi-flag sorange rounded p-2 me-2"></i>Estimasi & Prioritas</h2>
-                    <div class="row g-3"><div class="col-md-4"><label class="form-label small fw-bold">Estimasi Dari (Rp)</label><input name="est_value_min" value="{{ old('est_value_min') }}" class="form-control" placeholder="500.000.000"></div><div class="col-md-4"><label class="form-label small fw-bold">Sampai (Rp)</label><input name="est_value_max" value="{{ old('est_value_max') }}" class="form-control" placeholder="1.000.000.000"></div><div class="col-md-4"><label class="form-label small fw-bold">Prioritas Lead *</label><select name="priority" class="form-select" required><option value="">Pilih prioritas</option><option value="high" @selected(old('priority')=='high')>High (Tinggi)</option><option value="medium" @selected(old('priority','medium')=='medium')>Medium</option><option value="low" @selected(old('priority')=='low')>Low</option></select></div></div>
-                </div>
-                @if(! auth()->user()->isSales())<div class="sales-form-card"><h2 class="sales-form-title">Sales Owner</h2><select name="sales_id" class="form-select" required><option value="">Pilih sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id')===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
+                </section>
+                <section class="lead-card">
+                    <h2 class="lead-card-title"><span class="lead-icon sorange"><i class="bi bi-flag"></i></span>Estimasi &amp; Prioritas</h2>
+                    <div class="row g-3"><div class="col-md-4"><label class="form-label lead-label">Estimasi Dari (Rp)</label><input data-rupiah name="est_value_min" value="{{ old('est_value_min') }}" class="form-control lead-control" placeholder="500.000.000"></div><div class="col-md-4"><label class="form-label lead-label">Sampai (Rp)</label><input data-rupiah name="est_value_max" value="{{ old('est_value_max') }}" class="form-control lead-control" placeholder="1.000.000.000"></div><div class="col-md-4"><label class="form-label lead-label">Prioritas Lead <span>*</span></label><select name="priority" class="form-select lead-control" required><option value="">Pilih prioritas</option><option value="high" @selected(old('priority')=='high')>High (Tinggi)</option><option value="medium" @selected(old('priority','medium')=='medium')>Medium</option><option value="low" @selected(old('priority')=='low')>Low</option></select></div></div>
+                </section>
+                @if(! auth()->user()->isSales())
+                    <section class="lead-card">
+                        <h2 class="lead-card-title"><span class="lead-icon sblue"><i class="bi bi-person-badge"></i></span>Sales Owner</h2>
+                        <label class="form-label lead-label" for="leadSalesOwner">Sales yang Ditugaskan <span>*</span></label>
+                        <select name="sales_id" id="leadSalesOwner" class="form-select lead-control" required><option value="">Pilih sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id')===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select>
+                    </section>
+                @endif
             </div>
         </div>
 

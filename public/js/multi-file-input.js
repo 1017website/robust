@@ -34,7 +34,7 @@
         const showList = input.dataset.multiFileList !== 'off';
         const list = document.createElement('div');
         list.className = 'mt-2 d-none';
-        if (showList) input.insertAdjacentElement('afterend', list);
+        if (showList) (input.closest('.modern-file-field') || input).insertAdjacentElement('afterend', list);
 
         const files = [];
 
@@ -43,6 +43,7 @@
             files.forEach(function (file) { transfer.items.add(file); });
             input.files = transfer.files;
             render();
+            input.dispatchEvent(new CustomEvent('multi-file:sync', {bubbles: true}));
         }
 
         function render() {

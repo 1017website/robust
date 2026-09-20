@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
 use App\Models\Project;
+use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\User;
 use App\Services\CodeGenerator;
@@ -31,19 +31,29 @@ class ProjectController extends Controller
 
     public function create(Request $request)
     {
-        $quotation = $request->get('quotation')
-            ? $this->eligibleQuotationQuery()->with('customer')->findOrFail($request->get('quotation'))
+        $sourceProjectId = $request->integer('project');
+        if (! $sourceProjectId && $request->filled('quotation')) {
+            $sourceProjectId = (int) PurchaseOrderRequest::query()
+                ->where('quotation_id', $request->integer('quotation'))
+                ->value('id');
+        }
+
+        $sourceProject = $sourceProjectId
+            ? $this->eligibleSourceProjectQuery()->findOrFail($sourceProjectId)
             : null;
-        $wonQuotations = $this->eligibleQuotationQuery()->get();
-        $managers = User::assignableSales();
+        $availableProjects = $this->eligibleSourceProjectQuery()->get();
+        $managers = User::where('is_active', true)
+            ->whereIn('role', ['sales', 'drafter'])
+            ->orderBy('name')
+            ->get();
         $team = User::where('is_active', true)->get();
-        return view('sales.projects.create', compact('quotation', 'wonQuotations', 'managers', 'team'));
+        return view('sales.projects.create', compact('sourceProject', 'availableProjects', 'managers', 'team'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'quotation_id' => ['required', 'exists:quotations,id'],
+            'purchase_order_request_id' => ['required', 'exists:purchase_order_requests,id'],
             'name' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
@@ -60,7 +70,7 @@ class ProjectController extends Controller
             'project_manager_id' => [
                 'required',
                 Rule::exists('users', 'id')->where(fn ($query) => $query
-                    ->where('role', 'sales')
+                    ->whereIn('role', ['sales', 'drafter'])
                     ->where('is_active', true)
                     ->whereNull('deleted_at')),
             ],
@@ -70,8 +80,10 @@ class ProjectController extends Controller
             'note' => ['nullable', 'string'],
         ]);
 
-        $quotation = $this->eligibleQuotationQuery()->with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
-        $data['code'] = ($data['code'] ?? null) ?: $this->nextProjectCode($quotation);
+        $sourceProject = $this->eligibleSourceProjectQuery()->findOrFail($data['purchase_order_request_id']);
+        $quotation = $sourceProject->quotation;
+        unset($data['purchase_order_request_id']);
+        $data['code'] = ($data['code'] ?? null) ?: $this->nextProjectCode($sourceProject);
         $data['customer_id'] = $quotation->customer_id;
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
         $data['tax_amount'] = $quotation->tax_amount;
@@ -80,7 +92,7 @@ class ProjectController extends Controller
         $data['created_by'] = Auth::id();
 
         $project = Project::create($data);
-        Logger::record('created', "Project {$project->name} dibuat dari penawaran {$quotation->code}", $project);
+        Logger::record('created', "Request Process {$project->name} dibuat dari Project {$sourceProject->projectNumber()}", $project);
 
         return redirect()->route('sales.projects.show', $project)->with('success', 'Request Process berhasil dibuat.');
     }
@@ -116,9 +128,9 @@ class ProjectController extends Controller
      * Request Process memakai Nomor Proyek milik Project-nya. Kode PRJ otomatis hanya
      * dipakai bila nomor itu sudah terpakai Request Process lain.
      */
-    protected function nextProjectCode(Quotation $quotation): string
+    protected function nextProjectCode(PurchaseOrderRequest $sourceProject): string
     {
-        $projectNumber = trim((string) $quotation->purchaseOrderRequest?->projectNumber());
+        $projectNumber = trim((string) $sourceProject->projectNumber());
 
         // Kode unik di level database, jadi Request Process terhapus pun masih memegangnya.
         return $projectNumber !== '' && ! Project::withTrashed()->where('code', $projectNumber)->exists()
@@ -126,14 +138,18 @@ class ProjectController extends Controller
             : CodeGenerator::next(Project::class, 'PRJ', 4, true);
     }
 
-    protected function eligibleQuotationQuery(): Builder
+    protected function eligibleSourceProjectQuery(): Builder
     {
-        return Quotation::with('sales')
-            ->whereIn('status', Quotation::wonStatuses())
-            ->whereDoesntHave('project')
-            // Sejalan dengan Quotation::canCreateProject(): Project (Request PO) harus sudah diajukan.
-            ->whereHas('purchaseOrderRequest', fn ($query) => $query->whereNotIn('status', ['draft', 'cancelled']))
-            ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
+        return PurchaseOrderRequest::query()
+            ->with([
+                'quotation.sales', 'quotation.customer.primaryPic', 'quotation.items',
+                'quotation.documents.uploader', 'quotation.designRequest.productionPic',
+            ])
+            ->visibleTo(Auth::user())
+            ->whereNotIn('status', ['draft', 'cancelled'])
+            ->whereHas('quotation', fn ($query) => $query
+                ->whereIn('status', Quotation::wonStatuses())
+                ->whereDoesntHave('project'))
             ->latest();
     }
 

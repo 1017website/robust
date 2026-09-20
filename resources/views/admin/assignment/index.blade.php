@@ -131,22 +131,35 @@
                 </div>
                 <hr>
                 <h2 class="sa-small-title">Reassign Lead / Ownership</h2>
-                <form method="POST" action="{{ route('admin.assignment.reassign') }}" class="sa-reassign-form">
-                    @csrf
-                    <label class="form-label small">Pilih Lead</label>
-                    <select name="lead_id" class="form-select mb-3" required>
-                        @foreach($leads as $lead)
-                            <option value="{{ $lead->id }}">{{ $lead->instansi }}</option>
-                        @endforeach
-                    </select>
-                    <div class="row g-2 align-items-end">
-                        <div class="col"><label class="form-label small">Dari</label><input class="form-control" value="{{ $selectedSales->name }}" readonly></div>
-                        <div class="col-auto pb-2"><i class="bi bi-arrow-right"></i></div>
-                        <div class="col"><label class="form-label small">Ke</label><select name="to_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach</select></div>
+                <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#reassignLeadModal"><i class="bi bi-arrow-left-right me-1"></i>Buka Form Reassign</button>
+                <div class="sa-note mt-3"><i class="bi bi-info-circle"></i> Pastikan koordinasi dengan sales terkait sebelum memindahkan ownership lead.</div>
+
+                <div class="modal fade" id="reassignLeadModal" tabindex="-1" aria-labelledby="reassignLeadTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ route('admin.assignment.reassign') }}">@csrf
+                                <div class="modal-header">
+                                    <div><h5 class="modal-title" id="reassignLeadTitle">Reassign Lead</h5><small class="text-muted-2">Pindahkan ownership dari {{ $selectedSales->name }} ke sales lain.</small></div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label class="form-label small fw-semibold">Pilih Lead</label>
+                                    <select name="lead_id" class="form-select mb-3" required>
+                                        @foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->instansi }}</option>@endforeach
+                                    </select>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6"><label class="form-label small fw-semibold">Dari</label><input class="form-control" value="{{ $selectedSales->name }}" readonly></div>
+                                        <div class="col-sm-6"><label class="form-label small fw-semibold">Ke</label><select name="to_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach</select></div>
+                                    </div>
+                                    <div class="modal-form-actions">
+                                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-primary">Reassign Lead</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <button class="btn btn-primary w-100 mt-3">Reassign</button>
-                </form>
-                <div class="sa-note mt-3"><i class="bi bi-info-circle"></i> Pastikan koordinasi dengan sales terkait sebelum reassign lead.</div>
+                </div>
             @endif
         </aside>
     </div>

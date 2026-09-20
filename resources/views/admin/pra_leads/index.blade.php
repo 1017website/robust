@@ -7,7 +7,7 @@
 @endphp
 
 <x-page-header title="Pra Leads" subtitle="Kelola prospek baru sebelum menjadi lead dan ditugaskan ke sales.">
-    <a href="#praLeadPanel" class="btn btn-primary btn-sm" id="topCreatePraLead"><i class="bi bi-plus-lg me-1"></i>Tambah Pra Lead</a>
+    <button type="button" class="btn btn-primary btn-sm" id="topCreatePraLead" data-bs-toggle="modal" data-bs-target="#praLeadModal"><i class="bi bi-plus-lg me-1"></i>Tambah Pra Lead</button>
 </x-page-header>
 
 @if ($errors->any())
@@ -21,7 +21,7 @@
     </div>
 @endif
 
-<div class="pra-lead-shell">
+<div class="pra-lead-shell is-list-only">
     <section class="pra-lead-main">
         <div class="mini-stat-grid mb-4">
             <x-stat-card icon="bi-file-earmark-plus" color="primary" label="Semua Pra Leads" :value="$counts['all']" sub="100% dari total" />
@@ -159,16 +159,19 @@
         </div>
     </section>
 
-    <aside class="pra-lead-detail-panel" id="praLeadPanel">
-        <div class="detail-header">
+    <div class="modal fade pra-lead-form-modal" id="praLeadModal" tabindex="-1" aria-labelledby="praPanelTitle" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+       <div class="modal-content">
+        <div class="modal-header">
             <div>
                 <h5 id="praPanelTitle">Tambah Pra Lead</h5>
                 <div class="small text-muted-2" id="praPanelSubtitle">Input data prospek dan assign sales jika sudah siap dikirim.</div>
             </div>
-            <button class="btn btn-sm btn-primary" type="button" id="showCreateForm"><i class="bi bi-plus-lg me-1"></i>Tambah Pra Lead</button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
 
-        <div id="praLeadPreview" class="pra-preview d-none">
+        <div class="modal-body">
+        <div id="praLeadPreview" class="pra-preview d-none p-0">
             <div class="badge text-bg-success mb-3" id="previewStatus">Status</div>
             <h4 id="previewInstansi">Instansi</h4>
             <div class="info-box mt-3">
@@ -256,21 +259,25 @@
                 @endif
             </div>
 
-            <div class="detail-actions">
+            <div class="modal-form-actions">
                 <button type="submit" name="action" value="draft" class="btn btn-soft">Simpan Draft</button>
                 <button type="submit" name="action" value="save" class="btn btn-soft">Simpan</button>
                 <button type="submit" name="action" value="send" class="btn btn-primary">Kirim ke Sales</button>
             </div>
         </form>
-    </aside>
+        </div>
+       </div>
+      </div>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var createBtn = document.getElementById('showCreateForm');
     var topCreateBtn = document.getElementById('topCreatePraLead');
+    var modalElement = document.getElementById('praLeadModal');
+    var modal = modalElement ? window.RobustModal.getOrCreateInstance(modalElement) : null;
     var form = document.getElementById('praLeadForm');
     var methodWrap = document.getElementById('praFormMethodWrap');
     var preview = document.getElementById('praLeadPreview');
@@ -296,10 +303,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (title) title.textContent = 'Tambah Pra Lead';
         if (subtitle) subtitle.textContent = 'Input data prospek dan assign sales jika sudah siap dikirim.';
         if (createdAt) createdAt.value = '{{ now()->format('d M Y, H:i') }}';
-        document.getElementById('praLeadPanel')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+        modal?.show();
     }
 
-    if (createBtn) createBtn.addEventListener('click', showCreateForm);
     if (topCreateBtn) topCreateBtn.addEventListener('click', showCreateForm);
 
     document.querySelectorAll('.pra-load-detail').forEach(function (btn) {
@@ -320,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setText('previewNote', btn.dataset.note || '—');
             setText('previewSales', btn.dataset.sales || '—');
             setText('previewStatus', btn.dataset.status || 'Status');
-            document.getElementById('praLeadPanel')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+            modal?.show();
         });
     });
 
@@ -363,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setField('assigned_sales_id', btn.dataset.assignedSalesId);
             syncSalesQuickPick(btn.dataset.assignedSalesId);
             if (createdAt) createdAt.value = btn.dataset.created || '—';
-            document.getElementById('praLeadPanel')?.scrollIntoView({behavior: 'smooth', block: 'start'});
+            modal?.show();
         });
     });
 
@@ -384,6 +390,10 @@ document.addEventListener('DOMContentLoaded', function () {
             radio.checked = value && radio.value === String(value);
         });
     }
+
+    @if($errors->any())
+        modal?.show();
+    @endif
 });
 </script>
 @endpush

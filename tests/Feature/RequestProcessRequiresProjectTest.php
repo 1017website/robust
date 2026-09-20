@@ -74,6 +74,33 @@ class RequestProcessRequiresProjectTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_request_process_form_uses_project_and_prefills_existing_data_without_fake_attachments(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $quotation = $this->wonQuotation($sales);
+        $project = PurchaseOrderRequest::create([
+            'code' => 'PRJ-SOURCE-001',
+            'quotation_id' => $quotation->id,
+            'customer_name' => 'PT Gate Test',
+            'delivery_address' => 'Bandung',
+            'payment_term' => 'Termin 30 hari',
+            'expected_delivery_date' => '2026-10-20',
+            'requested_by' => $sales->id,
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($sales)
+            ->get(route('sales.projects.create', ['project' => $project->id]))
+            ->assertOk()
+            ->assertSee('name="purchase_order_request_id"', false)
+            ->assertSee('PRJ-SOURCE-001')
+            ->assertSee('Bandung')
+            ->assertSee('Termin 30 hari')
+            ->assertSee('Belum ada dokumen yang terlampir pada Project ini.')
+            ->assertDontSee('1.2 MB')
+            ->assertDontSee('2.4 MB');
+    }
+
     public function test_submitting_a_project_starts_it_running_and_creates_request_process(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);

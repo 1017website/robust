@@ -48,7 +48,6 @@ class LeadController extends Controller
         $selectedLead = $request->filled('lead')
             ? $leads->getCollection()->firstWhere('id', (int) $request->get('lead'))
             : null;
-        $selectedLead ??= $leads->first();
 
         return view('sales.leads.index', compact('leads', 'stats', 'selectedLead'));
     }

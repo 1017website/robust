@@ -164,7 +164,7 @@
                 </div>
             </div>
         </div>
-        <div class="d-flex justify-content-end"><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
+        <div class="d-flex justify-content-end wizard-form-actions"><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
     </div>
 
     <div class="wizard-pane d-none" data-pane="2">
@@ -177,7 +177,7 @@
                 </table>
             </div>
         </div>
-        <div class="d-flex justify-content-between"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
+        <div class="d-flex justify-content-between wizard-form-actions"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
     </div>
 
     <div class="wizard-pane d-none" data-pane="3">
@@ -210,7 +210,7 @@
                 </div>
             </div>
         </div>
-        <div class="d-flex justify-content-between"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
+        <div class="d-flex justify-content-between wizard-form-actions"><button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button><button type="button" class="btn btn-primary next-step">Lanjut <i class="bi bi-arrow-right ms-1"></i></button></div>
     </div>
 
     <div class="wizard-pane d-none" data-pane="4">
@@ -218,7 +218,7 @@
             <div class="card-head"><h2>Review Penawaran</h2></div>
             <div id="reviewBox" class="small"></div>
         </div>
-        <div class="d-flex justify-content-between">
+        <div class="d-flex justify-content-between wizard-form-actions">
             <button type="button" class="btn btn-soft prev-step"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
             <div class="d-flex gap-2">
                 <button type="submit" name="action" value="draft" class="btn btn-soft">{{ $submitDraftLabel }}</button>
