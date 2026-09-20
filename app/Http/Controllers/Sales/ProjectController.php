@@ -36,6 +36,7 @@ class ProjectController extends Controller
             $sourceProjectId = (int) PurchaseOrderRequest::query()
                 ->where('quotation_id', $request->integer('quotation'))
                 ->value('id');
+            abort_if(! $sourceProjectId, 404, 'Project yang sudah diajukan tidak ditemukan.');
         }
 
         $sourceProject = $sourceProjectId
