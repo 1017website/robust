@@ -28,8 +28,11 @@
                 <div class="mb-3"><label class="form-label small fw-semibold">Tindak Lanjut</label><textarea name="next_action" rows="2" class="form-control"></textarea></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Tgl Follow Up</label><input name="next_followup_date" type="date" class="form-control"></div>
             </div>
-            <div class="card-r"><button type="submit" class="btn btn-primary w-100">Simpan Aktivitas</button><a href="{{ route('activities.index') }}" class="btn btn-soft w-100 mt-2">Batal</a></div>
         </div>
+    </div>
+    <div class="form-submit-actions">
+        <a href="{{ route('activities.index') }}" class="btn btn-soft">Batal</a>
+        <button type="submit" class="btn btn-primary">Simpan Aktivitas</button>
     </div>
 </form>
 @endsection

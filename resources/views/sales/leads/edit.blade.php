@@ -239,10 +239,10 @@
                 <div class="mb-3"><label class="form-label small fw-semibold">Catatan</label><textarea name="initial_note" rows="3" class="form-control">{{ $lead->initial_note }}</textarea></div>
                 @if(! auth()->user()->isSales())<div class="mb-3"><label class="form-label small fw-semibold">Sales Owner</label><select name="sales_id" class="form-select" required>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id',$lead->sales_id)===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
             </div>
-            <div class="card-r">
-                <button class="btn btn-primary w-100">Simpan Perubahan</button>
-                <a href="{{ route('sales.leads.show',$lead) }}" class="btn btn-soft w-100 mt-2">Batal</a>
-            </div>
+        </div>
+        <div class="form-submit-actions">
+            <a href="{{ route('sales.leads.show',$lead) }}" class="btn btn-soft">Batal</a>
+            <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
         </div>
     </form>
 </div>

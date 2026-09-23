@@ -71,9 +71,9 @@
                     </div>
                 </div>
 
-                <div class="mt-4 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan Branding</button>
+                <div class="form-submit-actions">
                     <a href="{{ route('admin.system-settings.index') }}" class="btn btn-soft">Reset Form</a>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan Branding</button>
                 </div>
             </form>
         </div>
@@ -109,7 +109,9 @@
                         Nomor awal ini akan dipakai pada PO berikutnya, lalu urutan berjalan normal.
                     @endif
                 </div>
-                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i> Simpan Penomoran</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan Penomoran</button>
+                </div>
             </form>
         </div>
     </div>

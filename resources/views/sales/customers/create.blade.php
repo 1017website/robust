@@ -9,7 +9,6 @@
                 <a href="{{ route('sales.customers.index') }}" class="btn btn-soft" aria-label="Kembali"><i class="bi bi-arrow-left"></i></a>
                 <div><h1 class="page-title mb-1">Tambah Customer</h1><div class="page-subtitle">Lengkapi data customer dan PIC utama.</div></div>
             </div>
-            <div class="page-actions"><a href="{{ route('sales.customers.index') }}" class="btn btn-soft">Batal</a><button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan</button></div>
         </div>
 
         <div class="row g-3">
@@ -56,6 +55,10 @@
                     <div><label class="form-label small fw-bold">Catatan</label><textarea name="notes" rows="5" class="form-control">{{ old('notes') }}</textarea></div>
                 </div>
             </div>
+        </div>
+        <div class="form-submit-actions">
+            <a href="{{ route('sales.customers.index') }}" class="btn btn-soft">Batal</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan</button>
         </div>
     </form>
 </div>

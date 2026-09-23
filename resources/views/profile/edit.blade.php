@@ -13,7 +13,9 @@
                 <div class="mb-3"><label class="form-label small fw-semibold">Email</label><input name="email" type="email" value="{{ old('email',$user->email) }}" class="form-control"></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">No. Telepon</label><input name="phone" value="{{ old('phone',$user->phone) }}" class="form-control"></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Jabatan</label><input name="job_title" value="{{ old('job_title',$user->job_title) }}" class="form-control"></div>
-                <button class="btn btn-primary">Simpan Perubahan</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
             </form>
         </div>
     </div>
@@ -25,7 +27,9 @@
                 <div class="mb-3"><label class="form-label small fw-semibold">Password Saat Ini</label><input name="current_password" type="password" class="form-control"></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Password Baru</label><input name="password" type="password" class="form-control"></div>
                 <div class="mb-3"><label class="form-label small fw-semibold">Konfirmasi Password Baru</label><input name="password_confirmation" type="password" class="form-control"></div>
-                <button class="btn btn-primary">Ubah Password</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary">Ubah Password</button>
+                </div>
             </form>
         </div>
     </div>

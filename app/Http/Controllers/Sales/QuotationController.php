@@ -34,6 +34,7 @@ class QuotationController extends Controller
                 ->orWhere('project_name', 'like', "%$s%")
                 ->orWhere('pic_name', 'like', "%$s%")
                 ->orWhereHas('customer.primaryPic', fn ($pic) => $pic->where('name', 'like', "%$s%"))
+                ->orWhereHas('sales', fn ($sales) => $sales->where('name', 'like', "%$s%"))
                 ->orWhere('code', 'like', "%$s%"));
         }
         if ($status = $request->get('status')) {

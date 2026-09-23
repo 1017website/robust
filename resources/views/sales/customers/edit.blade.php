@@ -33,8 +33,11 @@
                 <div class="mb-3"><label class="form-label small fw-semibold">Mulai Menjadi Partner</label><input name="partner_since" type="date" value="{{ old('partner_since',$customer->partner_since?->format('Y-m-d')) }}" class="form-control"></div>
                 <div><label class="form-label small fw-semibold">Catatan</label><textarea name="notes" rows="4" class="form-control">{{ old('notes',$customer->notes) }}</textarea></div>
             </div>
-            <div class="card-r"><button type="submit" class="btn btn-primary w-100">Simpan</button><a href="{{ route('sales.customers.show',$customer) }}" class="btn btn-soft w-100 mt-2">Batal</a></div>
         </div>
+    </div>
+    <div class="form-submit-actions">
+        <a href="{{ route('sales.customers.show',$customer) }}" class="btn btn-soft">Batal</a>
+        <button type="submit" class="btn btn-primary">Simpan</button>
     </div>
 </form>
 @endsection

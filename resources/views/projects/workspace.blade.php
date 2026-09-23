@@ -67,6 +67,14 @@
                             <div class="col-md-6"><div class="small text-muted-2">Target Selesai</div><div class="fw-semibold">{{ $project->target_date?->translatedFormat('d M Y') ?? '-' }}</div></div>
                             <div class="col-md-6"><div class="small text-muted-2">Lokasi</div><div>{{ $project->location ?: '-' }}</div></div>
                             <div class="col-md-6"><div class="small text-muted-2">Prioritas</div><div class="text-capitalize">{{ $project->priority }}</div></div>
+                            <div class="col-md-6">
+                                <div class="small text-muted-2">Dokumen PO</div>
+                                @if($purchaseOrder?->customer_po_file)
+                                    <a href="{{ asset('storage/'.$purchaseOrder->customer_po_file) }}" target="_blank" rel="noopener" class="btn btn-sm btn-soft mt-1"><i class="bi bi-file-earmark-check me-1"></i>Lihat Dokumen PO</a>
+                                @else
+                                    <div>-</div>
+                                @endif
+                            </div>
                             <div class="col-12"><div class="small text-muted-2">Scope of Work</div><div>{{ $project->scope_of_work ?: '-' }}</div></div>
                             <div class="col-12"><div class="small text-muted-2">Catatan / Follow-up</div><div>{{ $project->note ?: '-' }}</div></div>
                         </div>

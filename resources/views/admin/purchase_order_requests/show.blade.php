@@ -45,7 +45,9 @@
                     <div class="col-md-6"><label class="form-label small fw-semibold">Estimasi Tanggal Kirim</label><input type="date" name="expected_delivery_date" value="{{ old('expected_delivery_date', $requestPo->expected_delivery_date?->format('Y-m-d')) }}" class="form-control"></div>
                 </div>
 
-                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Data</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan Data</button>
+                </div>
             </form>
         </div>
         @endunless
@@ -58,7 +60,9 @@
             <form method="POST" action="{{ route('admin.purchase-order-requests.checklist', $requestPo) }}">
                 @csrf @method('PUT')
                 <x-checklist-editor :items="$requestPo->checklistItems()" id-prefix="chk_show" />
-                <button class="btn btn-primary mt-3"><i class="bi bi-save me-1"></i>Simpan Checklist</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan Checklist</button>
+                </div>
             </form>
         </div>
 
@@ -100,7 +104,9 @@
                 <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
                 <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Tanpa batas ukuran. File lama tetap tersimpan jika tidak memilih file baru.</div>
                 @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                <button type="submit" class="btn btn-primary mt-3">Simpan Nomor &amp; Dokumen</button>
+                <div class="form-submit-actions">
+                    <button type="submit" class="btn btn-primary">Simpan Nomor &amp; Dokumen</button>
+                </div>
             </form>
         </div>
         @if(auth()->user()->canManageBackOffice() && !$requestPo->invoice && $requestPo->quotation?->project && !$requestPo->canCreateInvoice())

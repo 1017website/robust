@@ -148,9 +148,9 @@
             </div>
         </div>
 
-        <div class="lead-sticky-actions">
+        <div class="form-submit-actions">
             <a href="{{ route('sales.leads.index') }}" class="btn btn-soft">Batal</a>
-            <button class="btn btn-primary">Simpan Lead</button>
+            <button type="submit" class="btn btn-primary">Simpan Lead</button>
         </div>
     </form>
 </div>

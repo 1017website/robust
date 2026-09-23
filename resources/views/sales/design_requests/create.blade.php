@@ -22,11 +22,6 @@
         <input type="hidden" id="customer_id" name="customer_id" value="{{ old('customer_id', $designRequest?->customer_id ?? $lead?->customer_id) }}">
         <div class="sales-page-head">
             <div class="sales-title-wrap"><div class="sales-title-icon"><i class="bi bi-calendar-plus"></i></div><div><div class="small fw-bold text-primary mb-1">Design Request &gt; {{ $isDraft ? 'Lanjutkan Draf' : 'Design Request Baru' }}</div><h1 class="page-title mb-1">{{ $isDraft ? 'Lanjutkan Draf '.$designRequest->code : 'Design Request Baru' }}</h1><div class="page-subtitle">Kirim brief, sketsa, dan assignment langsung ke drafter.</div></div></div>
-            <div class="page-actions">
-                <a href="{{ route('sales.design-requests.index') }}" class="btn btn-soft">Batal</a>
-                <button name="action" value="save" class="btn btn-soft" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf</button>
-                <button name="action" value="send" class="btn btn-primary"><i class="bi bi-send me-1"></i>{{ $isDraft ? 'Kirim ke Drafter' : 'Simpan & Kirim ke Drafter' }}</button>
-            </div>
         </div>
 
         <div class="row g-3">
@@ -172,6 +167,11 @@
                     <label class="form-label small fw-bold mt-3">Catatan untuk Drafter</label><textarea name="production_note" rows="4" class="form-control" maxlength="300">{{ $val('production_note') }}</textarea>
                 </div>
             </div>
+        </div>
+        <div class="form-submit-actions">
+            <a href="{{ route('sales.design-requests.index') }}" class="btn btn-soft">Batal</a>
+            <button type="submit" name="action" value="save" class="btn btn-soft" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf</button>
+            <button type="submit" name="action" value="send" class="btn btn-primary"><i class="bi bi-send me-1"></i>{{ $isDraft ? 'Kirim ke Drafter' : 'Simpan & Kirim ke Drafter' }}</button>
         </div>
     </form>
 </div>

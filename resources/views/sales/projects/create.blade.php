@@ -11,7 +11,7 @@
     $defaultScope = $designRequest?->detail_need ?: $quotation?->items?->pluck('name')->filter()->implode(', ');
 @endphp
 <div class="sales-ui request-process-create">
-    <form method="POST" action="{{ route('sales.projects.store') }}">
+    <form method="POST" action="{{ route('sales.projects.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="sales-page-head">
             <div class="sales-title-wrap">
@@ -21,10 +21,6 @@
                     <h1 class="page-title mb-1">Tambah Request Process</h1>
                     <div class="page-subtitle">Pilih Project yang sudah diajukan. Data yang tersedia akan dimuat otomatis.</div>
                 </div>
-            </div>
-            <div class="page-actions">
-                <a href="{{ route('sales.projects.index') }}" class="btn btn-soft">Batal</a>
-                <button class="btn btn-primary" @disabled(!$sourceProject)><i class="bi bi-check-square me-1"></i>Simpan Request Process</button>
             </div>
         </div>
 
@@ -106,8 +102,18 @@
                         <h2 class="sales-form-title">5. Tim Project</h2>
                         <label class="form-label small fw-bold">Project Manager *</label>
                         <select name="project_manager_id" class="form-select" required><option value="">Pilih Project Manager</option>@foreach($managers as $manager)<option value="{{ $manager->id }}" @selected((string) old('project_manager_id', $defaultManager) === (string) $manager->id)>{{ $manager->name }} — {{ $manager->roleLabel() }}</option>@endforeach</select>
-                        <label class="form-label small fw-bold mt-3">Tim Internal</label>
-                        <select name="internal_team[]" class="form-select" multiple>@foreach($team as $member)<option value="{{ $member->id }}" @selected(in_array((string) $member->id, array_map('strval', old('internal_team', $defaultTeam)), true))>{{ $member->name }} — {{ $member->roleLabel() }}</option>@endforeach</select>
+                        <fieldset class="mt-3">
+                            <legend class="form-label small fw-bold mb-2">Tim Internal</legend>
+                            <div class="team-choice-grid">
+                                @foreach($team as $member)
+                                    <label class="team-choice">
+                                        <input type="checkbox" name="internal_team[]" value="{{ $member->id }}" @checked(in_array((string) $member->id, array_map('strval', old('internal_team', $defaultTeam)), true))>
+                                        <span><strong>{{ $member->name }}</strong><small>{{ $member->roleLabel() }}</small></span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <div class="form-text mt-2">Pilih satu atau beberapa anggota yang terlibat dalam Request Process.</div>
+                        </fieldset>
                         <label class="form-label small fw-bold mt-3">Tim Eksternal / Vendor</label>
                         <input name="external_vendor" value="{{ old('external_vendor') }}" class="form-control" placeholder="Vendor jika ada">
                     </section>
@@ -129,7 +135,12 @@
                                 <div class="request-document-empty"><i class="bi bi-paperclip"></i><span>Belum ada dokumen yang terlampir pada Project ini.</span></div>
                             @endif
                         </div>
-                        <div class="form-text mt-2">Daftar ini hanya menampilkan file asli yang sudah tersimpan pada Project atau Penawaran terkait.</div>
+                        <div class="mt-3">
+                            <label class="form-label small fw-bold" for="requestProcessPoFile">{{ $sourceProject?->customer_po_file ? 'Ganti Dokumen PO' : 'Upload Dokumen PO' }}</label>
+                            <input id="requestProcessPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+                            @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text">PDF, JPG, PNG, Word, atau Excel. File ini tersimpan sebagai Dokumen PO Project sumber.</div>
+                        </div>
                     </section>
 
                     <section class="sales-form-card">
@@ -139,6 +150,10 @@
                 </div>
             </div>
         </fieldset>
+        <div class="form-submit-actions">
+            <a href="{{ route('sales.projects.index') }}" class="btn btn-soft">Batal</a>
+            <button type="submit" class="btn btn-primary" @disabled(!$sourceProject)><i class="bi bi-check-square me-1"></i>Simpan Request Process</button>
+        </div>
     </form>
 </div>
 @endsection

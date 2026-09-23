@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
+use App\Models\Project;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
-use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -37,9 +38,58 @@ class RequestProcessRevisionTest extends TestCase
         Quotation::create(['code' => 'Q-PIC-1', 'project_name' => 'Proyek Uji', 'customer_name' => $customer->name, 'customer_id' => $customer->id, 'pic_name' => 'PIC Penawaran Uji', 'sales_id' => $sales->id]);
         Quotation::create(['code' => 'Q-PIC-2', 'project_name' => 'Proyek Uji', 'customer_name' => $customer->name, 'customer_id' => $customer->id, 'sales_id' => $sales->id]);
         $this->actingAs($sales)->get(route('sales.quotations.index'))->assertOk()
-            ->assertSee('PIC Customer')->assertSee('PIC Penawaran Uji')->assertSee('PIC Utama Uji');
+            ->assertSee('PIC Customer')->assertSee('PIC Sales')->assertSee($sales->name)
+            ->assertSee('PIC Penawaran Uji')->assertSee('PIC Utama Uji');
         $this->get(route('sales.quotations.index', ['q' => 'PIC Penawaran Uji']))->assertOk()
             ->assertSee('Q-PIC-1')->assertDontSee('Q-PIC-2');
+    }
+
+    public function test_request_process_uses_team_checkboxes_and_can_upload_the_project_po(): void
+    {
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $drafter = User::factory()->create(['role' => 'drafter']);
+        $quotation = Quotation::create([
+            'code' => 'Q-RP-PO-1',
+            'customer_name' => 'Customer Request Process',
+            'project_name' => 'Project Request Process',
+            'status' => 'customer_accepted',
+            'sales_id' => $sales->id,
+            'subtotal' => 1000000,
+            'tax_amount' => 110000,
+            'grand_total' => 1110000,
+        ]);
+        $sourceProject = PurchaseOrderRequest::create([
+            'code' => 'PROJECT-RP-PO-1',
+            'quotation_id' => $quotation->id,
+            'requested_by' => $sales->id,
+            'status' => 'po_created',
+        ]);
+
+        $this->actingAs($sales)->get(route('sales.projects.create', ['project' => $sourceProject->id]))
+            ->assertOk()
+            ->assertSee('type="checkbox" name="internal_team[]"', false)
+            ->assertSee('name="customer_po_file"', false)
+            ->assertDontSee('name="internal_team[]" class="form-select" multiple', false);
+
+        $this->post(route('sales.projects.store'), [
+            'purchase_order_request_id' => $sourceProject->id,
+            'name' => 'Request Process Upload PO',
+            'priority' => 'medium',
+            'status' => 'planning',
+            'start_date' => '2026-09-24',
+            'target_date' => '2026-10-24',
+            'project_manager_id' => $sales->id,
+            'internal_team' => [$drafter->id],
+            'customer_po_file' => UploadedFile::fake()->create('dokumen-po.pdf', 100, 'application/pdf'),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $project = Project::sole();
+        $this->assertSame($quotation->id, $project->quotation_id);
+        $this->assertSame([$drafter->id], array_map('intval', $project->internal_team));
+        $this->assertNotNull($sourceProject->fresh()->customer_po_file);
+        Storage::disk('public')->assertExists($sourceProject->fresh()->customer_po_file);
+        $this->get(route('sales.projects.show', $project))->assertOk()->assertSee('Lihat Dokumen PO');
     }
 
     public function test_sales_can_change_submitted_number_without_losing_document_and_duplicate_is_rejected(): void

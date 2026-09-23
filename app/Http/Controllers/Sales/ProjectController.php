@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\ProjectWorkflow;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Services\Logger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
@@ -26,6 +28,7 @@ class ProjectController extends Controller
             $query->where('status', $status);
         }
         $projects = $query->paginate(10)->withQueryString();
+
         return view('sales.projects.index', compact('projects'));
     }
 
@@ -48,6 +51,7 @@ class ProjectController extends Controller
             ->orderBy('name')
             ->get();
         $team = User::where('is_active', true)->get();
+
         return view('sales.projects.create', compact('sourceProject', 'availableProjects', 'managers', 'team'));
     }
 
@@ -78,13 +82,17 @@ class ProjectController extends Controller
             'internal_team' => ['nullable', 'array'],
             'internal_team.*' => [Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at'))],
             'external_vendor' => ['nullable', 'string', 'max:255'],
+            'customer_po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
             'note' => ['nullable', 'string'],
         ]);
 
         $sourceProject = $this->eligibleSourceProjectQuery()->findOrFail($data['purchase_order_request_id']);
         $quotation = $sourceProject->quotation;
+        $poFile = $data['customer_po_file'] ?? null;
         unset($data['purchase_order_request_id']);
+        unset($data['customer_po_file']);
         $data['code'] = ($data['code'] ?? null) ?: $this->nextProjectCode($sourceProject);
+        $data['quotation_id'] = $quotation->id;
         $data['customer_id'] = $quotation->customer_id;
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
         $data['tax_amount'] = $quotation->tax_amount;
@@ -93,6 +101,14 @@ class ProjectController extends Controller
         $data['created_by'] = Auth::id();
 
         $project = Project::create($data);
+        if ($poFile) {
+            $oldPath = $sourceProject->customer_po_file;
+            $newPath = $poFile->store('purchase-order-requests', 'public');
+            $sourceProject->update(['customer_po_file' => $newPath]);
+            if ($oldPath && $oldPath !== $newPath) {
+                Storage::disk('public')->delete($oldPath);
+            }
+        }
         Logger::record('created', "Request Process {$project->name} dibuat dari Project {$sourceProject->projectNumber()}", $project);
 
         return redirect()->route('sales.projects.show', $project)->with('success', 'Request Process berhasil dibuat.');
@@ -120,7 +136,7 @@ class ProjectController extends Controller
             ->where('category', 'production_progress')
             ->sortByDesc('created_at')
             ->values();
-        $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
+        $qcChecklistDefinition = ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
 
         return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
     }

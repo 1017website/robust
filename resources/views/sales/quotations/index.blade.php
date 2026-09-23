@@ -8,7 +8,7 @@
 
 <div class="card-r">
     <form class="filter-bar" method="GET">
-        <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari kode / customer / PIC / proyek...">
+        <input type="text" name="q" value="{{ request('q') }}" class="form-control" placeholder="Cari kode / customer / PIC customer / PIC sales / proyek...">
         <select name="status" class="form-select">
             <option value="">Semua Status</option>
             @foreach(\App\Models\Quotation::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')==$k)>{{ $v }}</option>@endforeach
@@ -17,13 +17,14 @@
     </form>
     <div class="table-wrap">
         <table class="table-r">
-            <thead><tr><th>Kode</th><th>Customer</th><th>PIC Customer</th><th>Proyek</th><th>Jenis</th><th>Berlaku s/d</th><th>Grand Total</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Kode</th><th>Customer</th><th>PIC Customer</th><th>PIC Sales</th><th>Proyek</th><th>Jenis</th><th>Berlaku s/d</th><th>Grand Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
             @forelse($quotations as $q)
                 <tr>
                     <td class="fw-semibold">{{ $q->code }}</td>
                     <td>{{ $q->customer_name }}</td>
                     <td>{{ $q->pic_name ?: $q->customer?->primaryPic?->name ?: '-' }}</td>
+                    <td>{{ $q->sales?->name ?: '-' }}</td>
                     <td>{{ $q->project_name }}</td>
                     <td>{{ $q->creationModeLabel() }}</td>
                     <td>{{ $q->valid_until?->format('d M Y') ?? '—' }}</td>
@@ -32,7 +33,7 @@
                     <td><a href="{{ route('sales.quotations.show',$q) }}" class="btn btn-sm btn-soft">Detail</a></td>
                 </tr>
             @empty
-                <tr><td colspan="9"><x-empty text="Belum ada penawaran." /></td></tr>
+                <tr><td colspan="10"><x-empty text="Belum ada penawaran." /></td></tr>
             @endforelse
             </tbody>
         </table>

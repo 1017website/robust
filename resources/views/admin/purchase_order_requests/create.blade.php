@@ -133,11 +133,14 @@
                 </ol>
                 <div class="form-text mt-2">Kolom bertanda <span class="text-danger">*</span> wajib diisi sebelum Project diajukan. Fase produksi sampai pengiriman dicatat di Request Process, bukan di sini.</div>
             </div>
-            <button name="action" value="submit" class="btn btn-primary w-100 mt-3"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
-            <button name="action" value="draft" class="btn btn-soft w-100 mt-2" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>
-            <div class="form-text mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum dijalankan.</div>
         </div>
     </div>
+    <div class="form-submit-actions">
+        <a href="{{ route('admin.purchase-order-requests.index') }}" class="btn btn-soft">Batal</a>
+        <button type="submit" name="action" value="draft" class="btn btn-soft" formnovalidate><i class="bi bi-journal-text me-1"></i>Simpan Draf (Pending)</button>
+        <button type="submit" name="action" value="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>{{ $isEditingDraft ? 'Ajukan Project' : 'Simpan & Ajukan Project' }}</button>
+    </div>
+    <div class="form-text text-end mt-2">Draf tersimpan tanpa validasi kelengkapan dan belum dijalankan.</div>
 </form>
 @push('scripts')<script>
 const purchaseSourceInputs=document.querySelectorAll('input[name="purchase_source"]');
