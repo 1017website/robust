@@ -1288,3 +1288,6 @@ a.sales-chip:not(.active):hover{border-color:#8cbcff;background:#f6faff;color:#0
 .lead-create-page .lead-existing-doc i{color:#0b5cff;font-size:16px}
 .lead-create-page .lead-existing-doc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .lead-create-page .lead-existing-doc small{color:#687895}
+
+/* Judul grup menu sidebar: memberi jarak antar kelompok agar menu tidak terlihat berserakan. */
+.side-nav .side-label{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 14px 4px;border-top:1px solid rgba(174,185,204,.12);color:#6f819c}

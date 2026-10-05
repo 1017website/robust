@@ -27,52 +27,66 @@
     }
 
     if ($role === 'administrator') {
-        $pushLabel($menuGroups, 'MAIN');
+        $pushLabel($menuGroups, 'PROSPEK & CUSTOMER');
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushLabel($menuGroups, 'PENJUALAN');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
+        $pushLabel($menuGroups, 'PROJECT & PENAGIHAN');
         $pushItem($menuGroups, 'Project', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
-        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
-        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
-        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
+        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
+        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
         $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Manage User', 'admin.users.index', 'admin.users.*', 'bi-person-gear');
         $pushItem($menuGroups, 'System Settings', 'admin.system-settings.index', 'admin.system-settings.*', 'bi-gear-wide-connected');
     } elseif ($role === 'sales_spv') {
+        $pushLabel($menuGroups, 'PROSPEK & CUSTOMER');
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
         $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-people');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushLabel($menuGroups, 'PENJUALAN');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Monitoring Penawaran', 'spv.quotation-approvals.index', 'spv.quotation-approvals.*', 'bi-eye');
-        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
+        $pushLabel($menuGroups, 'PROJECT');
         $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'administration') {
+        $pushLabel($menuGroups, 'PROJECT');
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
         $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-folder2-open');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'production') {
+        $pushLabel($menuGroups, 'PEKERJAAN');
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square');
-        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Laporan Produksi', 'drafter.projects.index', 'drafter.projects.*', 'bi-clipboard2-check');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
+        $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Dokumen Project', 'documents.index', 'documents.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'qc') {
         $pushItem($menuGroups, 'QC Attachment', 'drafter.projects.index', 'drafter.projects.*', 'bi-patch-check');
@@ -83,26 +97,33 @@
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'drafter') {
+        $pushLabel($menuGroups, 'PEKERJAAN');
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-box-seam');
         $pushItem($menuGroups, 'Tasks', 'drafter.tasks.index', 'drafter.tasks.*', 'bi-ui-checks');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-file-earmark-text');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
+        $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } else {
+        $pushLabel($menuGroups, 'PROSPEK & CUSTOMER');
         $pushItem($menuGroups, 'Pra Leads', 'admin.pra-leads.index', 'admin.pra-leads.*', 'bi-percent');
         $pushItem($menuGroups, 'Assignment', 'admin.assignment.index', 'admin.assignment.*', 'bi-people');
         $pushItem($menuGroups, 'Request Masuk', 'sales.request-masuk.index', 'sales.request-masuk.*', 'bi-inbox');
         $pushItem($menuGroups, 'Leads', 'sales.leads.index', 'sales.leads.*', 'bi-person-lines-fill');
+        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
         $pushItem($menuGroups, 'Activities', 'activities.index', 'activities.*', 'bi-check2-square');
+        $pushLabel($menuGroups, 'PENJUALAN');
         $pushItem($menuGroups, 'Design Request', 'sales.design-requests.index', 'sales.design-requests.*', 'bi-pencil-square');
         $pushItem($menuGroups, 'Penawaran', 'sales.quotations.index', 'sales.quotations.*', 'bi-file-earmark-text');
+        $pushLabel($menuGroups, 'PROJECT & PENAGIHAN');
         $pushItem($menuGroups, 'Project', 'admin.purchase-order-requests.index', 'admin.purchase-order-requests.*', 'bi-receipt');
-        $pushItem($menuGroups, 'Customers', 'sales.customers.index', 'sales.customers.*', 'bi-person-vcard');
-        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
         $pushItem($menuGroups, 'Request Process', 'sales.projects.index', 'sales.projects.*', 'bi-folder');
         $pushItem($menuGroups, 'Project Monitoring', 'administration.project-monitoring.index', 'administration.project-monitoring.*', 'bi-table');
+        $pushItem($menuGroups, 'Invoice', 'admin.invoices.index', 'admin.invoices.*', 'bi-file-earmark-richtext');
+        $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Calendar', 'calendar.index', 'calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Documents', 'documents.index', 'documents.*', 'bi-folder2-open');
         $pushItem($menuGroups, 'Reports', 'reports.index', 'reports.*', 'bi-bar-chart');
