@@ -99,7 +99,7 @@
                     <select name="customer_id" class="form-select" id="customerSelect">
                         <option value="">Tidak dihubungkan / customer baru</option>
                         @foreach($customers as $customer)
-                            <option value="{{ $customer->id }}" data-name="{{ $customer->name }}" @selected((string)$customerIdValue === (string)$customer->id)>{{ $customer->name }}</option>
+                            <option value="{{ $customer->id }}" data-name="{{ $customer->name }}" @selected((string)$customerIdValue === (string)$customer->id)>{{ $customer->optionLabel() }}</option>
                         @endforeach
                     </select>
                 </div>

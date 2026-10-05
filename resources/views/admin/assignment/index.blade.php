@@ -126,7 +126,7 @@
             <div class="sa-card-head"><h2>Lead Terbaru</h2><a href="{{ route('sales.leads.index') }}">Lihat Semua</a></div>
                 <div class="sa-mini-list">
                     @foreach($leads->where('sales_id', $selectedSales->id)->take(3) as $lead)
-                        <div><span>{{ $loop->iteration }}</span><strong>{{ $lead->instansi }}</strong><small><x-status-badge :status="$lead->status" /></small></div>
+                        <div><span>{{ $loop->iteration }}</span><strong>{{ $lead->instansi }}@if($lead->identityDetails())<small class="d-block fw-normal text-muted-2">{{ $lead->identityDetails() }}</small>@endif</strong><small><x-status-badge :status="$lead->status" /></small></div>
                     @endforeach
                 </div>
                 <hr>
@@ -145,7 +145,7 @@
                                 <div class="modal-body">
                                     <label class="form-label small fw-semibold">Pilih Lead</label>
                                     <select name="lead_id" class="form-select mb-3" required>
-                                        @foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->instansi }}</option>@endforeach
+                                        @foreach($leads as $lead)<option value="{{ $lead->id }}">{{ $lead->optionLabel() }}</option>@endforeach
                                     </select>
                                     <div class="row g-3">
                                         <div class="col-sm-6"><label class="form-label small fw-semibold">Dari</label><input class="form-control" value="{{ $selectedSales->name }}" readonly></div>

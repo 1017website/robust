@@ -22,6 +22,10 @@ class ActivityController extends Controller
     {
         $period = $request->get('period', 'today');
         $selectedDate = $request->get('date');
+        // Tab halaman Activities; selalu dibuka di Pipeline kecuali tab lain dipilih.
+        $view = in_array($request->get('view'), ['pipeline', 'list', 'calendar', 'tracking'], true)
+            ? $request->get('view')
+            : 'pipeline';
         $calendarMonth = min(12, max(1, (int) $request->get('cal_month', now()->month)));
         $calendarYear = min(2100, max(2000, (int) $request->get('cal_year', now()->year)));
         $calendarFirst = Carbon::create($calendarYear, $calendarMonth, 1);
@@ -49,17 +53,17 @@ class ActivityController extends Controller
         if ($customerId = $request->get('customer_id')) {
             $query->where('customer_id', $customerId);
         }
+        // Filter periode hanya untuk Tracking Harian; tab lain menampilkan seluruh histori
+        // aktivitas (tanggal tetap bisa dipilih manual dari filter daftar).
         if ($selectedDate) {
             $query->whereDate('activity_date', $selectedDate);
-        } elseif ($period === 'overdue') {
-            $query->whereDate('activity_date', '<', today())
-                ->whereNotIn('status', ['completed', 'cancelled']);
-        } elseif ($period === 'week') {
-            $query->whereBetween('activity_date', [now()->startOfWeek(), now()->endOfWeek()]);
-        } elseif ($period === 'month') {
-            $query->whereYear('activity_date', now()->year)->whereMonth('activity_date', now()->month);
-        } else {
-            $query->whereDate('activity_date', today());
+        } elseif ($view === 'tracking') {
+            match ($period) {
+                'overdue' => $query->whereDate('activity_date', '<', today())->whereNotIn('status', ['completed', 'cancelled']),
+                'week' => $query->whereBetween('activity_date', [now()->startOfWeek(), now()->endOfWeek()]),
+                'month' => $query->whereYear('activity_date', now()->year)->whereMonth('activity_date', now()->month),
+                default => $query->whereDate('activity_date', today()),
+            };
         }
 
         $activities = $query->paginate(10)->withQueryString();
@@ -117,11 +121,6 @@ class ActivityController extends Controller
         $salesUsers = User::assignableSales();
         $customers = $customerScope()->orderBy('name')->get();
 
-        // Tab halaman Activities; selalu dibuka di Pipeline kecuali tab lain dipilih.
-        $view = in_array($request->get('view'), ['pipeline', 'list', 'calendar', 'tracking'], true)
-            ? $request->get('view')
-            : 'pipeline';
-
         // Tab Calendar menampilkan aktivitas sebulan penuh langsung di halaman ini.
         $calendarActivities = $view === 'calendar'
             ? $activityScope()->with('customer', 'lead')
@@ -155,7 +154,8 @@ class ActivityController extends Controller
 
     public function create()
     {
-        $customers = Customer::when(Auth::user()->isSales() && ! Auth::user()->isAdminLevel(), fn ($q) => $q->where('sales_id', Auth::id()))
+        $customers = Customer::with('primaryPic')
+            ->when(Auth::user()->isSales() && ! Auth::user()->isAdminLevel(), fn ($q) => $q->where('sales_id', Auth::id()))
             ->latest()
             ->latest('id')
             ->get();

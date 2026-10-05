@@ -48,7 +48,7 @@
                                             data-description="{{ e($sourceLead->need_description) }}"
                                             data-scopes="{{ e(json_encode($sourceLead->scope_items ?? [])) }}"
                                             @selected($selectedMasterSource === 'lead:'.$sourceLead->id)
-                                        >{{ $sourceLead->code }} — {{ $sourceLead->instansi }}{{ $sourceLead->lab_name ? ' / '.$sourceLead->lab_name : '' }}</option>
+                                        >{{ $sourceLead->code }} — {{ $sourceLead->optionLabel() }}{{ $sourceLead->lab_name ? ' / '.$sourceLead->lab_name : '' }}</option>
                                     @endforeach
                                 </optgroup>
                                 <optgroup label="Master Customers">
@@ -71,7 +71,7 @@
                                             data-description="{{ e($customerLead?->need_description ?: $sourceCustomer->notes) }}"
                                             data-scopes="{{ e(json_encode($customerLead?->scope_items ?? [])) }}"
                                             @selected($selectedMasterSource === 'customer:'.$sourceCustomer->id)
-                                        >{{ $sourceCustomer->code }} — {{ $sourceCustomer->name }}</option>
+                                        >{{ $sourceCustomer->code }} — {{ $sourceCustomer->optionLabel() }}</option>
                                     @endforeach
                                 </optgroup>
                             </select>

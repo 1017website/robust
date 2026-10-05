@@ -553,7 +553,7 @@ class CrmFlowTest extends TestCase
 
         $this->actingAs($sales)->get(route('activities.create'))
             ->assertSuccessful()
-            ->assertSeeText('Customer Nama Sama | Area: Jakarta | Divisi: Laboratorium');
+            ->assertSeeText('Customer Nama Sama — Laboratorium · Jakarta');
     }
 
     public function test_project_workspace_displays_complete_linked_design_request_information(): void

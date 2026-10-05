@@ -52,4 +52,23 @@ class Lead extends Model
             'Lainnya',
         ];
     }
+
+    /** Keterangan pembeda lead yang instansinya bernama sama: PIC, divisi, dan kota. */
+    public function identityDetails(): string
+    {
+        return collect([$this->pic_name, $this->division, $this->city])
+            ->map(fn ($value) => trim((string) $value))
+            // Isian placeholder seperti "-" tidak membantu membedakan, jadi dilewati.
+            ->reject(fn ($value) => in_array($value, ['', '-', '—'], true))
+            ->unique()
+            ->implode(' · ');
+    }
+
+    /** Label pilihan lead pada dropdown, mis. "Kimia Farma — Kevin · Laboratorium · Sidoarjo". */
+    public function optionLabel(): string
+    {
+        $details = $this->identityDetails();
+
+        return $this->instansi.($details !== '' ? ' — '.$details : '');
+    }
 }

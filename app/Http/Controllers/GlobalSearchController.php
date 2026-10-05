@@ -41,7 +41,7 @@ class GlobalSearchController extends Controller
                     $results->push([
                         'group' => 'Customer',
                         'title' => $customer->name,
-                        'subtitle' => trim(($customer->primaryPic?->name ?? 'PIC belum diisi').' · '.($customer->sales?->name ?? 'Sales belum diisi'), ' ·'),
+                        'subtitle' => trim(($customer->identityDetails() ?: 'PIC belum diisi').' · '.($customer->sales?->name ?? 'Sales belum diisi'), ' ·'),
                         'href' => route('sales.customers.show', $customer),
                         'icon' => 'bi-person-vcard',
                     ]);
@@ -64,7 +64,7 @@ class GlobalSearchController extends Controller
                     $results->push([
                         'group' => 'Lead',
                         'title' => $lead->instansi,
-                        'subtitle' => trim(($lead->pic_name ?? 'PIC belum diisi').' · '.($lead->stage ?? 'lead'), ' ·'),
+                        'subtitle' => trim(($lead->identityDetails() ?: 'PIC belum diisi').' · '.($lead->stage ?? 'lead'), ' ·'),
                         'href' => route('sales.leads.show', $lead),
                         'icon' => 'bi-person-lines-fill',
                     ]);
@@ -72,7 +72,7 @@ class GlobalSearchController extends Controller
             }
 
             if (! $user->isDrafter()) {
-                $activities = Activity::with('customer', 'lead', 'sales')
+                $activities = Activity::with('customer.primaryPic', 'lead', 'sales')
                     ->when(($user->isSales() && ! $user->isAdminLevel()), fn (Builder $q) => $q->where('sales_id', $user->id))
                     ->where(function (Builder $q) use ($like) {
                         $q->where('title', 'like', $like)
@@ -88,7 +88,7 @@ class GlobalSearchController extends Controller
                     $results->push([
                         'group' => 'Activity',
                         'title' => $activity->title,
-                        'subtitle' => trim(($activity->customer?->name ?? $activity->lead?->instansi ?? 'Customer belum diisi').' · '.($activity->activity_date?->translatedFormat('d M Y') ?? '-'), ' ·'),
+                        'subtitle' => trim(($activity->customer?->optionLabel() ?? $activity->lead?->optionLabel() ?? 'Customer belum diisi').' · '.($activity->activity_date?->translatedFormat('d M Y') ?? '-'), ' ·'),
                         'href' => route('activities.index', ['activity' => $activity->id]),
                         'icon' => 'bi-check2-square',
                     ]);

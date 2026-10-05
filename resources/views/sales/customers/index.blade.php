@@ -39,7 +39,7 @@
                     <div class="sa-card-head"><h2>Top Customer (Berdasarkan Total Project)</h2></div>
                     <div class="sa-ranked-list">
                         @foreach($customers->take(5) as $cust)
-                            <div><span>{{ $loop->iteration }}</span><strong>{{ $cust->name }}</strong><b>{{ $cust->projects()->count() }}</b></div>
+                            <div><span>{{ $loop->iteration }}</span><strong>{{ $cust->name }}@if($cust->identityDetails())<small class="d-block fw-normal text-muted-2">{{ $cust->identityDetails() }}</small>@endif</strong><b>{{ $cust->projects()->count() }}</b></div>
                         @endforeach
                     </div>
                     <a class="sa-link" href="{{ route('sales.customers.index') }}">Lihat Semua <i class="bi bi-arrow-right"></i></a>
@@ -48,7 +48,7 @@
                     <div class="sa-card-head"><h2>Potensi Repeat Order</h2></div>
                     <div class="sa-repeat-list">
                         @foreach($customers->take(3) as $cust)
-                            <div><i class="bi bi-building-check"></i><span><strong>{{ $cust->name }}</strong><small>Terakhir project: {{ $cust->updated_at?->translatedFormat('M Y') }}</small></span><em>{{ $cust->probability >= 70 ? 'Tinggi' : 'Sedang' }}</em></div>
+                            <div><i class="bi bi-building-check"></i><span><strong>{{ $cust->name }}</strong>@if($cust->identityDetails())<small>{{ $cust->identityDetails() }}</small>@endif<small>Terakhir project: {{ $cust->updated_at?->translatedFormat('M Y') }}</small></span><em>{{ $cust->probability >= 70 ? 'Tinggi' : 'Sedang' }}</em></div>
                         @endforeach
                     </div>
                     <a class="sa-link" href="{{ route('sales.customers.index') }}">Lihat Semua <i class="bi bi-arrow-right"></i></a>

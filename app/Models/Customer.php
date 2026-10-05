@@ -63,6 +63,28 @@ class Customer extends Model
     }
 
     /**
+     * Keterangan pembeda customer yang bernama sama: PIC utama, divisi, dan kota/area.
+     * Muat relasi primaryPic lebih dulu saat dipakai di daftar agar tidak N+1.
+     */
+    public function identityDetails(): string
+    {
+        return collect([$this->primaryPic?->name, $this->division, $this->city ?: $this->area])
+            ->map(fn ($value) => trim((string) $value))
+            // Isian placeholder seperti "-" tidak membantu membedakan, jadi dilewati.
+            ->reject(fn ($value) => in_array($value, ['', '-', '—'], true))
+            ->unique()
+            ->implode(' · ');
+    }
+
+    /** Label pilihan customer pada dropdown, mis. "Kimia Farma — Kevin · Laboratorium · Sidoarjo". */
+    public function optionLabel(): string
+    {
+        $details = $this->identityDetails();
+
+        return $this->name.($details !== '' ? ' — '.$details : '');
+    }
+
+    /**
      * Nilai pada kartu pipeline. Tahap awal (Identify, Approaching, Follow Up) belum
      * punya angka pasti sehingga memakai estimasi budget lead; tahap akhir memakai
      * nilai penawaran. Won / Maintaining hanya menghitung penawaran yang disetujui,

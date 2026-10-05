@@ -323,6 +323,48 @@ class August2026CrmRevisionTest extends TestCase
             ->assertDontSee('href="'.route('calendar.index').'" class="sales-chip"', false);
     }
 
+    public function test_activity_list_ignores_period_and_shows_full_history(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $customer = Customer::create(['name' => 'PT Daftar Aktivitas', 'sales_id' => $sales->id, 'pipeline_stage' => 'identify']);
+        \App\Models\Activity::create([
+            'title' => 'Call dua bulan lalu', 'type' => 'call', 'sales_id' => $sales->id, 'customer_id' => $customer->id,
+            'activity_date' => today()->subMonths(2), 'status' => 'completed', 'pipeline_stage' => 'identify',
+        ]);
+
+        // URL seperti di produksi: masih membawa period=overdue dari link lama.
+        $this->actingAs($sales)->get(route('activities.index', ['period' => 'overdue', 'customer_id' => $customer->id, 'view' => 'list']))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($rows) => $rows->total() === 1)
+            ->assertSee('Call dua bulan lalu')
+            ->assertSee('Semua customer');
+
+        // Tracking Harian tetap memakai filter periode.
+        $this->actingAs($sales)->get(route('activities.index', ['period' => 'overdue', 'customer_id' => $customer->id, 'view' => 'tracking']))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($rows) => $rows->total() === 0);
+    }
+
+    public function test_customer_and_lead_labels_include_distinguishing_details(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $first = Customer::create(['name' => 'Kimia Farma', 'division' => 'Laboratorium', 'city' => 'Sidoarjo', 'sales_id' => $sales->id]);
+        $first->pics()->create(['name' => 'Kevin', 'is_primary' => true]);
+        $second = Customer::create(['name' => 'Kimia Farma', 'division' => 'QC', 'city' => 'Bandung', 'sales_id' => $sales->id]);
+
+        $this->assertSame('Kimia Farma — Kevin · Laboratorium · Sidoarjo', $first->fresh('primaryPic')->optionLabel());
+        $this->assertSame('Kimia Farma — QC · Bandung', $second->fresh('primaryPic')->optionLabel());
+        $this->assertSame('Kimia Farma', Customer::make(['name' => 'Kimia Farma'])->optionLabel());
+
+        $lead = new Lead(['instansi' => 'Kimia Farma', 'pic_name' => 'Hengky', 'division' => 'Procurement', 'city' => 'Jakarta']);
+        $this->assertSame('Kimia Farma — Hengky · Procurement · Jakarta', $lead->optionLabel());
+
+        $this->actingAs($sales)->get(route('activities.create'))
+            ->assertOk()
+            ->assertSee('Kimia Farma — Kevin · Laboratorium · Sidoarjo')
+            ->assertSee('Kimia Farma — QC · Bandung');
+    }
+
     public function test_request_po_required_fields_are_starred(): void
     {
         $administrator = User::factory()->create(['role' => 'administrator']);

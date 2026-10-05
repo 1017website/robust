@@ -581,6 +581,7 @@ class QuotationController extends Controller
     protected function customerQuery()
     {
         return Customer::query()
+            ->with('primaryPic')
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()));
     }
 
