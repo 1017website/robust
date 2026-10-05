@@ -487,13 +487,19 @@ class CrmFlowTest extends TestCase
 
         $this->assertSame('PIC Updated', $customer->fresh()->primaryPic?->name);
 
-        $this->actingAs($sales)->post(route('activities.store'), [
+        $activityPayload = [
             'customer_id' => $customer->id,
             'type' => 'call',
             'title' => 'Follow up test',
             'activity_date' => now()->format('Y-m-d'),
             'status' => 'scheduled',
-        ])->assertRedirect(route('activities.index'));
+        ];
+        // Pipeline stage wajib dipilih; tidak lagi otomatis memakai stage customer.
+        $this->actingAs($sales)->post(route('activities.store'), $activityPayload)
+            ->assertSessionHasErrors('pipeline_stage');
+        $this->actingAs($sales)->post(route('activities.store'), $activityPayload + ['pipeline_stage' => 'follow_up'])
+            ->assertRedirect(route('activities.index'));
+        $this->assertSame('follow_up', $customer->fresh()->pipeline_stage);
 
         $activity = Activity::where('title', 'Follow up test')->firstOrFail();
         $this->actingAs($sales)->put(route('activities.status', $activity), [
@@ -644,7 +650,7 @@ class CrmFlowTest extends TestCase
             ->assertSeeText('Catatan teknis produksi.');
     }
 
-    public function test_add_activity_buttons_are_only_visible_to_sales(): void
+    public function test_add_activity_buttons_follow_role_visibility(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $administratorUser = User::factory()->create(['role' => 'administrator']);
@@ -657,14 +663,20 @@ class CrmFlowTest extends TestCase
             ->assertSuccessful()
             ->assertSeeText('Tambah Activity');
 
-        foreach ([$administratorUser, $salesSpv] as $nonSalesUser) {
-            $this->actingAs($nonSalesUser)->get(route('activities.index'))
-                ->assertSuccessful()
-                ->assertDontSeeText('Tambah Activity');
-            $this->actingAs($nonSalesUser)->get(route('calendar.index'))
-                ->assertSuccessful()
-                ->assertDontSeeText('Tambah Activity');
-        }
+        // Administrator juga dapat menambah aktivitas langsung dari halaman Activities.
+        $this->actingAs($administratorUser)->get(route('activities.index'))
+            ->assertSuccessful()
+            ->assertSeeText('Tambah Activity');
+        $this->actingAs($administratorUser)->get(route('calendar.index'))
+            ->assertSuccessful()
+            ->assertDontSeeText('Tambah Activity');
+
+        $this->actingAs($salesSpv)->get(route('activities.index'))
+            ->assertSuccessful()
+            ->assertDontSeeText('Tambah Activity');
+        $this->actingAs($salesSpv)->get(route('calendar.index'))
+            ->assertSuccessful()
+            ->assertDontSeeText('Tambah Activity');
     }
 
     public function test_administrator_sales_and_administration_can_update_project_monitoring_fields(): void

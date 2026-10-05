@@ -56,7 +56,7 @@ class QuotationController extends Controller
             abort(404, 'Design Request selesai tidak ditemukan atau bukan milik Anda.');
         }
 
-        $customers = $this->customerQuery()->orderBy('name')->get();
+        $customers = $this->customerQuery()->latest()->latest('id')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = $this->safeItemMasters();
 
@@ -148,7 +148,7 @@ class QuotationController extends Controller
 
         $quotation->load('items', 'designRequest', 'documents.uploader');
         $designRequest = $quotation->designRequest;
-        $customers = $this->customerQuery()->orderBy('name')->get();
+        $customers = $this->customerQuery()->latest()->latest('id')->get();
         $completedDR = $this->accessibleCompletedDesignRequests()->get();
         $itemMasters = $this->safeItemMasters();
 

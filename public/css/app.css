@@ -1243,3 +1243,48 @@ tr.customer-select-row:focus-visible{outline:2px solid #2563eb;outline-offset:-2
     .sales-admin-ui .sales-kanban{grid-template-columns:1fr!important}
     .request-detail-body .estimate-range strong{white-space:normal}
 }
+
+/* Navbar melayang pada tablet & HP: terlepas dari tepi layar dan tetap terlihat saat digulir. */
+@media(max-width:1199.98px){
+    /* overflow-x:hidden pada html/body membuat body jadi scroll container sehingga
+       sticky tidak bekerja; clip tetap mencegah geser horizontal tanpa efek itu. */
+    html,body{overflow-x:clip}
+    .topbar{
+        position:sticky;
+        top:10px;
+        margin:10px 12px 0;
+        border:1px solid var(--line);
+        border-radius:14px;
+        background:rgba(255,255,255,.92);
+        -webkit-backdrop-filter:saturate(180%) blur(12px);
+        backdrop-filter:saturate(180%) blur(12px);
+        box-shadow:0 10px 30px rgba(15,27,45,.10);
+    }
+}
+@media(max-width:767.98px){
+    .topbar{top:8px;margin:8px 8px 0;border-radius:12px}
+}
+
+/* Tab navigasi halaman (Activities, Detail Lead) berupa tautan. */
+a.sales-chip{text-decoration:none;transition:.15s}
+a.sales-chip:not(.active):hover{border-color:#8cbcff;background:#f6faff;color:#0b5cff}
+.lead-detail-tabs{display:flex;gap:6px;margin:4px 0 16px;padding:5px;overflow-x:auto;background:#fff;border:1px solid var(--sales-line);border-radius:12px;scrollbar-width:none}
+.lead-detail-tabs::-webkit-scrollbar{display:none}
+.lead-detail-tabs a{flex:0 0 auto;padding:8px 14px;border-radius:8px;color:#4b5b7f;font-size:12.5px;font-weight:800;text-decoration:none;white-space:nowrap;transition:.15s}
+.lead-detail-tabs a:hover{background:#f3f7fe;color:#0b285d}
+.lead-detail-tabs a.active{background:#0b5cff;color:#fff}
+#leadSummary,#leadNeeds,#leadNotes,#leadDocuments,#leadActivities,#leadHistory{scroll-margin-top:90px}
+.lead-activity-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #edf2fb}
+.lead-activity-item:last-child{border-bottom:0}
+.lead-activity-item:hover strong{color:#0b5cff}
+.lead-activity-text{display:grid;gap:2px;min-width:0}
+.lead-activity-text strong{font-size:13px;color:#061b49;overflow-wrap:anywhere}
+.lead-activity-text small{color:#66749b;font-size:11.5px}
+
+/* Dokumen yang sudah terlampir di form Edit Lead. */
+.lead-create-page .lead-existing-docs{display:grid;gap:8px}
+.lead-create-page .lead-existing-doc{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--sales-line);border-radius:9px;color:#15284f;font-size:12.5px;text-decoration:none}
+.lead-create-page .lead-existing-doc:hover{border-color:#8cbcff;background:#f6faff}
+.lead-create-page .lead-existing-doc i{color:#0b5cff;font-size:16px}
+.lead-create-page .lead-existing-doc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.lead-create-page .lead-existing-doc small{color:#687895}

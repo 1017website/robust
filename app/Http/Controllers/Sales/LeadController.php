@@ -91,7 +91,10 @@ class LeadController extends Controller
     public function show(Lead $lead)
     {
         $this->ensureAccess($lead);
-        $lead->load('praLead', 'customer', 'designRequests', 'documents', 'quotations');
+        $lead->load([
+            'praLead', 'customer', 'designRequests', 'documents', 'quotations',
+            'activities' => fn ($query) => $query->with('sales')->orderByDesc('activity_date')->orderByDesc('activity_time'),
+        ]);
         return view('sales.leads.show', compact('lead'));
     }
 
@@ -175,6 +178,9 @@ class LeadController extends Controller
             'est_value_max' => ['nullable', 'numeric'],
             'priority' => ['required', 'in:low,medium,high'],
             'initial_note' => ['nullable', 'string'],
+            'initial_followup_date' => ['nullable', 'date'],
+            'contact_preference' => ['nullable', 'string', 'max:100'],
+            'best_contact_time' => ['nullable', 'string', 'max:100'],
             'documents' => ['nullable', 'array'],
             'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png'],
             'sales_id' => [

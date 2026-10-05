@@ -3,7 +3,11 @@
 @section('content')
 @php
     $isEditingDraft = (bool) $requestPo;
-    $defaultSource = $requestPo?->quotation?->isExternal() ? 'external' : 'crm';
+    // Penawaran hasil upload tidak dirinci di CRM, jadi Project-nya otomatis memakai mode PO Existing / Non-CRM.
+    $uploadedQuotation = $quotation?->isUploaded() ? $quotation : null;
+    $externalQuotation = $requestPo?->quotation?->isExternal() ? $requestPo->quotation : $uploadedQuotation;
+    $defaultSource = $externalQuotation ? 'external' : 'crm';
+    $externalOrderValue = (float) $externalQuotation?->grand_total > 0 ? $externalQuotation->grand_total : null;
     $purchaseSource = old('purchase_source', $defaultSource);
     $value = fn (string $field, $fallback = null) => old($field, $requestPo?->{$field} ?? $fallback);
     $checklistItems = old('checklist_present')
@@ -69,13 +73,20 @@
                 </div>
 
                 <div id="externalQuotationFields" class="mb-3 {{ $purchaseSource === 'external' ? '' : 'd-none' }}">
-                    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>CRM akan membuat catatan penawaran eksternal otomatis agar alur Project dan Invoice tetap terhubung.</div>
+                    @if($uploadedQuotation)
+                        <input type="hidden" name="source_quotation_id" value="{{ $uploadedQuotation->id }}">
+                        <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>Project ini dibuat dari penawaran upload <strong>{{ $uploadedQuotation->code }}</strong> dan tetap terhubung ke penawaran tersebut. Isi total nilai sesuai PO customer.</div>
+                    @else
+                        <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>CRM akan membuat catatan penawaran eksternal otomatis agar alur Project dan Invoice tetap terhubung.</div>
+                    @endif
                     <div class="row g-3">
-                        <div class="col-md-8"><label class="form-label small fw-semibold">Nama Project / Order <span class="text-danger">*</span></label><input name="external_project_name" value="{{ old('external_project_name', $requestPo?->quotation?->project_name) }}" class="form-control" placeholder="Nama project pada PO customer" required></div>
-                        <div class="col-md-4"><label class="form-label small fw-semibold">No Penawaran Eksternal</label><input name="external_quotation_number" value="{{ old('external_quotation_number') }}" class="form-control" placeholder="Opsional"></div>
-                        <div class="col-md-6"><label class="form-label small fw-semibold">Total Nilai PO <span class="text-danger">*</span></label><input data-rupiah name="external_order_value" value="{{ old('external_order_value', $requestPo?->quotation?->grand_total) }}" class="form-control" inputmode="numeric" placeholder="Rp 0" required><div class="form-text">Masukkan total akhir termasuk pajak jika berlaku.</div></div>
+                        <div class="{{ $uploadedQuotation ? 'col-md-12' : 'col-md-8' }}"><label class="form-label small fw-semibold">Nama Project / Order <span class="text-danger">*</span></label><input name="external_project_name" value="{{ old('external_project_name', $externalQuotation?->project_name) }}" class="form-control" placeholder="Nama project pada PO customer" required></div>
+                        @unless($uploadedQuotation)
+                            <div class="col-md-4"><label class="form-label small fw-semibold">No Penawaran Eksternal</label><input name="external_quotation_number" value="{{ old('external_quotation_number') }}" class="form-control" placeholder="Opsional"></div>
+                        @endunless
+                        <div class="col-md-6"><label class="form-label small fw-semibold">Total Nilai PO <span class="text-danger">*</span></label><input data-rupiah name="external_order_value" value="{{ old('external_order_value', $externalOrderValue) }}" class="form-control" inputmode="numeric" placeholder="Rp 0" required><div class="form-text">Masukkan total akhir termasuk pajak jika berlaku.</div></div>
                         @unless(auth()->user()->isSales())
-                            <div class="col-md-6"><label class="form-label small fw-semibold">Sales Penanggung Jawab <span class="text-danger">*</span></label><select name="external_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected(old('external_sales_id', $requestPo?->quotation?->sales_id) == $sales->id)>{{ $sales->name }}</option>@endforeach</select></div>
+                            <div class="col-md-6"><label class="form-label small fw-semibold">Sales Penanggung Jawab <span class="text-danger">*</span></label><select name="external_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected(old('external_sales_id', $externalQuotation?->sales_id) == $sales->id)>{{ $sales->name }}</option>@endforeach</select></div>
                         @endunless
                     </div>
                 </div>

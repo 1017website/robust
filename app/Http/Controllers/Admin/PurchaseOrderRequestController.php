@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderRequestController extends Controller
 {
@@ -84,7 +85,7 @@ class PurchaseOrderRequestController extends Controller
         }
 
         $isExternal = $data['purchase_source'] === 'external';
-        $quotation = null;
+        $quotation = $this->uploadedSourceQuotation($data);
 
         if (! $isExternal && ! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
@@ -96,7 +97,9 @@ class PurchaseOrderRequestController extends Controller
 
         $poRequest = DB::transaction(function () use ($data, $isExternal, $asDraft, $quotation, $projectProvisioner) {
             if ($isExternal && ! $asDraft) {
-                $quotation = $this->createExternalQuotation($data);
+                $quotation = $quotation
+                    ? $this->applyExternalOrder($quotation, $data)
+                    : $this->createExternalQuotation($data);
             }
 
             $poRequest = PurchaseOrderRequest::create($this->attributes($data, $quotation) + [
@@ -150,7 +153,8 @@ class PurchaseOrderRequestController extends Controller
 
         if ($isExternal) {
             // Catatan penawaran eksternal milik draf ini saja yang boleh dipakai ulang.
-            $quotation = $quotation?->isExternal() ? $quotation : null;
+            $quotation = $this->uploadedSourceQuotation($data, $purchaseOrderRequest)
+                ?? ($quotation?->isExternal() ? $quotation : null);
         } elseif (! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
             abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
@@ -165,7 +169,11 @@ class PurchaseOrderRequestController extends Controller
             if ($isExternal && ! $asDraft && ! $quotation) {
                 $quotation = $this->createExternalQuotation($data);
             }
-            if ($isExternal && $quotation) {
+            if ($isExternal && $quotation?->isUploaded()) {
+                if (! $asDraft) {
+                    $this->applyExternalOrder($quotation, $data);
+                }
+            } elseif ($isExternal && $quotation) {
                 $quotation->update([
                     'customer_name' => $data['customer_name'],
                     'project_name' => $data['external_project_name'],
@@ -399,6 +407,48 @@ class PurchaseOrderRequestController extends Controller
             ->get();
     }
 
+    /**
+     * Penawaran hasil upload file yang dibawa dari halaman detailnya. Nilainya tidak
+     * dirinci di CRM, jadi Project dicatat sebagai PO Existing / Non-CRM namun tetap
+     * terhubung ke penawaran upload tersebut, bukan membuat catatan eksternal baru.
+     */
+    protected function uploadedSourceQuotation(array $data, ?PurchaseOrderRequest $current = null): ?Quotation
+    {
+        if ($data['purchase_source'] !== 'external' || empty($data['source_quotation_id'])) {
+            return null;
+        }
+
+        $quotation = Quotation::with('purchaseOrderRequest')->find($data['source_quotation_id']);
+        if (! $quotation?->isUploaded()) {
+            return null;
+        }
+
+        abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
+
+        $linkedToCurrent = $current && (int) $quotation->id === (int) $current->quotation_id;
+        if (! $linkedToCurrent && ! $quotation->canCreatePurchaseOrderRequest()) {
+            throw ValidationException::withMessages([
+                'source_quotation_id' => 'Project hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Project.',
+            ]);
+        }
+
+        return $quotation;
+    }
+
+    /** Nilai PO yang diisi manual menjadi nilai penawaran upload yang dihubungkan. */
+    protected function applyExternalOrder(Quotation $quotation, array $data): Quotation
+    {
+        $quotation->update([
+            'project_name' => $data['external_project_name'],
+            'sales_id' => Auth::user()->isSales() ? $quotation->sales_id : ($data['external_sales_id'] ?? $quotation->sales_id),
+            'subtotal' => $data['external_order_value'],
+            'tax_amount' => 0,
+            'grand_total' => $data['external_order_value'],
+        ]);
+
+        return $quotation;
+    }
+
     protected function createExternalQuotation(array $data): Quotation
     {
         $externalReference = trim((string) ($data['external_quotation_number'] ?? ''));
@@ -537,6 +587,7 @@ class PurchaseOrderRequestController extends Controller
                 ? ['nullable', 'string', 'max:255']
                 : ['nullable', 'required_if:purchase_source,external', 'string', 'max:255'],
             'external_quotation_number' => ['nullable', 'string', 'max:100'],
+            'source_quotation_id' => ['nullable', 'integer'],
             'external_order_value' => $asDraft
                 ? ['nullable', 'numeric', 'min:0']
                 : ['nullable', 'required_if:purchase_source,external', 'numeric', 'min:0.01'],

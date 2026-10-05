@@ -5,8 +5,13 @@
 @php
     $scopeItems = old('scope_items', $lead->scope_items ?: []);
     $selectedCity = old('city', $lead->city);
+    // Pilihan baku sama dengan form tambah lead; item lama di luar daftar ikut ditampilkan agar tidak hilang saat disimpan.
+    $scopeOptions = collect(['Wall Bench','Fume Hood','Storage Cabinet','Sink Area','Meja Praktikum','Meja Instrumen','Safety Equipment','Lainnya']);
+    $scopeSelected = collect($scopeItems)->map(fn ($item) => trim((string) $item))->filter();
+    $scopeOptions = $scopeOptions->merge($scopeSelected->reject(fn ($item) => $scopeOptions->contains(fn ($option) => strcasecmp($option, $item) === 0)))->values();
+    $scopeChecked = fn ($option) => $scopeSelected->contains(fn ($item) => strcasecmp($option, $item) === 0);
 @endphp
-<div class="sales-ui lead-layout-page">
+<div class="sales-ui lead-layout-page lead-create-page">
     <form method="POST" action="{{ route('sales.leads.update', $lead) }}" enctype="multipart/form-data" class="lead-form-shell">
         @csrf
         @method('PUT')
@@ -132,33 +137,20 @@
             <div class="lead-form-col">
                 <section class="lead-card">
                     <h2 class="lead-card-title"><span class="lead-icon sgreen"><i class="bi bi-clipboard-check"></i></span>Kebutuhan Awal</h2>
-
                     <div class="mb-3">
                         <label class="form-label lead-label">Nama Laboratorium / Proyek <span>*</span></label>
                         <input name="lab_name" value="{{ old('lab_name', $lead->lab_name) }}" class="form-control lead-control" required placeholder="Contoh: Laboratorium Kimia">
                     </div>
-
                     <label class="form-label lead-label">Deskripsi Kebutuhan</label>
-                    <div class="lead-textarea-wrap">
-                        <textarea name="need_description" rows="5" maxlength="500" class="form-control lead-control lead-counter-field" data-counter-target="needCounter" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description', $lead->need_description) }}</textarea>
-                        <span id="needCounter" class="lead-counter">{{ strlen(old('need_description', $lead->need_description ?? '')) }}/500</span>
-                    </div>
-
+                    <textarea name="need_description" rows="5" maxlength="500" class="form-control lead-control" placeholder="Jelaskan kebutuhan laboratorium / peralatan yang dibutuhkan...">{{ old('need_description', $lead->need_description) }}</textarea>
                     <div class="mt-3">
-                        <label class="form-label lead-label">Daftar Kebutuhan <span class="fw-normal">(contoh: Wall Bench, Fume Hood, Sink, dll)</span></label>
-                        <div class="lead-chip-input">
-                            <input type="text" id="scopeInput" class="form-control lead-control" placeholder="Ketik kebutuhan lalu tekan Enter">
-                            <button type="button" class="btn btn-soft" id="scopeAddBtn"><i class="bi bi-plus-lg me-1"></i>Tambah</button>
-                        </div>
-                        <div class="lead-chip-list" id="scopeChipList">
-                            @foreach($scopeItems as $scope)
-                                @if(trim($scope) !== '')
-                                    <span class="lead-scope-chip" data-value="{{ $scope }}">{{ $scope }} <button type="button" aria-label="Hapus kebutuhan">×</button><input type="hidden" name="scope_items[]" value="{{ $scope }}"></span>
-                                @endif
+                        <label class="form-label lead-label">Daftar Kebutuhan</label>
+                        <div class="lead-scope-options">
+                            @foreach($scopeOptions as $item)
+                                <label class="lead-scope-option"><input type="checkbox" name="scope_items[]" value="{{ $item }}" @checked($scopeChecked($item))><span>{{ $item }}</span></label>
                             @endforeach
                         </div>
                     </div>
-
                     <div class="mt-3">
                         <label class="form-label lead-label">Kapasitas / Pengguna</label>
                         <input name="capacity" value="{{ old('capacity', $lead->capacity) }}" class="form-control lead-control" placeholder="Contoh: 40 Mahasiswa / 10 Peneliti">
@@ -166,18 +158,10 @@
                 </section>
 
                 <section class="lead-card">
-                    <h2 class="lead-card-title"><span class="lead-icon sorange"><i class="bi bi-flag"></i></span>Estimasi & Prioritas</h2>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label lead-label">Estimasi Potensi <span class="fw-normal">(Opsional)</span></label>
-                            <input data-rupiah name="est_value_min" value="{{ old('est_value_min', $lead->est_value_min) }}" class="form-control lead-control" placeholder="Contoh: 500.000.000">
-                            <small class="text-muted-2">Dari (Rp)</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label lead-label d-none d-md-block">&nbsp;</label>
-                            <input data-rupiah name="est_value_max" value="{{ old('est_value_max', $lead->est_value_max) }}" class="form-control lead-control" placeholder="Contoh: 1.000.000.000">
-                            <small class="text-muted-2">Sampai (Rp)</small>
-                        </div>
+                    <h2 class="lead-card-title"><span class="lead-icon sorange"><i class="bi bi-flag"></i></span>Estimasi &amp; Prioritas</h2>
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label lead-label">Estimasi Dari (Rp)</label><input data-rupiah name="est_value_min" value="{{ old('est_value_min', $lead->est_value_min) }}" class="form-control lead-control" placeholder="500.000.000"></div>
+                        <div class="col-md-4"><label class="form-label lead-label">Sampai (Rp)</label><input data-rupiah name="est_value_max" value="{{ old('est_value_max', $lead->est_value_max) }}" class="form-control lead-control" placeholder="1.000.000.000"></div>
                         <div class="col-md-4">
                             <label class="form-label lead-label">Prioritas Lead <span>*</span></label>
                             <select name="priority" class="form-select lead-control" required>
@@ -192,23 +176,12 @@
 
                 <section class="lead-card">
                     <h2 class="lead-card-title"><span class="lead-icon sblue"><i class="bi bi-file-earmark-arrow-up"></i></span>Dokumen Pendukung <span class="text-muted-2 fw-normal">(Opsional)</span></h2>
-                    <div class="lead-upload-grid">
-                        <label class="lead-upload-box">
-                            <input type="file" name="documents[]" id="leadDocuments" multiple data-multi-file data-multi-file-list="off" accept=".pdf,.jpg,.jpeg,.png" class="d-none">
-                            <i class="bi bi-cloud-arrow-up"></i>
-                            <strong>Klik atau drag & drop file di sini</strong>
-                            <span>PDF, JPG, PNG &middot; tanpa batas jumlah dan ukuran</span>
-                        </label>
-                        <div class="lead-file-panel">
-                            <div class="lead-file-head"><span>File yang diunggah</span><b id="leadFileCount">0</b></div>
-                            <div class="lead-file-list" id="leadFileList">
-                                <div class="lead-empty-file">Belum ada file baru yang dipilih</div>
-                            </div>
-                        </div>
-                    </div>
+                    <label class="form-label lead-label" for="leadDocuments">Tambah Dokumen</label>
+                    <input type="file" name="documents[]" id="leadDocuments" multiple data-multi-file accept=".pdf,.jpg,.jpeg,.png" class="form-control lead-control">
+                    <div class="form-text">PDF, JPG, PNG. Dokumen baru ditambahkan tanpa menghapus dokumen yang sudah ada.</div>
                     @if($lead->documents->count())
                         <div class="lead-existing-docs mt-3">
-                            <div class="small fw-bold mb-2">Dokumen saat ini</div>
+                            <div class="lead-label mb-2">Dokumen saat ini</div>
                             @foreach($lead->documents as $doc)
                                 <a href="{{ asset('storage/'.$doc->file_path) }}" target="_blank" class="lead-existing-doc">
                                     <i class="bi bi-file-earmark-text"></i>
@@ -219,27 +192,17 @@
                         </div>
                     @endif
                 </section>
+
+                @if(! auth()->user()->isSales())
+                    <section class="lead-card">
+                        <h2 class="lead-card-title"><span class="lead-icon sblue"><i class="bi bi-person-badge"></i></span>Sales Owner</h2>
+                        <label class="form-label lead-label" for="leadSalesOwner">Sales yang Ditugaskan <span>*</span></label>
+                        <select name="sales_id" id="leadSalesOwner" class="form-select lead-control" required><option value="">Pilih sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id',$lead->sales_id)===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select>
+                    </section>
+                @endif
             </div>
         </div>
-        <div class="col-lg-4">
-            <div class="card-r">
-                <div class="card-head"><h2>Klasifikasi</h2></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Sumber *</label>
-                    <select name="source" class="form-select" required>
-                        @foreach(\App\Models\PraLead::sources() as $src => $label)<option value="{{ $src }}" @selected($lead->source==$src)>{{ $label }}</option>@endforeach
-                    </select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Prioritas *</label>
-                    <select name="priority" class="form-select">
-                        @foreach(['low'=>'Low','medium'=>'Medium','high'=>'High'] as $k=>$v)<option value="{{ $k }}" @selected($lead->priority==$k)>{{ $v }}</option>@endforeach
-                    </select>
-                </div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Estimasi Min</label><input data-rupiah name="est_value_min" type="text" inputmode="numeric" value="{{ $lead->est_value_min }}" class="form-control"></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Estimasi Max</label><input data-rupiah name="est_value_max" type="text" inputmode="numeric" value="{{ $lead->est_value_max }}" class="form-control"></div>
-                <div class="mb-3"><label class="form-label small fw-semibold">Catatan</label><textarea name="initial_note" rows="3" class="form-control">{{ $lead->initial_note }}</textarea></div>
-                @if(! auth()->user()->isSales())<div class="mb-3"><label class="form-label small fw-semibold">Sales Owner</label><select name="sales_id" class="form-select" required>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected((string)old('sales_id',$lead->sales_id)===(string)$sales->id)>{{ $sales->name }}</option>@endforeach</select></div>@endif
-            </div>
-        </div>
+
         <div class="form-submit-actions">
             <a href="{{ route('sales.leads.show',$lead) }}" class="btn btn-soft">Batal</a>
             <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
@@ -247,55 +210,3 @@
     </form>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const input = document.getElementById('scopeInput');
-    const addBtn = document.getElementById('scopeAddBtn');
-    const chipList = document.getElementById('scopeChipList');
-
-    function addScope(value) {
-        const clean = (value || '').trim();
-        if (!clean || !chipList) return;
-        const exists = Array.from(chipList.querySelectorAll('.lead-scope-chip')).some(chip => chip.dataset.value.toLowerCase() === clean.toLowerCase());
-        if (exists) { if (input) input.value = ''; return; }
-        const chip = document.createElement('span');
-        chip.className = 'lead-scope-chip';
-        chip.dataset.value = clean;
-        chip.innerHTML = `${clean} <button type="button" aria-label="Hapus kebutuhan">×</button><input type="hidden" name="scope_items[]" value="${clean.replace(/"/g, '&quot;')}">`;
-        chipList.appendChild(chip);
-        if (input) input.value = '';
-    }
-
-    if (addBtn) addBtn.addEventListener('click', () => addScope(input.value));
-    if (input) input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); addScope(input.value); }
-    });
-    if (chipList) chipList.addEventListener('click', function (e) {
-        if (e.target.matches('button')) e.target.closest('.lead-scope-chip').remove();
-    });
-
-    document.querySelectorAll('.lead-counter-field').forEach(function (field) {
-        const counter = document.getElementById(field.dataset.counterTarget);
-        const update = () => { if (counter) counter.textContent = `${field.value.length}/${field.maxLength || 500}`; };
-        field.addEventListener('input', update); update();
-    });
-
-    const fileInput = document.getElementById('leadDocuments');
-    const fileList = document.getElementById('leadFileList');
-    const fileCount = document.getElementById('leadFileCount');
-    if (fileInput && fileList) {
-        fileInput.addEventListener('change', function () {
-            const files = Array.from(fileInput.files);
-            if (fileCount) fileCount.textContent = `${files.length}`;
-            if (!files.length) {
-                fileList.innerHTML = '<div class="lead-empty-file">Belum ada file baru yang dipilih</div>';
-                return;
-            }
-            fileList.innerHTML = files.map(file => `<div class="lead-file-item"><i class="bi bi-file-earmark"></i><span>${file.name}</span></div>`).join('');
-        });
-    }
-});
-</script>
-@endpush

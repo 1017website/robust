@@ -83,7 +83,7 @@ class ActivityController extends Controller
             'overdue' => $activityScope()->whereNotIn('status', ['completed', 'cancelled'])->whereDate('activity_date', '<', today())->count(),
         ];
 
-        $customerScope = fn () => Customer::with('primaryPic', 'sales')
+        $customerScope = fn () => Customer::with('primaryPic', 'sales', 'leads:id,customer_id,est_value_min,est_value_max', 'quotations:id,customer_id,status,grand_total')
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
             ->when(! (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
 
@@ -121,7 +121,8 @@ class ActivityController extends Controller
     public function create()
     {
         $customers = Customer::when(Auth::user()->isSales() && ! Auth::user()->isAdminLevel(), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->orderBy('name')
+            ->latest()
+            ->latest('id')
             ->get();
         $salesUsers = User::assignableSales();
         return view('shared.activities.create', compact('customers', 'salesUsers'));
@@ -139,7 +140,8 @@ class ActivityController extends Controller
             'activity_time' => ['nullable'],
             'duration_minutes' => ['nullable', 'integer'],
             'location_link' => ['nullable', 'string', 'max:255'],
-            'pipeline_stage' => ['nullable', 'in:'.implode(',', array_keys(Customer::stages()))],
+            // Wajib dipilih manual agar stage customer selalu ditinjau ulang setiap aktivitas.
+            'pipeline_stage' => ['required', 'in:'.implode(',', array_keys(Customer::stages()))],
             'status' => ['required', Rule::in(array_keys(Activity::statuses()))],
             'next_action' => ['nullable', 'string'],
             'next_followup_date' => ['nullable', 'date'],
@@ -152,7 +154,7 @@ class ActivityController extends Controller
                     ->whereNull('deleted_at')),
             ],
         ]);
-        $selectedPipelineStage = $data['pipeline_stage'] ?? null;
+        $selectedPipelineStage = $data['pipeline_stage'];
         $customer = null;
 
         if (! empty($data['customer_id'])) {
@@ -161,7 +163,6 @@ class ActivityController extends Controller
             if (! Auth::user()->isSales() && (int) $customer->sales_id !== (int) $data['sales_id']) {
                 throw ValidationException::withMessages(['customer_id' => 'Customer tidak dimiliki oleh sales yang dipilih.']);
             }
-            $data['pipeline_stage'] = ($data['pipeline_stage'] ?? null) ?: $customer->pipeline_stage;
         }
         if (! empty($data['lead_id'])) {
             $lead = Lead::findOrFail($data['lead_id']);
@@ -177,7 +178,7 @@ class ActivityController extends Controller
         $activity = DB::transaction(function () use ($data, $customer, $selectedPipelineStage) {
             $activity = Activity::create($data);
 
-            if ($customer && $selectedPipelineStage && $customer->pipeline_stage !== $selectedPipelineStage) {
+            if ($customer && $customer->pipeline_stage !== $selectedPipelineStage) {
                 $customer->update(['pipeline_stage' => $selectedPipelineStage]);
             }
 

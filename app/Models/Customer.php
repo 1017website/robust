@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Format;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,5 +60,34 @@ class Customer extends Model
             'Kontraktor',
             'Lainnya',
         ];
+    }
+
+    /**
+     * Nilai pada kartu pipeline. Tahap awal (Identify, Approaching, Follow Up) belum
+     * punya angka pasti sehingga memakai estimasi budget lead; tahap akhir memakai
+     * nilai penawaran. Won / Maintaining hanya menghitung penawaran yang disetujui,
+     * Lost menghitung seluruh penawaran yang sempat diajukan (bukan draf).
+     */
+    public function pipelineValueLabel(): string
+    {
+        if (in_array($this->pipeline_stage, ['identify', 'approaching', 'follow_up'], true)) {
+            $min = (float) $this->leads->sum('est_value_min');
+            $max = (float) $this->leads->sum('est_value_max');
+            [$low, $high] = [min($min, $max), max($min, $max)];
+
+            if ($high <= 0) {
+                return 'Estimasi belum diisi';
+            }
+
+            return $low > 0 && $low < $high
+                ? 'Est. '.Format::rupiahShort($low).' – '.Format::rupiahShort($high)
+                : 'Est. '.Format::rupiahShort($high);
+        }
+
+        $quotations = $this->pipeline_stage === 'lost'
+            ? $this->quotations->where('status', '!=', 'draft')
+            : $this->quotations->whereIn('status', ['customer_accepted', 'request_po_created', 'won']);
+
+        return Format::rupiahShort($quotations->sum('grand_total'));
     }
 }

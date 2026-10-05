@@ -185,6 +185,105 @@ class August2026CrmRevisionTest extends TestCase
         $this->assertSame(88000000.0, (float) $project->total_value);
     }
 
+    public function test_project_from_uploaded_quotation_defaults_to_non_crm_and_stays_linked(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $quotation = Quotation::create([
+            'code' => 'Q-UPLOAD-0101',
+            'customer_name' => 'PT Upload Existing',
+            'project_name' => 'Meja Lab Upload',
+            'sales_id' => $sales->id,
+            'creation_mode' => 'upload',
+            'status' => 'ready',
+            'grand_total' => 0,
+        ]);
+
+        $this->actingAs($sales)->get(route('admin.purchase-order-requests.create', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('name="purchase_source" value="external" checked', false)
+            ->assertSee('name="source_quotation_id" value="'.$quotation->id.'"', false)
+            ->assertSee('value="Meja Lab Upload"', false);
+
+        $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), [
+            'purchase_source' => 'external',
+            'source_quotation_id' => $quotation->id,
+            'external_project_name' => 'Meja Lab Upload',
+            'external_order_value' => 45000000,
+            'code' => 'PRJ-UPL-0101',
+            'customer_name' => 'PT Upload Existing',
+            'request_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $requestPo = PurchaseOrderRequest::where('code', 'PRJ-UPL-0101')->firstOrFail();
+        $quotation->refresh();
+        $this->assertSame($quotation->id, $requestPo->quotation_id);
+        $this->assertSame('request_po_created', $quotation->status);
+        $this->assertSame(45000000.0, (float) $quotation->grand_total);
+        $this->assertSame(0, Quotation::where('creation_mode', 'external')->where('customer_name', 'PT Upload Existing')->count());
+    }
+
+    public function test_lead_edit_saves_main_form_values_and_follow_up_preferences(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $lead = Lead::create([
+            'code' => 'LD-EDIT-0001', 'instansi' => 'PT Edit Lead', 'pic_name' => 'Budi', 'phone' => '0811',
+            'location' => 'Surabaya', 'city' => 'Surabaya', 'instansi_type' => 'Swasta', 'source' => array_key_first(PraLead::sources()),
+            'lab_name' => 'Lab Lama', 'priority' => 'low', 'stage' => 'lead', 'status' => 'aktif',
+            'scope_items' => ['wall bench'], 'sales_id' => $sales->id, 'created_by' => $sales->id,
+        ]);
+
+        $this->actingAs($sales)->get(route('sales.leads.edit', $lead))
+            ->assertOk()
+            ->assertSee('lead-create-page', false)
+            ->assertDontSee('Klasifikasi');
+
+        $this->actingAs($sales)->put(route('sales.leads.update', $lead), [
+            'instansi' => 'PT Edit Lead', 'pic_name' => 'Budi', 'phone' => '0811', 'location' => 'Surabaya',
+            'city' => 'Surabaya', 'instansi_type' => 'Swasta', 'source' => $lead->source, 'lab_name' => 'Lab Baru',
+            'priority' => 'high', 'initial_note' => 'Catatan baru', 'scope_items' => ['wall bench', 'Fume Hood'],
+            'initial_followup_date' => '2026-10-20', 'contact_preference' => 'Email', 'best_contact_time' => 'Siang',
+        ])->assertRedirect(route('sales.leads.show', $lead));
+
+        $lead->refresh();
+        $this->assertSame('high', $lead->priority);
+        $this->assertSame('Catatan baru', $lead->initial_note);
+        $this->assertSame(['wall bench', 'Fume Hood'], $lead->scope_items);
+        $this->assertSame('2026-10-20', $lead->initial_followup_date->format('Y-m-d'));
+        $this->assertSame('Email', $lead->contact_preference);
+        $this->assertSame('Siang', $lead->best_contact_time);
+    }
+
+    public function test_pipeline_card_value_uses_lead_budget_early_and_quotations_late(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $customer = Customer::create(['name' => 'PT Nilai Pipeline', 'sales_id' => $sales->id, 'pipeline_stage' => 'follow_up']);
+        Lead::create([
+            'code' => 'LD-VAL-0001', 'instansi' => 'PT Nilai Pipeline', 'pic_name' => 'Ani', 'phone' => '0812',
+            'location' => 'Jakarta', 'city' => 'Jakarta', 'instansi_type' => 'Swasta', 'source' => array_key_first(PraLead::sources()),
+            'lab_name' => 'Lab', 'priority' => 'medium', 'stage' => 'lead', 'status' => 'aktif',
+            'est_value_min' => 50000000, 'est_value_max' => 75000000,
+            'customer_id' => $customer->id, 'sales_id' => $sales->id, 'created_by' => $sales->id,
+        ]);
+        foreach (['draft' => 10000000, 'sent_to_customer' => 20000000, 'customer_accepted' => 30000000] as $status => $total) {
+            Quotation::create([
+                'code' => 'Q-VAL-'.$status, 'customer_id' => $customer->id, 'customer_name' => $customer->name,
+                'project_name' => 'Lab', 'sales_id' => $sales->id, 'status' => $status, 'grand_total' => $total,
+            ]);
+        }
+
+        $label = fn (string $stage) => tap($customer->fresh('leads', 'quotations'), fn ($c) => $c->pipeline_stage = $stage)->pipelineValueLabel();
+
+        $this->assertSame('Est. Rp 50 Jt – Rp 75 Jt', $label('follow_up'));
+        $this->assertSame('Est. Rp 50 Jt – Rp 75 Jt', $label('identify'));
+        $this->assertSame('Rp 30 Jt', $label('won_closing'));
+        $this->assertSame('Rp 30 Jt', $label('maintaining'));
+        $this->assertSame('Rp 50 Jt', $label('lost'));
+
+        $this->actingAs($sales)->get(route('activities.index'))
+            ->assertOk()
+            ->assertSee('Est. Rp 50 Jt – Rp 75 Jt');
+    }
+
     public function test_request_po_required_fields_are_starred(): void
     {
         $administrator = User::factory()->create(['role' => 'administrator']);
