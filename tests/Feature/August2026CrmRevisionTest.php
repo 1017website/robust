@@ -284,6 +284,45 @@ class August2026CrmRevisionTest extends TestCase
             ->assertSee('Est. Rp 50 Jt – Rp 75 Jt');
     }
 
+    public function test_activity_detail_panel_keeps_customer_history_outside_selected_period(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $customer = Customer::create(['name' => 'PT Histori Aktivitas', 'sales_id' => $sales->id, 'pipeline_stage' => 'identify']);
+        \App\Models\Activity::create([
+            'title' => 'Meeting bulan lalu', 'type' => 'meeting', 'sales_id' => $sales->id, 'customer_id' => $customer->id,
+            'activity_date' => today()->subMonth(), 'status' => 'completed', 'pipeline_stage' => 'identify',
+        ]);
+
+        // Dibuka dari kartu Pipeline saat filter periode "terlambat" masih aktif.
+        $this->actingAs($sales)->get(route('activities.index', ['period' => 'overdue', 'view' => 'pipeline', 'customer_id' => $customer->id]))
+            ->assertOk()
+            ->assertSee('Riwayat Aktivitas Customer')
+            ->assertSee('Meeting bulan lalu');
+    }
+
+    public function test_activities_default_to_pipeline_and_calendar_tab_stays_on_page(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $customer = Customer::create(['name' => 'PT Kalender', 'sales_id' => $sales->id, 'pipeline_stage' => 'identify']);
+        \App\Models\Activity::create([
+            'title' => 'Survey kalender', 'type' => 'survey_lokasi', 'sales_id' => $sales->id, 'customer_id' => $customer->id,
+            'activity_date' => today(), 'status' => 'scheduled', 'pipeline_stage' => 'identify',
+        ]);
+
+        // Parameter periode (mis. dari link lama) tidak lagi memindahkan tab default.
+        $this->actingAs($sales)->get(route('activities.index', ['period' => 'overdue']))
+            ->assertOk()
+            ->assertViewHas('view', 'pipeline');
+
+        $this->actingAs($sales)->get(route('activities.index', ['view' => 'calendar']))
+            ->assertOk()
+            ->assertViewHas('view', 'calendar')
+            ->assertSee('activity-calendar', false)
+            ->assertSee('Survey kalender')
+            ->assertSee(route('activities.index', ['view' => 'calendar']), false)
+            ->assertDontSee('href="'.route('calendar.index').'" class="sales-chip"', false);
+    }
+
     public function test_request_po_required_fields_are_starred(): void
     {
         $administrator = User::factory()->create(['role' => 'administrator']);

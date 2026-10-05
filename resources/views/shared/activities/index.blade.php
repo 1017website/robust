@@ -9,11 +9,6 @@
     $stageClass = fn($s) => match($s) {'identify'=>'st-blue','approaching'=>'st-yellow','follow_up'=>'st-purple','won_closing'=>'st-green','lost'=>'st-red','maintaining'=>'st-green', default=>'st-gray'};
     $stageLabel = fn($s) => \App\Models\Customer::stages()[$s] ?? match($s) {'lead'=>'Identify','design_request'=>'Approaching','penawaran'=>'Follow Up','negosiasi'=>'Follow Up','won'=>'Won / Closing','closing'=>'Won / Closing', default => ($s ? \Illuminate\Support\Str::headline($s) : '-')};
     $cleanQuery = request()->except('page');
-    // Tab tampilan halaman; Calendar tetap membuka halaman kalender tersendiri.
-    // Tautan berperiode/bertanggal (mis. notifikasi aktivitas terlambat) langsung membuka Tracking Harian.
-    $view = in_array(request('view'), ['pipeline', 'list', 'tracking'], true)
-        ? request('view')
-        : (request()->hasAny(['period', 'date']) ? 'tracking' : 'pipeline');
     $viewUrl = fn($v) => route('activities.index', array_merge(request()->except('page', 'activity', 'hide_detail'), ['view' => $v]));
     $periodUrl = fn($p) => route('activities.index', array_merge(request()->except('page', 'date'), ['period' => $p]));
     $activityUrl = fn($id) => route('activities.index', array_merge($cleanQuery, ['activity' => $id]));
@@ -53,7 +48,7 @@
                     <div class="kanban-col">
                         <a class="kh {{ $stageClass($stage) }} text-decoration-none" href="{{ route('sales.customers.index',['status'=>$stage]) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer <i class="bi bi-chevron-right"></i></span></a>
                         @forelse($data['customers']->take(4) as $cust)
-                            <a class="kanban-card text-reset text-decoration-none" href="{{ route('activities.index', array_merge(request()->except(['page','hide_detail']), ['customer_id'=>$cust->id])) }}#activity-customer-detail">
+                            <a class="kanban-card text-reset text-decoration-none" href="{{ route('activities.index', array_merge(request()->except(['page','hide_detail','activity']), ['customer_id'=>$cust->id])) }}#activity-customer-detail">
                                 <div class="fw-bold">{{ $cust->name }}</div>
                                 <div class="small text-muted-2">{{ $cust->primaryPic?->name ?? $cust->sales?->name ?? '-' }}</div>
                                 <div class="kanban-meta mt-2">
@@ -148,6 +143,10 @@
                 <div class="p-3 d-flex flex-wrap justify-content-between gap-3"><span class="small text-muted-2">Menampilkan {{ $activities->firstItem() ?? 0 }} - {{ $activities->lastItem() ?? 0 }} dari {{ $activities->total() }} data</span>{{ $activities->links() }}</div>
             </section>
             @endif
+
+            @if($view === 'calendar')
+                @include('shared.activities._calendar', ['calendarCardClass' => 'sa-card'])
+            @endif
         </main>
         <aside class="sa-activity-side" id="activity-customer-detail">
             <div class="sa-card">
@@ -160,6 +159,20 @@
                     <div class="sa-result-block mt-3"><h6>Hasil Aktivitas</h6><p>{{ $selectedActivity->result ?: 'Belum tersedia' }}</p></div>
                     <div class="sa-next-block mt-3"><i class="bi bi-arrow-right"></i><span>{{ $selectedActivity->next_action ?: 'Next action belum diisi' }}<br><small>Target: {{ $selectedActivity->next_followup_date?->translatedFormat('d F Y') ?? '-' }}</small></span></div>
                     <div class="sa-info-card mt-3"><h6>Riwayat Status</h6><div class="sa-status-timeline"><div><i></i><strong>{{ ucfirst($selectedActivity->status) }}</strong><span>{{ $selectedActivity->updated_at?->translatedFormat('d F Y H:i') }}</span></div><div><i></i><strong>Dibuat</strong><span>{{ $selectedActivity->created_at?->translatedFormat('d F Y H:i') }}</span></div></div></div>
+                    <div class="sa-info-card mt-3">
+                        <h6>Riwayat Aktivitas Customer</h6>
+                        <div class="activity-history-list">
+                            @foreach(($customerHistory ?? collect()) as $history)
+                                <a href="{{ $activityUrl($history->id) }}#activity-customer-detail" class="activity-history-item {{ $history->id === $selectedActivity->id ? 'active' : '' }}">
+                                    <span class="activity-history-text">
+                                        <strong>{{ $history->title }}</strong>
+                                        <small>{{ \App\Models\Activity::types()[$history->type] ?? $history->type }} · {{ $history->activity_date?->translatedFormat('d M Y') ?? '-' }}{{ $history->sales ? ' · '.$history->sales->name : '' }}</small>
+                                    </span>
+                                    <x-status-badge :status="$history->status" />
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 @else
                     <x-empty text="Belum ada aktivitas." />
                 @endif
@@ -197,6 +210,8 @@
                     <div class="kanban-col"><div class="kh {{ $stageClass($stage) }}"><span class="kh-title">{{ strtoupper($data['label']) }}</span><span class="kh-count">{{ $data['customers']->count() }} Customer</span></div>@forelse($data['customers']->take(4) as $cust)<div class="kanban-card"><div class="fw-bold">{{ $cust->name }}</div><div class="small text-muted-2">{{ $cust->primaryPic?->name ?? '-' }}</div><div class="kanban-meta mt-2">@if($showPrices)<span>{{ $cust->pipelineValueLabel() }}</span>@endif<span class="small text-muted-2"><i class="bi bi-calendar2 me-1"></i>{{ $cust->updated_at->translatedFormat('d M Y') }}</span></div></div>@empty<div class="small text-muted-2">Belum ada customer</div>@endforelse<a href="{{ route('sales.customers.index',['status'=>$stage]) }}" class="btn btn-link w-100 fw-bold small">Lihat Semua</a></div>
                 @endforeach
             </div>
+            @elseif($view === 'calendar')
+                @include('shared.activities._calendar', ['calendarCardClass' => 'card-r'])
             @else
             {{-- Layout ini tidak punya panel tracking tersendiri; Tracking Harian memakai daftar per tanggal. --}}
             <div class="card-r p-0 overflow-hidden">

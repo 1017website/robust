@@ -1291,3 +1291,30 @@ a.sales-chip:not(.active):hover{border-color:#8cbcff;background:#f6faff;color:#0
 
 /* Judul grup menu sidebar: memberi jarak antar kelompok agar menu tidak terlihat berserakan. */
 .side-nav .side-label{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 14px 4px;border-top:1px solid rgba(174,185,204,.12);color:#6f819c}
+
+/* Riwayat aktivitas customer pada panel detail Activities. */
+.activity-history-list{display:grid}
+.activity-history-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 8px;margin:0 -8px;border-radius:8px;color:inherit;text-decoration:none;border-bottom:1px solid #edf2fb}
+.activity-history-item:last-child{border-bottom:0}
+.activity-history-item:hover{background:#f6faff}
+.activity-history-item.active{background:#eef4ff}
+.activity-history-text{display:grid;gap:2px;min-width:0}
+.activity-history-text strong{font-size:12.5px;color:#061b49;overflow-wrap:anywhere}
+.activity-history-text small{font-size:11px;color:#66749b}
+
+/* Tab Calendar di halaman Activities. */
+.activity-calendar{margin-bottom:16px}
+.activity-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.activity-calendar-head h2{font-size:16px;font-weight:900;color:#061b49;min-width:140px;text-align:center}
+.activity-calendar-head .form-select{width:auto;min-width:150px}
+.activity-calendar .sales-cal-cell{min-height:118px}
+.activity-calendar-blank{background:#f8fafd}
+.activity-calendar .sales-cal-event{display:block;text-decoration:none;white-space:normal}
+.activity-calendar .sales-cal-event small{font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity-calendar .sales-cal-event:hover,.activity-calendar .sales-cal-event.selected{box-shadow:inset 0 0 0 1.5px currentColor}
+.activity-calendar-dayname{display:none}
+@media(max-width:900px){
+    /* Di HP kalender menjadi daftar per hari; hari tanpa aktivitas disembunyikan. */
+    .activity-calendar .sales-cal-cell.is-empty,.activity-calendar-blank{display:none}
+    .activity-calendar-dayname{display:inline}
+}

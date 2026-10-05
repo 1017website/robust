@@ -497,6 +497,9 @@ class CrmFlowTest extends TestCase
         // Pipeline stage wajib dipilih; tidak lagi otomatis memakai stage customer.
         $this->actingAs($sales)->post(route('activities.store'), $activityPayload)
             ->assertSessionHasErrors('pipeline_stage');
+        // Customer juga wajib dipilih.
+        $this->actingAs($sales)->post(route('activities.store'), ['customer_id' => null, 'pipeline_stage' => 'follow_up'] + $activityPayload)
+            ->assertSessionHasErrors('customer_id');
         $this->actingAs($sales)->post(route('activities.store'), $activityPayload + ['pipeline_stage' => 'follow_up'])
             ->assertRedirect(route('activities.index'));
         $this->assertSame('follow_up', $customer->fresh()->pipeline_stage);

@@ -15,8 +15,8 @@
         <div>
             <div class="sales-toolbar">
                 <div class="sales-chip-row">
-                    <a class="sales-chip" href="{{ route('activities.index',['period'=>'today']) }}">Hari</a>
-                    <a class="sales-chip" href="{{ route('activities.index',['period'=>'week']) }}">Minggu</a>
+                    <a class="sales-chip" href="{{ route('activities.index',['view'=>'tracking','period'=>'today']) }}">Hari</a>
+                    <a class="sales-chip" href="{{ route('activities.index',['view'=>'tracking','period'=>'week']) }}">Minggu</a>
                     <span class="sales-chip active">Bulan</span>
                     <a href="{{ route('calendar.index',['month'=>$prevMonth->month,'year'=>$prevMonth->year]) }}" class="btn btn-soft" aria-label="Bulan sebelumnya"><i class="bi bi-chevron-left"></i></a>
                     <a href="{{ route('calendar.index',['month'=>$nextMonth->month,'year'=>$nextMonth->year]) }}" class="btn btn-soft" aria-label="Bulan berikutnya"><i class="bi bi-chevron-right"></i></a>

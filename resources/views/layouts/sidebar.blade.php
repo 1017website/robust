@@ -158,7 +158,7 @@
                     $isActive = request()->routeIs($menu['active']);
                     $badge = (int) ($menu['badge'] ?? ($sidebarNotificationCounts[$menu['active']] ?? 0));
                 ?>
-                <a href="{{ route($menu['route'], $menu['route'] === 'activities.index' && $badge > 0 ? ['period' => 'overdue'] : []) }}" class="{{ $isActive ? 'active' : '' }}">
+                <a href="{{ route($menu['route']) }}" class="{{ $isActive ? 'active' : '' }}">
                     <i class="bi {{ $menu['icon'] }}"></i>
                     <span class="side-menu-text">{{ $menu['label'] }}</span>
                     <?php if ($badge > 0): ?>

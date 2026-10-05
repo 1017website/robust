@@ -70,11 +70,26 @@ class ActivityController extends Controller
         }
         $selectedActivity = $request->get('activity')
             ? $selectedActivityQuery->find($request->get('activity'))
-            : $activities->first();
+            : null;
 
         $activityScope = fn () => Activity::query()
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
             ->when(! (Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && $request->get('sales_id'), fn ($q) => $q->where('sales_id', $request->get('sales_id')));
+
+        // Riwayat aktivitas customer di panel detail tidak ikut filter periode, supaya
+        // customer yang dipilih dari Pipeline tetap terlihat seluruh histori aktivitasnya.
+        $historyCustomerId = $request->get('customer_id')
+            ?: $selectedActivity?->customer_id
+            ?: $activities->first()?->customer_id;
+        $customerHistory = $historyCustomerId
+            ? $activityScope()->with('sales')
+                ->where('customer_id', $historyCustomerId)
+                ->orderByDesc('activity_date')
+                ->orderByDesc('activity_time')
+                ->limit(10)
+                ->get()
+            : collect();
+        $selectedActivity ??= $activities->first() ?? $customerHistory->first()?->load('customer.primaryPic', 'lead');
 
         $stats = [
             'today' => $activityScope()->whereDate('activity_date', today())->count(),
@@ -102,7 +117,26 @@ class ActivityController extends Controller
         $salesUsers = User::assignableSales();
         $customers = $customerScope()->orderBy('name')->get();
 
+        // Tab halaman Activities; selalu dibuka di Pipeline kecuali tab lain dipilih.
+        $view = in_array($request->get('view'), ['pipeline', 'list', 'calendar', 'tracking'], true)
+            ? $request->get('view')
+            : 'pipeline';
+
+        // Tab Calendar menampilkan aktivitas sebulan penuh langsung di halaman ini.
+        $calendarActivities = $view === 'calendar'
+            ? $activityScope()->with('customer', 'lead')
+                ->when($request->get('type'), fn ($q, $type) => $q->where('type', $type))
+                ->whereYear('activity_date', $calendarYear)
+                ->whereMonth('activity_date', $calendarMonth)
+                ->orderBy('activity_date')
+                ->orderBy('activity_time')
+                ->get()
+                ->groupBy(fn ($activity) => $activity->activity_date->format('Y-m-d'))
+            : collect();
+
         return view('shared.activities.index', compact(
+            'view',
+            'calendarActivities',
             'activities',
             'stats',
             'pipeline',
@@ -110,6 +144,7 @@ class ActivityController extends Controller
             'salesUsers',
             'customers',
             'selectedActivity',
+            'customerHistory',
             'period',
             'selectedDate',
             'calendarFirst',
@@ -131,7 +166,8 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'customer_id' => ['nullable', Rule::exists('customers', 'id')->whereNull('deleted_at')],
+            // Aktivitas selalu tercatat pada customer agar pipeline-nya ikut diperbarui.
+            'customer_id' => ['required', Rule::exists('customers', 'id')->whereNull('deleted_at')],
             'lead_id' => ['nullable', Rule::exists('leads', 'id')->whereNull('deleted_at')],
             'type' => ['required', Rule::in(array_keys(Activity::types()))],
             'title' => ['required', 'string', 'max:255'],
@@ -155,14 +191,10 @@ class ActivityController extends Controller
             ],
         ]);
         $selectedPipelineStage = $data['pipeline_stage'];
-        $customer = null;
-
-        if (! empty($data['customer_id'])) {
-            $customer = Customer::findOrFail($data['customer_id']);
-            abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $customer->sales_id !== (int) Auth::id(), 403);
-            if (! Auth::user()->isSales() && (int) $customer->sales_id !== (int) $data['sales_id']) {
-                throw ValidationException::withMessages(['customer_id' => 'Customer tidak dimiliki oleh sales yang dipilih.']);
-            }
+        $customer = Customer::findOrFail($data['customer_id']);
+        abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $customer->sales_id !== (int) Auth::id(), 403);
+        if (! Auth::user()->isSales() && (int) $customer->sales_id !== (int) $data['sales_id']) {
+            throw ValidationException::withMessages(['customer_id' => 'Customer tidak dimiliki oleh sales yang dipilih.']);
         }
         if (! empty($data['lead_id'])) {
             $lead = Lead::findOrFail($data['lead_id']);
@@ -178,7 +210,7 @@ class ActivityController extends Controller
         $activity = DB::transaction(function () use ($data, $customer, $selectedPipelineStage) {
             $activity = Activity::create($data);
 
-            if ($customer && $customer->pipeline_stage !== $selectedPipelineStage) {
+            if ($customer->pipeline_stage !== $selectedPipelineStage) {
                 $customer->update(['pipeline_stage' => $selectedPipelineStage]);
             }
 

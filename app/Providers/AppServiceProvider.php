@@ -133,7 +133,7 @@ class AppServiceProvider extends ServiceProvider
                         ->whereDate('activity_date', '<', today())
                         ->whereNotIn('status', ['completed', 'cancelled'])
                         ->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'activities.*', $overdueActivities, 'Aktivitas terlambat', 'Follow up belum diselesaikan.', route('activities.index', ['period' => 'overdue']), 'bi-exclamation-triangle', 'text-danger');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'activities.*', $overdueActivities, 'Aktivitas terlambat', 'Follow up belum diselesaikan.', route('activities.index', ['view' => 'tracking', 'period' => 'overdue']), 'bi-exclamation-triangle', 'text-danger');
                 }
             }
 

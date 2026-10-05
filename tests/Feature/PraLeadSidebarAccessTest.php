@@ -93,7 +93,7 @@ class PraLeadSidebarAccessTest extends TestCase
             Activity::create(['title' => 'Activity '.$status, 'type' => 'call', 'sales_id' => $sales->id, 'activity_date' => today()->subDay(), 'status' => $status]);
         }
         $this->assertSame(1, $this->counts($sales)['activities.*']);
-        $this->actingAs($sales)->get(route('activities.index', ['period' => 'overdue']))->assertOk()
+        $this->actingAs($sales)->get(route('activities.index', ['view' => 'tracking', 'period' => 'overdue']))->assertOk()
             ->assertViewHas('activities', fn ($rows) => $rows->total() === 1)
             ->assertSee('Aktivitas Terlambat');
     }
