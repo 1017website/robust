@@ -66,6 +66,16 @@
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label for="customerPoFile" class="form-label small fw-semibold">Upload Dokumen PO</label>
+                    <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
+                    <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Tanpa batas ukuran.</div>
+                    @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @if($requestPo?->customer_po_file)
+                        <div class="form-text">Lampiran saat ini: <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank">lihat file</a>. Unggah file baru hanya jika ingin mengganti.</div>
+                    @endif
+                </div>
+
                 <div id="crmQuotationFields" class="mb-3">
                     <label class="form-label small fw-semibold">Pilih Penawaran Siap / Customer Setuju <span class="text-danger">*</span></label>
                     <select name="quotation_id" id="quotationSelect" class="form-select">
@@ -103,15 +113,6 @@
                     <div class="col-md-8">
                         <label class="form-label small fw-semibold">No PO Customer</label>
                         <input name="customer_po_number" value="{{ $value('customer_po_number') }}" class="form-control" placeholder="Jika customer sudah memberi nomor PO">
-                    </div>
-                    <div class="col-md-12">
-                        <label for="customerPoFile" class="form-label small fw-semibold">Upload Dokumen PO</label>
-                        <input id="customerPoFile" type="file" name="customer_po_file" class="form-control @error('customer_po_file') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-describedby="customerPoFileHelp">
-                        <div id="customerPoFileHelp" class="form-text">PDF, JPG, PNG, Word, atau Excel. Tanpa batas ukuran.</div>
-                        @error('customer_po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        @if($requestPo?->customer_po_file)
-                            <div class="form-text">Lampiran saat ini: <a href="{{ asset('storage/'.$requestPo->customer_po_file) }}" target="_blank">lihat file</a>. Unggah file baru hanya jika ingin mengganti.</div>
-                        @endif
                     </div>
                 </div>
             </div>
