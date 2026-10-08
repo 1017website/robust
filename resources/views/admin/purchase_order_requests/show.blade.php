@@ -7,7 +7,7 @@
     @if($requestPo->isDraft())
         <a href="{{ route('admin.purchase-order-requests.edit', $requestPo) }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Lanjutkan &amp; Ajukan</a>
     @else
-        <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</a>
+        <a href="{{ route('admin.purchase-order-requests.pdf', $requestPo) }}" target="_blank" rel="noopener" class="btn btn-soft btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Preview PDF</a>
     @endif
     @if($requestPo->quotation?->project)<a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}" class="btn btn-soft btn-sm"><i class="bi bi-kanban me-1"></i>Project Operasional</a>@endif
     @if(auth()->user()->canManageBackOffice() && $requestPo->canCreateInvoice())<a href="{{ route('admin.invoices.create',['request_po'=>$requestPo->id]) }}" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Terbitkan Invoice</a>@endif
@@ -43,10 +43,13 @@
 
         @unless($requestPo->isDraft())
         <div class="card-r">
-            <div class="card-head"><h2>Data Pengiriman &amp; Penagihan</h2></div>
+            <div class="card-head"><h2>Data Order, Pengiriman &amp; Penagihan</h2></div>
             <form method="POST" action="{{ route('admin.purchase-order-requests.update', $requestPo) }}">
                 @csrf @method('PUT')
                 <div class="row g-3">
+                    <div class="col-md-12"><label for="customerPoNumber" class="form-label small fw-semibold">No PO Customer</label><input id="customerPoNumber" name="customer_po_number" value="{{ old('customer_po_number', $requestPo->customer_po_number) }}" class="form-control" maxlength="100"></div>
+                    <div class="col-md-6"><label for="customerArea" class="form-label small fw-semibold">Area / Lokasi Customer</label><input id="customerArea" name="customer_area" value="{{ old('customer_area', $requestPo->customer_area) }}" class="form-control" maxlength="255"></div>
+                    <div class="col-md-6"><label for="customerDivision" class="form-label small fw-semibold">Divisi Customer</label><input id="customerDivision" name="customer_division" value="{{ old('customer_division', $requestPo->customer_division) }}" class="form-control" maxlength="255"></div>
                     <div class="col-md-12"><label class="form-label small fw-semibold">Alamat Pengiriman / Lokasi Project</label><textarea name="delivery_address" rows="2" class="form-control">{{ old('delivery_address', $requestPo->delivery_address) }}</textarea></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">PIC Penerima / Project</label><input name="delivery_pic_name" value="{{ old('delivery_pic_name', $requestPo->delivery_pic_name) }}" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label small fw-semibold">No HP PIC</label><input name="delivery_pic_phone" value="{{ old('delivery_pic_phone', $requestPo->delivery_pic_phone) }}" class="form-control"></div>

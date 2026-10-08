@@ -237,7 +237,7 @@ class PurchaseOrderRequestController extends Controller
         return view('admin.purchase_order_requests.show', ['requestPo' => $purchaseOrderRequest]);
     }
 
-    public function downloadPdf(PurchaseOrderRequest $purchaseOrderRequest, OperationalDocumentPdf $pdf)
+    public function downloadPdf(Request $request, PurchaseOrderRequest $purchaseOrderRequest, OperationalDocumentPdf $pdf)
     {
         $this->authorizeAccess($purchaseOrderRequest);
         abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project belum dapat diekspor. Ajukan request terlebih dahulu.');
@@ -250,7 +250,7 @@ class PurchaseOrderRequestController extends Controller
 
         return response($pdf->makeRequestPo($purchaseOrderRequest), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$filename.'"',
         ]);
     }
 
@@ -260,6 +260,9 @@ class PurchaseOrderRequestController extends Controller
         abort_if($purchaseOrderRequest->isDraft(), 403, 'Draf Project harus diajukan terlebih dahulu.');
 
         $data = $request->validate([
+            'customer_po_number' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'customer_area' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'customer_division' => ['sometimes', 'nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:1500'],
             'delivery_pic_name' => ['nullable', 'string', 'max:255'],
             'delivery_pic_phone' => ['nullable', 'string', 'max:50'],
@@ -272,6 +275,7 @@ class PurchaseOrderRequestController extends Controller
         // Status tidak lagi diisi manual di sini: Berjalan ditetapkan saat Project diajukan,
         // Lunas mengikuti pelunasan invoice, dan Dibatalkan punya tombolnya sendiri.
         $purchaseOrderRequest->update([
+            ...\Illuminate\Support\Arr::only($data, ['customer_po_number', 'customer_area', 'customer_division']),
             'delivery_address' => $data['delivery_address'] ?? null,
             'delivery_pic_name' => $data['delivery_pic_name'] ?? null,
             'delivery_pic_phone' => $data['delivery_pic_phone'] ?? null,

@@ -22,14 +22,14 @@ class OperationalPdfExportTest extends TestCase
             ->get(route('admin.purchase-order-requests.show', $requestPo))
             ->assertOk()
             ->assertSee(route('admin.purchase-order-requests.pdf', $requestPo), false)
-            ->assertSee('Export PDF');
+            ->assertSee('Preview PDF');
 
         $response = $this->actingAs($sales)
             ->get(route('admin.purchase-order-requests.pdf', $requestPo));
 
         $response->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
-            ->assertDownload('PRJ-PDF-MODERN.pdf');
+            ->assertHeader('Content-Disposition', 'inline; filename="PRJ-PDF-MODERN.pdf"');
         $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
         $this->assertStringContainsString('REQUEST PROCESS', $response->getContent());
         $this->assertStringContainsString('ROBUST', $response->getContent());
@@ -60,14 +60,14 @@ class OperationalPdfExportTest extends TestCase
             ->get(route('admin.invoices.show', $invoice))
             ->assertOk()
             ->assertSee(route('admin.invoices.pdf', $invoice), false)
-            ->assertSee('Export PDF');
+            ->assertSee('Preview PDF');
 
         $response = $this->actingAs($admin)
             ->get(route('admin.invoices.pdf', $invoice));
 
         $response->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
-            ->assertDownload('inv-pdf-modern.pdf');
+            ->assertHeader('Content-Disposition', 'inline; filename="inv-pdf-modern.pdf"');
         $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
         $this->assertStringContainsString('INVOICE', $response->getContent());
         $this->assertStringContainsString('ROBUST', $response->getContent());
@@ -88,6 +88,46 @@ class OperationalPdfExportTest extends TestCase
         $this->actingAs($drafter)
             ->get(route('admin.invoices.pdf', $invoice))
             ->assertForbidden();
+    }
+
+    public function test_order_details_can_be_completed_and_empty_optional_fields_are_omitted_from_pdf(): void
+    {
+        [$sales, , , $requestPo] = $this->makeDocuments();
+        $requestPo->update(['customer_po_number' => null, 'customer_area' => null, 'payment_term' => null, 'expected_delivery_date' => null]);
+        $response = $this->actingAs($sales)->get(route('admin.purchase-order-requests.pdf', $requestPo))->assertOk();
+        foreach (['NO. PO CUSTOMER', 'AREA / LOKASI CUSTOMER', 'ESTIMASI PENGIRIMAN', 'TERMIN PEMBAYARAN'] as $label) {
+            $this->assertStringNotContainsString($label, $response->getContent());
+        }
+        $this->put(route('admin.purchase-order-requests.update', $requestPo), [
+            'customer_po_number' => 'PO-LENGKAP-001', 'customer_area' => 'Sidoarjo',
+            'customer_division' => 'Laboratorium', 'expected_delivery_date' => '2026-11-30',
+            'payment_term' => 'DP 50 persen',
+        ])->assertSessionHasNoErrors();
+        $response = $this->get(route('admin.purchase-order-requests.pdf', $requestPo))->assertOk();
+        foreach (['PO-LENGKAP-001', 'Sidoarjo', '30/11/2026', 'DP 50 persen'] as $value) {
+            $this->assertStringContainsString($value, $response->getContent());
+        }
+    }
+
+    public function test_all_generated_pdf_exports_preview_by_default_and_download_only_when_requested(): void
+    {
+        [$sales, , , $requestPo, $invoice] = $this->makeDocuments();
+        $quotation = $requestPo->quotation;
+        $this->actingAs($sales);
+        foreach ([
+            route('admin.purchase-order-requests.pdf', $requestPo),
+            route('admin.invoices.pdf', $invoice),
+            route('sales.quotations.pdf', $quotation),
+        ] as $url) {
+            $response = $this->get($url)->assertOk()->assertHeader('Content-Type', 'application/pdf');
+            $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+            $response = $this->get($url.'?download=1')->assertOk();
+            $this->assertStringStartsWith('attachment;', $response->headers->get('Content-Disposition'));
+        }
+        $project = \App\Models\Project::create(['code' => 'PRJ-PREVIEW', 'name' => 'Preview Delivery', 'quotation_id' => $quotation->id]);
+        $project->deliveryOrder()->create(['code' => 'DO-PREVIEW', 'delivery_date' => today(), 'delivery_address' => 'Jl. Contoh', 'recipient_name' => 'PIC Customer', 'created_by' => $sales->id, 'items' => [['name' => 'Cabinet', 'qty' => 1, 'unit' => 'Unit']]]);
+        $response = $this->get(route('delivery-orders.pdf', $project))->assertOk();
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
     }
 
     private function makeDocuments(): array

@@ -44,11 +44,10 @@ class RequestProcessRevisionTest extends TestCase
             ->assertSee('Q-PIC-1')->assertDontSee('Q-PIC-2');
     }
 
-    public function test_request_process_uses_team_checkboxes_and_can_upload_the_project_po(): void
+    public function test_request_process_can_be_created_without_team_fields_and_can_upload_the_project_po(): void
     {
         Storage::fake('public');
         $sales = User::factory()->create(['role' => 'sales']);
-        $drafter = User::factory()->create(['role' => 'drafter']);
         $quotation = Quotation::create([
             'code' => 'Q-RP-PO-1',
             'customer_name' => 'Customer Request Process',
@@ -68,7 +67,10 @@ class RequestProcessRevisionTest extends TestCase
 
         $this->actingAs($sales)->get(route('sales.projects.create', ['project' => $sourceProject->id]))
             ->assertOk()
-            ->assertSee('type="checkbox" name="internal_team[]"', false)
+            ->assertDontSee('Tim Project')
+            ->assertDontSee('name="project_manager_id"', false)
+            ->assertDontSee('name="internal_team[]"', false)
+            ->assertDontSee('name="external_vendor"', false)
             ->assertSee('name="customer_po_file"', false)
             ->assertDontSee('name="internal_team[]" class="form-select" multiple', false);
 
@@ -79,14 +81,12 @@ class RequestProcessRevisionTest extends TestCase
             'status' => 'planning',
             'start_date' => '2026-09-24',
             'target_date' => '2026-10-24',
-            'project_manager_id' => $sales->id,
-            'internal_team' => [$drafter->id],
             'customer_po_file' => UploadedFile::fake()->create('dokumen-po.pdf', 100, 'application/pdf'),
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $project = Project::sole();
         $this->assertSame($quotation->id, $project->quotation_id);
-        $this->assertSame([$drafter->id], array_map('intval', $project->internal_team));
+        $this->assertNull($project->project_manager_id);
         $this->assertNotNull($sourceProject->fresh()->customer_po_file);
         Storage::disk('public')->assertExists($sourceProject->fresh()->customer_po_file);
         $this->get(route('sales.projects.show', $project))->assertOk()->assertSee('Lihat Dokumen PO');

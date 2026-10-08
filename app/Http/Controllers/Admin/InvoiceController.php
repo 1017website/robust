@@ -100,7 +100,7 @@ class InvoiceController extends Controller
         return view('admin.invoices.show', compact('invoice'));
     }
 
-    public function downloadPdf(Invoice $invoice, OperationalDocumentPdf $pdf)
+    public function downloadPdf(Request $request, Invoice $invoice, OperationalDocumentPdf $pdf)
     {
         $filename = str($invoice->code ?: 'invoice')
             ->replace(['/', '\\'], '-')
@@ -110,7 +110,7 @@ class InvoiceController extends Controller
 
         return response($pdf->makeInvoice($invoice), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$filename.'"',
         ]);
     }
 

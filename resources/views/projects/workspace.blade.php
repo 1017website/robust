@@ -274,8 +274,7 @@
                     @endif
                     @if($deliveryOrder)
                         <div class="d-flex gap-2 mt-3">
-                            <a target="_blank" href="{{ route('delivery-orders.pdf', $project) }}" class="btn btn-soft flex-fill"><i class="bi bi-eye me-1"></i>Lihat PDF</a>
-                            <a href="{{ route('delivery-orders.pdf', [$project, 'download' => 1]) }}" class="btn btn-soft flex-fill"><i class="bi bi-download me-1"></i>Download</a>
+                            <a target="_blank" rel="noopener" href="{{ route('delivery-orders.pdf', $project) }}" class="btn btn-soft flex-fill"><i class="bi bi-eye me-1"></i>Preview PDF</a>
                         </div>
                     @endif
                 </section>

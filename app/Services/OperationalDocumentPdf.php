@@ -73,17 +73,21 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         ], true);
         $y -= 86;
 
-        $page .= $this->sectionTitle($y, 'INFORMASI ORDER', '01');
-        $y -= 22;
-        $page .= $this->detailPanel($y, 96, [
+        $orderFields = array_values(array_filter([
             ['No. PO Customer', $requestPo->customer_po_number],
             ['Referensi Penawaran', $quotation?->isExternal() ? 'Langsung dari PO' : $quotation?->code],
             ['Area / Lokasi Customer', $requestPo->customer_area],
             ['Divisi Customer', $requestPo->customer_division],
             ['Estimasi Pengiriman', $requestPo->expected_delivery_date?->format('d/m/Y')],
             ['Termin Pembayaran', $requestPo->payment_term],
-        ], 2);
-        $y -= 110;
+        ], fn ($field) => filled($field[1])));
+        if ($orderFields !== []) {
+            $page .= $this->sectionTitle($y, 'INFORMASI ORDER', '01');
+            $y -= 22;
+            $orderHeight = 38 * (int) ceil(count($orderFields) / 2);
+            $page .= $this->detailPanel($y, $orderHeight, $orderFields, 2);
+            $y -= $orderHeight + 14;
+        }
 
         $page .= $this->sectionTitle($y, 'PENGIRIMAN & BILLING', '02');
         $y -= 22;

@@ -5,8 +5,6 @@
     $quotation = $sourceProject?->quotation;
     $designRequest = $quotation?->designRequest;
     $quotationDocuments = $quotation?->documents ?? collect();
-    $defaultManager = $designRequest?->production_pic_id;
-    $defaultTeam = $defaultManager ? [(string) $defaultManager] : [];
     $defaultStatus = $designRequest ? 'planning' : 'ongoing';
     $defaultScope = $designRequest?->detail_need ?: $quotation?->items?->pluck('name')->filter()->implode(', ');
 @endphp
@@ -99,27 +97,7 @@
                     </section>
 
                     <section class="sales-form-card">
-                        <h2 class="sales-form-title">5. Tim Project</h2>
-                        <label class="form-label small fw-bold">Project Manager *</label>
-                        <select name="project_manager_id" class="form-select" required><option value="">Pilih Project Manager</option>@foreach($managers as $manager)<option value="{{ $manager->id }}" @selected((string) old('project_manager_id', $defaultManager) === (string) $manager->id)>{{ $manager->name }} — {{ $manager->roleLabel() }}</option>@endforeach</select>
-                        <fieldset class="mt-3">
-                            <legend class="form-label small fw-bold mb-2">Tim Internal</legend>
-                            <div class="team-choice-grid">
-                                @foreach($team as $member)
-                                    <label class="team-choice">
-                                        <input type="checkbox" name="internal_team[]" value="{{ $member->id }}" @checked(in_array((string) $member->id, array_map('strval', old('internal_team', $defaultTeam)), true))>
-                                        <span><strong>{{ $member->name }}</strong><small>{{ $member->roleLabel() }}</small></span>
-                                    </label>
-                                @endforeach
-                            </div>
-                            <div class="form-text mt-2">Pilih satu atau beberapa anggota yang terlibat dalam Request Process.</div>
-                        </fieldset>
-                        <label class="form-label small fw-bold mt-3">Tim Eksternal / Vendor</label>
-                        <input name="external_vendor" value="{{ old('external_vendor') }}" class="form-control" placeholder="Vendor jika ada">
-                    </section>
-
-                    <section class="sales-form-card">
-                        <h2 class="sales-form-title">6. Dokumen &amp; Lampiran</h2>
+                        <h2 class="sales-form-title">5. Dokumen &amp; Lampiran</h2>
                         <div class="request-document-list">
                             @if($sourceProject?->customer_po_file)
                                 <a href="{{ asset('storage/'.$sourceProject->customer_po_file) }}" target="_blank" rel="noopener" class="request-document-row">
@@ -144,7 +122,7 @@
                     </section>
 
                     <section class="sales-form-card">
-                        <h2 class="sales-form-title">7. Catatan Tambahan</h2>
+                        <h2 class="sales-form-title">6. Catatan Tambahan</h2>
                         <textarea name="note" rows="5" class="form-control" placeholder="Catatan tambahan terkait proses project">{{ old('note') }}</textarea>
                     </section>
                 </div>

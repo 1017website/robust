@@ -7,7 +7,6 @@ use App\Models\Project;
 use App\Models\ProjectWorkflow;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
-use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Support\ProjectDeadline;
@@ -15,7 +14,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -50,13 +48,7 @@ class ProjectController extends Controller
             ? $this->eligibleSourceProjectQuery()->findOrFail($sourceProjectId)
             : null;
         $availableProjects = $this->eligibleSourceProjectQuery()->get();
-        $managers = User::where('is_active', true)
-            ->whereIn('role', ['sales', 'drafter'])
-            ->orderBy('name')
-            ->get();
-        $team = User::where('is_active', true)->get();
-
-        return view('sales.projects.create', compact('sourceProject', 'availableProjects', 'managers', 'team'));
+        return view('sales.projects.create', compact('sourceProject', 'availableProjects'));
     }
 
     public function store(Request $request)
@@ -76,16 +68,6 @@ class ProjectController extends Controller
             'location' => ['nullable', 'string'],
             'scope_of_work' => ['nullable', 'string'],
             'payment_scheme' => ['nullable', 'string', 'max:100'],
-            'project_manager_id' => [
-                'required',
-                Rule::exists('users', 'id')->where(fn ($query) => $query
-                    ->whereIn('role', ['sales', 'drafter'])
-                    ->where('is_active', true)
-                    ->whereNull('deleted_at')),
-            ],
-            'internal_team' => ['nullable', 'array'],
-            'internal_team.*' => [Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_active', true)->whereNull('deleted_at'))],
-            'external_vendor' => ['nullable', 'string', 'max:255'],
             'customer_po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
             'note' => ['nullable', 'string'],
         ]);
@@ -101,7 +83,6 @@ class ProjectController extends Controller
         $data['project_value'] = $quotation->subtotal - $quotation->discount_amount;
         $data['tax_amount'] = $quotation->tax_amount;
         $data['total_value'] = $quotation->grand_total;
-        $data['internal_team'] = array_values($data['internal_team'] ?? []);
         $data['created_by'] = Auth::id();
 
         $project = Project::create($data);

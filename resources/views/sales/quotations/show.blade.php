@@ -10,7 +10,7 @@
     @endif
     @if($quotation->canDownloadPdf())
         <a href="{{ route('sales.quotations.excel',$quotation) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</a>
-        <a href="{{ route('sales.quotations.pdf',$quotation) }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Download PDF</a>
+        <a href="{{ route('sales.quotations.pdf',$quotation) }}" target="_blank" rel="noopener" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Preview PDF</a>
     @endif
     @if($quotation->status === 'ready')
         <form method="POST" action="{{ route('sales.quotations.sent-to-customer',$quotation) }}" class="d-inline">@csrf<button class="btn btn-soft btn-sm"><i class="bi bi-send me-1"></i>Tandai Dikirim</button></form>

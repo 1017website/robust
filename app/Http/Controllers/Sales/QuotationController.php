@@ -267,7 +267,7 @@ class QuotationController extends Controller
         return back()->with('success', 'Penawaran siap dikirim tanpa approval SPV.');
     }
 
-    public function downloadPdf(Quotation $quotation, SimpleQuotationPdf $pdf)
+    public function downloadPdf(Request $request, Quotation $quotation, SimpleQuotationPdf $pdf)
     {
         $this->ensureOwner($quotation);
 
@@ -280,7 +280,7 @@ class QuotationController extends Controller
 
         return response($pdf->make($quotation), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.$filename.'"',
         ]);
     }
 
