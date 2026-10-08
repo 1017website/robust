@@ -17,12 +17,13 @@
     @if(!$qcReady)
         <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dapat diisi setelah QC Produksi selesai.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
     @endif
-    <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage>
+    <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage data-item-progress-form>
         @csrf @method('PUT')
         <fieldset @disabled(!$qcReady)>
             <label class="form-label d-flex justify-content-between align-items-center" for="{{ $qcPrefix }}_progress"><span>Progress {{ $qcTitle }}</span><output class="progress-range-value" for="{{ $qcPrefix }}_progress" data-qc-value>{{ old($qcPrefix.'_progress', $qcProgress) }}%</output></label>
-            <input class="form-range" id="{{ $qcPrefix }}_progress" type="range" name="{{ $qcPrefix }}_progress" min="0" max="100" step="5" value="{{ old($qcPrefix.'_progress', $qcProgress) }}" data-qc-range>
+            <input class="form-range" id="{{ $qcPrefix }}_progress" type="{{ $workItems->isNotEmpty() ? 'hidden' : 'range' }}" name="{{ $qcPrefix }}_progress" min="0" max="100" step="5" value="{{ old($qcPrefix.'_progress', $qcProgress) }}" data-qc-range data-stage-progress>
             <div class="progress mb-3" style="height:8px"><div class="progress-bar" role="progressbar" aria-label="Progress {{ $qcTitle }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ old($qcPrefix.'_progress', $qcProgress) }}" style="width:{{ old($qcPrefix.'_progress', $qcProgress) }}%" data-qc-bar></div></div>
+            @include('projects._item-progress', ['itemPrefix' => $qcPrefix, 'itemEditable' => true])
             <div class="qc-checklist mb-3">
                 @forelse($qcDefinition as $qcItem)
                     <div class="qc-item">
@@ -43,6 +44,7 @@
         </fieldset>
     </form>
 @else
+    @include('projects._item-progress', ['itemPrefix' => $qcPrefix, 'itemEditable' => false])
     <div class="d-flex justify-content-between mb-2"><span>Progress {{ $qcTitle }}</span><strong>{{ $qcProgress }}%</strong></div>
     <div class="progress mb-3" style="height:8px"><div class="progress-bar" role="progressbar" aria-label="Progress {{ $qcTitle }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $qcProgress }}" style="width:{{ $qcProgress }}%"></div></div>
     @if($workflow->{$qcPrefix.'_note'})<p class="small mb-3">{{ $workflow->{$qcPrefix.'_note'} }}</p>@endif

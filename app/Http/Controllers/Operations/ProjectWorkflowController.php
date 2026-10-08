@@ -36,6 +36,8 @@ class ProjectWorkflowController extends Controller
         $data = $request->validate([
             'production_status' => ['required', Rule::in(array_keys(ProjectWorkflow::productionStatuses()))],
             'production_progress' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'production_item_progress' => ['nullable', 'array'],
+            'production_item_progress.*' => ['required', 'integer', 'min:0', 'max:100'],
             'production_note' => ['nullable', 'string', 'max:2000'],
             'production_report_completed' => ['nullable', 'boolean'],
             'production_report' => ['nullable', 'file', 'mimes:pdf'],
@@ -62,6 +64,11 @@ class ProjectWorkflowController extends Controller
             $progress = 100;
         }
 
+        $itemProgress = $this->itemProgress($request, $project, $workflow, 'production', $data['production_status'] === 'production_finished');
+        if ($itemProgress !== null) {
+            $progress = (int) round(array_sum($itemProgress) / count($itemProgress));
+        }
+
         $update = [
             'production_status' => $data['production_status'],
             'production_progress' => $progress,
@@ -70,6 +77,7 @@ class ProjectWorkflowController extends Controller
             'production_updated_by' => $request->user()->id,
             'production_updated_at' => now(),
         ];
+        if ($itemProgress !== null) $update['production_item_progress'] = $itemProgress;
         if ($file = $request->file('production_report')) {
             $update += $this->replaceFile($workflow->production_report_path, $file, "project-workflows/{$project->id}/production", 'production_report', true);
             $attachments[] = ['path' => $update['production_report_path'], 'name' => $update['production_report_name']];
@@ -132,6 +140,8 @@ class ProjectWorkflowController extends Controller
         $data = $request->validate([
             "{$prefix}_completed" => ['nullable', 'boolean'],
             "{$prefix}_progress" => ['nullable', 'integer', 'min:0', 'max:100'],
+            "{$prefix}_item_progress" => ['nullable', 'array'],
+            "{$prefix}_item_progress.*" => ['required', 'integer', 'min:0', 'max:100'],
             "{$prefix}_document" => ['nullable', 'file', 'mimes:pdf'],
             "{$prefix}_checklist" => ['nullable', 'array'],
             "{$prefix}_checklist.*" => ['boolean'],
@@ -148,14 +158,19 @@ class ProjectWorkflowController extends Controller
             throw ValidationException::withMessages(["{$prefix}_checklist" => "Semua pemeriksaan wajib dicek sebelum {$label} diselesaikan."]);
         }
 
+        $itemProgress = $this->itemProgress($request, $project, $workflow, $prefix, $completed);
+
         $update = [
             "{$prefix}_completed" => $completed,
-            "{$prefix}_progress" => $completed ? 100 : ($data["{$prefix}_progress"] ?? $workflow->qcProgress($installation)),
+            "{$prefix}_progress" => $itemProgress !== null
+                ? (int) round(array_sum($itemProgress) / count($itemProgress))
+                : ($completed ? 100 : ($data["{$prefix}_progress"] ?? $workflow->qcProgress($installation))),
             "{$prefix}_checklist" => $checklist,
             "{$prefix}_note" => $data["{$prefix}_note"] ?? null,
             "{$prefix}_updated_by" => $request->user()->id,
             "{$prefix}_updated_at" => now(),
         ];
+        if ($itemProgress !== null) $update["{$prefix}_item_progress"] = $itemProgress;
         if ($file = $request->file("{$prefix}_document")) {
             $update += $this->replaceFile($workflow->{"{$prefix}_document_path"}, $file, "project-workflows/{$project->id}/{$prefix}", "{$prefix}_document", true);
             $attachments[] = ['path' => $update["{$prefix}_document_path"], 'name' => $update["{$prefix}_document_name"]];
@@ -298,6 +313,26 @@ class ProjectWorkflowController extends Controller
         return Storage::disk('public')->download($attachment['path'], $attachment['name']);
     }
 
+    private function itemProgress(Request $request, Project $project, ProjectWorkflow $workflow, string $prefix, bool $completed): ?array
+    {
+        $field = "{$prefix}_item_progress";
+        $saved = $workflow->{$field} ?? [];
+        if (! $request->has($field) && $saved === []) return null;
+        $items = $project->quotation?->items()->where('is_optional', false)->pluck('id')->all() ?? [];
+        $input = $request->input($field) ?? [];
+        if (array_diff(array_map('strval', array_keys($input)), array_map('strval', $items))) {
+            throw ValidationException::withMessages([$field => 'Item tidak termasuk dalam project ini.']);
+        }
+        if ($items === []) return null;
+        $stageWasCompleted = $prefix === 'production' ? $workflow->production_status === 'production_finished' : (bool) $workflow->{$prefix.'_completed'};
+        $progress = [];
+        foreach ($items as $id) $progress[$id] = (int) ($input[$id] ?? $saved[$id] ?? ($stageWasCompleted ? 100 : 0));
+        if ($completed && min($progress) < 100) {
+            throw ValidationException::withMessages([$field => 'Semua item harus mencapai 100% sebelum tahap diselesaikan.']);
+        }
+        return $progress;
+    }
+
     private function snapshot(ProjectWorkflow $workflow, string $prefix): array
     {
         if ($prefix === 'delivery') {
@@ -311,10 +346,11 @@ class ProjectWorkflowController extends Controller
             ];
         }
         $fields = $prefix === 'production'
-            ? ['status', 'progress', 'note', 'report_completed', 'report_path', 'report_name']
-            : ['completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
+            ? ['status', 'progress', 'item_progress', 'note', 'report_completed', 'report_path', 'report_name']
+            : ['completed', 'progress', 'item_progress', 'note', 'checklist', 'document_path', 'document_name'];
 
         $snapshot = collect($fields)->mapWithKeys(fn ($field) => [$field => $workflow->{"{$prefix}_{$field}"}])->all();
+        $snapshot['item_names'] = $workflow->project->quotation?->items?->pluck('name', 'id')->all() ?? [];
         if ($prefix !== 'production') {
             $snapshot['checklist_labels'] = collect(ProjectWorkflow::qcChecklistDefinition($workflow->project, false, $prefix === 'qc_installation'))
                 ->flatMap(fn ($item) => collect($item['checks'])->mapWithKeys(fn ($check) => [$check['key'] => $item['item_name'].' · '.$check['label']]))

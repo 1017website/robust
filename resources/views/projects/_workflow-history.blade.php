@@ -25,6 +25,16 @@
             </div>
             <div class="small">Status: {{ $statusText($before) }} → {{ $statusText($after) }}</div>
             @if(!$delivery && !$deliveryOrderEntry)<div class="small">Progres: {{ $before['progress'] ?? 0 }}% → {{ $after['progress'] ?? 0 }}%</div>@endif
+            @if(!empty($after['item_progress']))
+                <details class="small mt-2">
+                    <summary>Progress per Item</summary>
+                    <ul class="mt-2 mb-0">
+                        @foreach($after['item_progress'] as $itemId => $itemProgress)
+                            <li>{{ $after['item_names'][$itemId] ?? 'Item' }}: {{ $before['item_progress'][$itemId] ?? 0 }}% → {{ $itemProgress }}%</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
             @if($delivery)
                 <div class="small">Jadwal: {{ $formatDate($before['scheduled_at'] ?? null) }} → {{ $formatDate($after['scheduled_at'] ?? null) }}</div>
                 <div class="small">Penerima: {{ $before['receiver_name'] ?? '-' }} → {{ $after['receiver_name'] ?? '-' }}</div>

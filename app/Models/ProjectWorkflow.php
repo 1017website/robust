@@ -21,6 +21,9 @@ class ProjectWorkflow extends Model
     ];
 
     protected $casts = [
+        'production_item_progress' => 'array',
+        'qc_item_progress' => 'array',
+        'qc_installation_item_progress' => 'array',
         'production_report_completed' => 'boolean',
         'production_progress' => 'integer',
         'production_updated_at' => 'datetime',
@@ -75,6 +78,7 @@ class ProjectWorkflow extends Model
         $project->loadMissing('quotation.items');
 
         return $project->quotation?->items
+            ->where('is_optional', false)
             ->values()
             ->map(function (QuotationItem $item) use ($includePrices, $installation): array {
                 $checks = [[
@@ -82,7 +86,7 @@ class ProjectWorkflow extends Model
                     'label' => 'Jumlah: '.rtrim(rtrim(number_format((float) $item->qty, 2, '.', ''), '0'), '.').' '.($item->unit ?: 'Unit'),
                 ]];
 
-                foreach (StructuredSpecification::flatten($item->specification) as $index => $specification) {
+                foreach (filled($item->specification) ? StructuredSpecification::flatten($item->specification) : [] as $index => $specification) {
                     if (($specification['type'] ?? null) === 'section') {
                         continue;
                     }

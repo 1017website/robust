@@ -22,6 +22,7 @@
     $deliveryStatusLabel = \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? $workflow->delivery_status;
     $deliveryOrder = $project->deliveryOrder;
     $purchaseOrder = $project->quotation?->purchaseOrderRequest;
+    $workItems = $project->quotation?->items?->where('is_optional', false) ?? collect();
     $defaultDeliveryItems = $project->quotation?->items
         ?->where('is_optional', false)
         ->map(fn($item) => ['name' => trim($item->name.($item->variant ? ' - '.$item->variant : '')), 'qty' => (float) $item->qty, 'unit' => $item->unit ?: 'Unit'])
@@ -86,6 +87,7 @@
                             <div class="col-md-6"><div class="small text-muted-2">Target Selesai</div><div class="fw-semibold">{{ $project->target_date?->translatedFormat('d M Y') ?? '-' }}</div></div>
                             <div class="col-md-6"><div class="small text-muted-2">Lokasi</div><div>{{ $project->location ?: '-' }}</div></div>
                             <div class="col-md-6"><div class="small text-muted-2">Prioritas</div><div class="text-capitalize">{{ $project->priority }}</div></div>
+                            @unless(auth()->user()->isProduction())
                             <div class="col-md-6">
                                 <div class="small text-muted-2">Dokumen PO</div>
                                 @if($purchaseOrder?->customer_po_file)
@@ -94,6 +96,7 @@
                                     <div>-</div>
                                 @endif
                             </div>
+                            @endunless
                             <div class="col-12"><div class="small text-muted-2">Scope of Work</div><div>{{ $project->scope_of_work ?: '-' }}</div></div>
                             <div class="col-12"><div class="small text-muted-2">Catatan / Follow-up</div><div>{{ $project->note ?: '-' }}</div></div>
                         </div>
@@ -158,13 +161,14 @@
             </section>
 
                 <section class="workflow-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Progress Desain & Produksi</h3><small class="text-muted-2">Perkiraan progres serta foto/dokumen pekerjaan</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
+                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Progress Produksi</h3><small class="text-muted-2">Progress setiap item serta foto/dokumen pekerjaan</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
                     @if($canProduction)
-                    <form method="POST" action="{{ route('project-workflow.production', $project) }}" enctype="multipart/form-data">@csrf @method('PUT')
+                    <form method="POST" action="{{ route('project-workflow.production', $project) }}" enctype="multipart/form-data" data-item-progress-form>@csrf @method('PUT')
                         <label class="form-label">Status Produksi</label>
                         <select class="form-select mb-3" name="production_status" required>@foreach(\App\Models\ProjectWorkflow::productionStatuses() as $value => $label)<option value="{{ $value }}" @selected($workflow->production_status === $value)>{{ $label }}</option>@endforeach</select>
                         <label class="form-label d-flex justify-content-between align-items-center"><span>Perkiraan Progress</span><output class="progress-range-value" id="productionProgressValue">{{ old('production_progress', $workflow->production_progress ?? 0) }}%</output></label>
-                        <input class="form-range mb-3" id="productionProgress" type="range" name="production_progress" min="0" max="100" step="5" value="{{ old('production_progress', $workflow->production_progress ?? 0) }}">
+                        <input class="form-range mb-3" id="productionProgress" type="{{ $workItems->isNotEmpty() ? 'hidden' : 'range' }}" name="production_progress" min="0" max="100" step="5" value="{{ old('production_progress', $workflow->production_progress ?? 0) }}" data-stage-progress>
+                        @include('projects._item-progress', ['itemPrefix' => 'production', 'itemEditable' => true])
                         <label class="form-label">Catatan Progress</label><textarea name="production_note" class="form-control mb-3" rows="2" placeholder="Contoh: rangka selesai, masuk proses finishing.">{{ old('production_note', $workflow->production_note) }}</textarea>
                         <label class="form-label">Foto / Dokumen Progress</label><input class="form-control mb-2" type="file" name="progress_files[]" multiple data-multi-file accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp">
                         <div class="form-text mb-3">Bisa pilih beberapa file sekaligus; tekan tombol pilih file berulang kali untuk menambah. Tanpa batas jumlah dan ukuran.</div>
@@ -173,6 +177,7 @@
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Produksi</button>
                     </form>
                     @else
+                        @include('projects._item-progress', ['itemPrefix' => 'production', 'itemEditable' => false])
                         <div class="d-flex justify-content-between align-items-center mb-2"><span>Progress terakhir</span><strong>{{ $workflow->production_progress ?? 0 }}%</strong></div><div class="prog mb-3"><span style="width:{{ $workflow->production_progress ?? 0 }}%"></span></div>
                         @if($workflow->production_note)<p class="small mb-3">{{ $workflow->production_note }}</p>@endif
                         <div class="d-flex align-items-center gap-2 mb-3"><i class="bi {{ $workflow->production_report_completed ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }}"></i><span>{{ $workflow->production_report_completed ? 'Laporan lengkap' : 'Laporan belum lengkap' }}</span></div>
@@ -350,9 +355,21 @@ document.addEventListener('DOMContentLoaded', function () {
             syncProgress();
         });
         completed.addEventListener('change', function () {
-            if (completed.checked) range.value = 100;
+            if (completed.checked && !form.querySelector('[data-item-progress]')) range.value = 100;
             syncProgress();
         });
+    });
+    document.querySelectorAll('[data-item-progress-form]').forEach(form => {
+        const items = [...form.querySelectorAll('[data-item-progress]')];
+        if (!items.length) return;
+        const total = form.querySelector('[data-stage-progress]');
+        function syncItems() {
+            items.forEach(input => input.closest('[data-item-progress-row]').querySelector('[data-item-progress-value]').value = input.value + '%');
+            total.value = Math.round(items.reduce((sum, input) => sum + Number(input.value), 0) / items.length);
+            total.dispatchEvent(new Event('input'));
+        }
+        items.forEach(input => input.addEventListener('input', syncItems));
+        syncItems();
     });
     const legacyTab = @json(auth()->user()->isQc() ? '#qc' : ($role === 'delivery' ? '#delivery' : '#production'));
     const errorFields = @json($errors->keys());
