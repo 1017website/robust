@@ -45,7 +45,7 @@
     <div class="work-stage-list">
         @foreach($stages as $stage)
             <div>
-                @if(in_array($stage['tab'], $visibleWorkTabs, true))
+                @if(in_array($stage['tab'], $visibleWorkTabs, true) && ($stage['tab'] !== 'qc' || in_array($stage['label'] === 'QC Pemasangan', $visibleQcStages, true)))
                     <a class="fw-semibold" href="#{{ $stage['tab'] }}">{{ $stage['label'] }}</a>
                 @else
                     <span class="fw-semibold">{{ $stage['label'] }}</span>

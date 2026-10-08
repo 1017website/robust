@@ -33,6 +33,72 @@ class ProjectQcStagesTest extends TestCase
             ->flatMap(fn ($item) => collect($item['checks'])->pluck('key'))->mapWithKeys(fn ($key) => [$key => 1])->all();
     }
 
+    public function test_different_qc_accounts_can_only_update_their_own_stage_and_history_records_each_user(): void
+    {
+        $production = User::factory()->create(['role' => 'qc_production']);
+        $installation = User::factory()->create(['role' => 'qc_installation']);
+        $project = $this->project();
+
+        $this->actingAs($production)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_progress' => 20])->assertForbidden();
+        $this->put(route('project-workflow.qc', $project), [
+            'qc_completed' => 1, 'qc_checklist' => $this->checks($project), 'qc_note' => 'Lolos oleh QC produksi',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->actingAs($installation)->putJson(route('project-workflow.qc', $project), ['qc_progress' => 20])->assertForbidden();
+        $this->put(route('project-workflow.qc-installation', $project), [
+            'qc_installation_progress' => 35, 'qc_installation_note' => 'Diperiksa oleh QC pemasangan',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $workflow = $project->workflow->fresh();
+        $this->assertSame($production->id, $workflow->qc_updated_by);
+        $this->assertSame($installation->id, $workflow->qc_installation_updated_by);
+        $this->assertSame($production->id, $project->workflowHistory()->where('action', 'qc_updated')->sole()->user_id);
+        $this->assertSame($installation->id, $project->workflowHistory()->where('action', 'qc_installation_updated')->sole()->user_id);
+        $this->assertSame(100, $workflow->qc_progress);
+        $this->assertSame(35, $workflow->qc_installation_progress);
+    }
+
+    public function test_qc_accounts_see_their_own_forms_work_queue_and_notifications(): void
+    {
+        $project = $this->project();
+        $project->update(['target_date' => today()->addDays(2)]);
+        foreach (['qc_production' => 'qc', 'qc_installation' => 'qc_installation'] as $role => $prefix) {
+            $user = User::factory()->create(['role' => $role]);
+            $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('drafter.projects.index'));
+            $this->get(route('drafter.calendar.index'))->assertOk();
+            $response = $this->get(route('project-workspace.show', $project))->assertOk()
+                ->assertSee('name="'.$prefix.'_progress"', false)
+                ->assertDontSee('name="'.($prefix === 'qc' ? 'qc_installation' : 'qc').'_progress"', false)
+                ->assertDontSee('id="production-tab"', false)->assertDontSee('id="delivery-tab"', false);
+            $this->get(route('drafter.projects.index'))->assertOk()->assertSee($user->roleLabel())
+                ->assertSee($prefix === 'qc' ? $project->code : 'Belum ada Request Process yang siap ditangani tim QC Pemasangan.');
+            if ($prefix === 'qc') {
+                $response->assertSee('Project menunggu QC Produksi')->assertDontSee('Project menunggu QC Pemasangan');
+                $response->assertSee($project->code.' · Deadline 2 hari lagi');
+            } else {
+                $response->assertDontSee('Project menunggu QC Produksi')->assertDontSee('Project menunggu QC Pemasangan');
+                $response->assertDontSee($project->code.' · Deadline 2 hari lagi');
+                $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100]);
+                $this->get(route('drafter.projects.index'))->assertOk()->assertSee($project->code)->assertSee('Buka QC Pemasangan');
+                $this->get(route('project-workspace.show', $project))->assertOk()
+                    ->assertSee('Project menunggu QC Pemasangan')->assertDontSee('Project menunggu QC Produksi')
+                    ->assertSee($project->code.' · Deadline 2 hari lagi');
+            }
+        }
+    }
+
+    public function test_administrator_can_create_separate_qc_roles_from_manage_user(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'administrator']))
+            ->get(route('admin.users.index'))->assertOk()->assertSee('QC Produksi')->assertSee('QC Pemasangan');
+        foreach (['qc_production', 'qc_installation'] as $role) {
+            $this->post(route('admin.users.store'), [
+                'name' => $role, 'email' => $role.'@example.test', 'role' => $role,
+                'password' => 'secret123', 'password_confirmation' => 'secret123', 'is_active' => 1,
+            ])->assertSessionHasNoErrors()->assertRedirect();
+            $this->assertDatabaseHas('users', ['email' => $role.'@example.test', 'role' => $role]);
+        }
+    }
+
     public function test_stages_keep_progress_notes_checklists_and_files_separate(): void
     {
         Storage::fake('public');

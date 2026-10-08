@@ -33,7 +33,9 @@ class User extends Authenticatable
     public function isSales(): bool { return in_array($this->role, ['sales', 'sales_admin'], true); }
     public function isDrafter(): bool { return $this->role === 'drafter'; }
     public function isProduction(): bool { return $this->role === 'production'; }
-    public function isQc(): bool { return $this->role === 'qc'; }
+    public function isQc(): bool { return in_array($this->role, ['qc', 'qc_production', 'qc_installation'], true); }
+    public function canUpdateQcProduction(): bool { return in_array($this->role, ['administrator', 'qc', 'qc_production'], true); }
+    public function canUpdateQcInstallation(): bool { return in_array($this->role, ['administrator', 'qc', 'qc_installation'], true); }
     public function isDelivery(): bool { return $this->role === 'delivery'; }
     public function isAdministration(): bool { return $this->role === 'administration'; }
     public function isSalesSpv(): bool { return $this->role === 'sales_spv'; }
@@ -82,7 +84,9 @@ class User extends Authenticatable
             'sales' => 'Sales',
             'drafter' => 'Drafter',
             'production' => 'Produksi',
-            'qc' => 'Quality Control',
+            'qc' => 'QC (Produksi & Pemasangan)',
+            'qc_production' => 'QC Produksi',
+            'qc_installation' => 'QC Pemasangan',
             'delivery' => 'Delivery',
             'administration' => 'Administration',
             default => $this->role,
@@ -98,7 +102,9 @@ class User extends Authenticatable
             'sales' => 'Sales',
             'drafter' => 'Drafter',
             'production' => 'Produksi',
-            'qc' => 'Quality Control',
+            'qc' => 'QC (Produksi & Pemasangan)',
+            'qc_production' => 'QC Produksi',
+            'qc_installation' => 'QC Pemasangan',
             'delivery' => 'Delivery',
             'administration' => 'Administration',
         ];

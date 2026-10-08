@@ -3,10 +3,14 @@
 
 @php
     $role = auth()->user()->role;
-    $visibleWorkTabs = in_array($role, ['production', 'qc', 'delivery'], true)
-        ? [$role] : ['production', 'qc', 'delivery'];
+    $visibleWorkTabs = auth()->user()->isQc() ? ['qc']
+        : (in_array($role, ['production', 'delivery'], true) ? [$role] : ['production', 'qc', 'delivery']);
+    $visibleQcStages = match ($role) {
+        'qc_production' => [false],
+        'qc_installation' => [true],
+        default => [false, true],
+    };
     $canProduction = in_array($role, ['administrator', 'production'], true);
-    $canQc = in_array($role, ['administrator', 'qc'], true);
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
     $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
@@ -31,6 +35,7 @@
     .workspace-tabs { border-bottom: 1px solid #e6eaf0; gap: .35rem; }
     .workspace-tabs .nav-link { color: #667085; font-weight: 700; border: 0; border-bottom: 3px solid transparent; padding: .85rem 1rem; }
     .workspace-tabs .nav-link.active { color: #0b63ce; border-bottom-color: #0b63ce; background: transparent; }
+    .qc-stage-grid > :only-child { grid-column: 1 / -1; }
     .qc-stage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .work-stage-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .work-stage-list > div { min-width: 0; }
@@ -59,7 +64,7 @@
             <li class="nav-item"><button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab" aria-controls="production" aria-selected="false">Produksi</button></li>
         @endif
         @if(in_array('qc', $visibleWorkTabs, true))
-            <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">QC</button></li>
+            <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">{{ auth()->user()->isQc() ? ($role === 'qc' ? 'QC' : auth()->user()->roleLabel()) : 'QC' }}</button></li>
         @endif
         @if(in_array('delivery', $visibleWorkTabs, true))
             <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Delivery</button></li>
@@ -191,12 +196,11 @@
         @if(in_array('qc', $visibleWorkTabs, true))
         <div class="tab-pane fade" id="qc" role="tabpanel" aria-labelledby="qc-tab">
             <div class="qc-stage-grid">
+                @foreach($visibleQcStages as $installation)
                 <section class="workflow-card">
-                    @include('projects._qc-stage', ['installation' => false])
+                    @include('projects._qc-stage', ['installation' => $installation])
                 </section>
-                <section class="workflow-card">
-                    @include('projects._qc-stage', ['installation' => true])
-                </section>
+                @endforeach
             </div>
         </div>
 
@@ -351,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function () {
             syncProgress();
         });
     });
-    const legacyTab = @json($role === 'qc' ? '#qc' : ($role === 'delivery' ? '#delivery' : '#production'));
+    const legacyTab = @json(auth()->user()->isQc() ? '#qc' : ($role === 'delivery' ? '#delivery' : '#production'));
     const errorFields = @json($errors->keys());
     const errorTab = errorFields.some(key => key.startsWith('production_') || key.startsWith('progress_files') || ['file', 'documentable_id'].includes(key)) ? '#production'
         : errorFields.some(key => key.startsWith('qc_')) ? '#qc'

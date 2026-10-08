@@ -18,6 +18,8 @@ class ProjectAccess
             $query->where(fn ($scope) => $scope
                 ->whereHas('documents', fn ($documents) => $documents->where('category', 'fabrication_drawing')->where('is_current', true))
                 ->orWhereHas('quotation', fn ($quotations) => $quotations->whereNull('design_request_id')));
+        } elseif ($user->role === 'qc_installation') {
+            $query->whereHas('workflow', fn ($workflow) => $workflow->where('qc_completed', true));
         } elseif ($user->isQc()) {
             $query->whereHas('workflow', fn ($workflow) => $workflow->where('production_status', 'production_finished'));
         } elseif ($user->isDelivery()) {
@@ -29,7 +31,7 @@ class ProjectAccess
 
     public static function canView(User $user, Project $project): bool
     {
-        if ($user->isAdminLevel() || in_array($user->role, ['sales_spv', 'administration', 'production', 'qc', 'delivery'], true)) {
+        if ($user->isAdminLevel() || in_array($user->role, ['sales_spv', 'administration', 'production', 'qc', 'qc_production', 'qc_installation', 'delivery'], true)) {
             return true;
         }
 

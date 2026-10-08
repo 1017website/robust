@@ -88,7 +88,7 @@
         $pushItem($menuGroups, 'Reports', 'drafter.reports.index', 'drafter.reports.*', 'bi-bar-chart');
         $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
-    } elseif ($role === 'qc') {
+    } elseif (auth()->user()->isQc()) {
         $pushLabel($menuGroups, 'PEKERJAAN QC');
         $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-patch-check');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
@@ -133,7 +133,7 @@
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     }
 
-    $showLogoutButton = in_array($role, ['drafter', 'production', 'qc', 'delivery', 'administration', 'sales', 'sales_admin', 'sales_spv'], true);
+    $showLogoutButton = in_array($role, ['drafter', 'production', 'qc', 'qc_production', 'qc_installation', 'delivery', 'administration', 'sales', 'sales_admin', 'sales_spv'], true);
 @endphp
 
 <aside class="sidebar" id="sidebar">

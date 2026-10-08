@@ -1,5 +1,5 @@
 @php($u = auth()->user())
-@php($calendarRoute = in_array($u?->role, ['drafter', 'production', 'qc', 'delivery'], true) ? route('drafter.calendar.index') : route('calendar.index'))
+@php($calendarRoute = in_array($u?->role, ['drafter', 'production', 'qc', 'qc_production', 'qc_installation', 'delivery'], true) ? route('drafter.calendar.index') : route('calendar.index'))
 @php($siteName = \App\Models\SystemSetting::value('company_name', config('app.name')))
 @php($companyFavicon = \App\Models\SystemSetting::assetUrl('company_favicon', asset('favicon.ico')))
 <!DOCTYPE html>

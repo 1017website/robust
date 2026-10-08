@@ -13,7 +13,7 @@
     <div><h3>{{ $qcTitle }}</h3><small class="text-muted-2">{{ $installation ? 'Pemeriksaan hasil pemasangan di lokasi customer' : 'Pemeriksaan hasil produksi sesuai spesifikasi penawaran' }}</small></div>
     <x-status-badge :status="$qcComplete ? 'approved' : 'pending'" :label="$qcComplete ? 'Selesai' : ($qcProgress > 0 ? 'Dalam Pemeriksaan' : 'Belum Dimulai')" />
 </div>
-@if($canQc)
+@if($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction())
     @if(!$qcReady)
         <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dapat diisi setelah QC Produksi selesai.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
     @endif

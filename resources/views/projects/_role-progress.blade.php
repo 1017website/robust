@@ -5,8 +5,9 @@
     <div class="small fw-semibold">{{ \App\Models\ProjectWorkflow::productionStatuses()[$progressWorkflow?->production_status ?? 'stock'] }}</div>
     <div class="prog my-2"><span style="width:{{ $progressWorkflow?->production_progress ?? 0 }}%"></span></div>
     <small>Produksi {{ $progressWorkflow?->production_progress ?? 0 }}%</small>
-@elseif($workRole === 'qc')
+@elseif(in_array($workRole, ['qc', 'qc_production', 'qc_installation'], true))
     @foreach([false => 'QC Produksi', true => 'QC Pemasangan'] as $installation => $qcLabel)
+        @continue(($workRole === 'qc_production' && $installation) || ($workRole === 'qc_installation' && !$installation))
         @php
             $qcProgress = $progressWorkflow?->qcProgress((bool) $installation) ?? 0;
             $qcCompleted = $installation ? $progressWorkflow?->qc_installation_completed : $progressWorkflow?->qc_completed;

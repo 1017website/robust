@@ -38,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
                 && Schema::hasColumn('project_workflows', 'delivery_status');
 
             if ($user) {
-                if (in_array($user->role, ['administrator', 'sales_admin', 'sales', 'sales_spv', 'administration', 'drafter', 'production', 'qc', 'delivery'], true)) {
+                if (in_array($user->role, ['administrator', 'sales_admin', 'sales', 'sales_spv', 'administration', 'drafter', 'production', 'qc', 'qc_production', 'qc_installation', 'delivery'], true)) {
                     $deadlineProjects = ProjectDeadline::apply(ProjectAccess::scopeRequestProcesses(Project::query(), $user))
                         ->when($user->isSales(), fn ($projects) => $projects->where(fn ($scope) => $scope
                             ->where('project_manager_id', $user->id)
@@ -141,12 +141,12 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 if ($user->isQc()) {
-                    $pendingQc = Project::whereHas('workflow', fn ($workflow) => $workflow
+                    $pendingQc = $user->canUpdateQcProduction() ? Project::whereHas('workflow', fn ($workflow) => $workflow
                         ->where('production_status', 'production_finished')
                         ->where('qc_completed', false))
-                        ->count();
+                        ->count() : 0;
                     $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingQc, 'Project menunggu QC Produksi', 'Produksi selesai. Periksa checklist spesifikasi penawaran.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
-                    if (Schema::hasColumn('project_workflows', 'qc_installation_completed')) {
+                    if ($user->canUpdateQcInstallation() && Schema::hasColumn('project_workflows', 'qc_installation_completed')) {
                         $pendingInstallationQc = Project::whereHas('workflow', fn ($workflow) => $workflow
                             ->where('qc_completed', true)
                             ->where('qc_installation_completed', false))->count();

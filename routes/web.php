@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Calendar & Reports juga untuk drafter
-    Route::middleware('role:drafter,production,qc,delivery')->group(function () {
+    Route::middleware('role:drafter,production,qc,qc_production,qc_installation,delivery')->group(function () {
         Route::get('/drafter/calendar', [CalendarController::class, 'index'])->name('drafter.calendar.index');
         Route::get('/drafter/reports', [ReportController::class, 'index'])->name('drafter.reports.index');
     });
@@ -100,8 +100,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:administrator,production')->group(function () {
         Route::put('/project-workspace/{project}/production', [ProjectWorkflowController::class, 'updateProduction'])->name('project-workflow.production');
     });
-    Route::middleware('role:administrator,qc')->group(function () {
+    Route::middleware('role:administrator,qc,qc_production')->group(function () {
         Route::put('/project-workspace/{project}/qc', [ProjectWorkflowController::class, 'updateQc'])->name('project-workflow.qc');
+    });
+    Route::middleware('role:administrator,qc,qc_installation')->group(function () {
         Route::put('/project-workspace/{project}/qc-installation', [ProjectWorkflowController::class, 'updateInstallationQc'])->name('project-workflow.qc-installation');
     });
     Route::middleware('role:administrator,delivery')->group(function () {
@@ -250,7 +252,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/design-requests/{designRequest}/feedback', [DrafterDesignRequestController::class, 'submitFeedback'])->name('design-requests.feedback');
     });
 
-    Route::middleware('role:drafter,production,qc,delivery,administration')->prefix('drafter')->name('drafter.')->group(function () {
+    Route::middleware('role:drafter,production,qc,qc_production,qc_installation,delivery,administration')->prefix('drafter')->name('drafter.')->group(function () {
         Route::get('/projects', [DrafterProjectController::class, 'index'])->name('projects.index');
     });
 });
