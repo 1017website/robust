@@ -103,7 +103,7 @@ class ProjectWorkflowController extends Controller
             'after' => $this->snapshot($workflow, 'production'), 'attachments' => $attachments,
         ]);
 
-        return back()->with('success', 'Laporan produksi berhasil diperbarui.')->withFragment('operations');
+        return back()->with('success', 'Laporan produksi berhasil diperbarui.')->withFragment('production');
     }
 
     public function updateQc(Request $request, Project $project)
@@ -170,12 +170,19 @@ class ProjectWorkflowController extends Controller
             'after' => $this->snapshot($workflow, $prefix), 'attachments' => $attachments,
         ]);
 
-        return back()->with('success', "{$label} berhasil diperbarui.")->withFragment('operations');
+        return back()->with('success', "{$label} berhasil diperbarui.")->withFragment('qc');
     }
 
     public function updateDelivery(Request $request, Project $project)
     {
+        return DB::transaction(fn () => $this->saveDelivery($request, $project));
+    }
+
+    private function saveDelivery(Request $request, Project $project)
+    {
         $workflow = $project->workflow()->firstOrCreate();
+        $before = $this->snapshot($workflow, 'delivery');
+        $attachments = [];
         abort_unless($workflow->qc_completed, 422, 'Delivery baru dapat diproses setelah QC Produksi selesai.');
 
         $data = $request->validate([
@@ -229,13 +236,16 @@ class ProjectWorkflowController extends Controller
             'delivery_updated_at' => now(),
         ];
         if ($file = $request->file('pod')) {
-            $update += $this->replaceFile($workflow->pod_path, $file, "project-workflows/{$project->id}/delivery", 'pod');
+            $update += $this->replaceFile($workflow->pod_path, $file, "project-workflows/{$project->id}/delivery", 'pod', true);
+            $attachments[] = ['path' => $update['pod_path'], 'name' => $update['pod_name']];
         }
         if ($file = $request->file('delivery_out_photo')) {
-            $update += $this->replaceFile($workflow->delivery_out_photo_path, $file, "project-workflows/{$project->id}/delivery", 'delivery_out_photo');
+            $update += $this->replaceFile($workflow->delivery_out_photo_path, $file, "project-workflows/{$project->id}/delivery", 'delivery_out_photo', true);
+            $attachments[] = ['path' => $update['delivery_out_photo_path'], 'name' => $update['delivery_out_photo_name']];
         }
         if ($file = $request->file('delivery_returned_photo')) {
-            $update += $this->replaceFile($workflow->delivery_returned_photo_path, $file, "project-workflows/{$project->id}/delivery", 'delivery_returned_photo');
+            $update += $this->replaceFile($workflow->delivery_returned_photo_path, $file, "project-workflows/{$project->id}/delivery", 'delivery_returned_photo', true);
+            $attachments[] = ['path' => $update['delivery_returned_photo_path'], 'name' => $update['delivery_returned_photo_name']];
         }
         $workflow->update($update);
         $project->update([
@@ -245,7 +255,12 @@ class ProjectWorkflowController extends Controller
                 : max(in_array($deliveryStatus, ['delivered', 'customer_received'], true) ? 90 : 85, (int) $project->progress),
         ]);
 
-        return back()->with('success', 'Monitoring Delivery berhasil diperbarui.')->withFragment('operations');
+        Logger::record('delivery_updated', 'Delivery diperbarui', $project, [
+            'stage' => 'Delivery', 'before' => $before,
+            'after' => $this->snapshot($workflow, 'delivery'), 'attachments' => $attachments,
+        ]);
+
+        return back()->with('success', 'Monitoring Delivery berhasil diperbarui.')->withFragment('delivery');
     }
 
     public function attachment(Request $request, Project $project, string $type)
@@ -285,6 +300,16 @@ class ProjectWorkflowController extends Controller
 
     private function snapshot(ProjectWorkflow $workflow, string $prefix): array
     {
+        if ($prefix === 'delivery') {
+            return [
+                'status' => $workflow->delivery_status, 'note' => $workflow->delivery_note,
+                'scheduled_at' => $workflow->delivery_scheduled_at?->toIso8601String(),
+                'receiver_name' => $workflow->customer_receiver_name,
+                'received_at' => $workflow->customer_received_at?->toIso8601String(),
+                'out_completed' => (bool) $workflow->delivery_out_completed,
+                'returned_completed' => (bool) $workflow->delivery_returned_completed,
+            ];
+        }
         $fields = $prefix === 'production'
             ? ['status', 'progress', 'note', 'report_completed', 'report_path', 'report_name']
             : ['completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];

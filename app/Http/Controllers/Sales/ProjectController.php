@@ -127,7 +127,8 @@ class ProjectController extends Controller
             'quotation.designRequest.revisionRequests.requester', 'quotation.designRequest.sales',
             'quotation.designRequest.productionPic', 'quotation.designRequest.customer.primaryPic',
             'quotation.designRequest.lead', 'terms', 'activities', 'documents.uploader',
-            'workflow.productionUpdater', 'workflow.qcUpdater', 'workflow.deliveryUpdater',
+            'workflow.productionUpdater', 'workflow.qcUpdater', 'workflow.qcInstallationUpdater', 'workflow.deliveryUpdater',
+            'deliveryOrder.creator', 'deliveryOrder.updater',
             'designRevisions.creator', 'designRevisions.statusUpdater',
         ]);
         $workflow = $project->workflow ?: $project->workflow()->make();
@@ -142,8 +143,9 @@ class ProjectController extends Controller
             ->values();
         $qcChecklistDefinition = ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
         $workflowHistory = $project->workflowHistory()->with('user')->orderByDesc('id')->paginate(15, ['*'], 'history_page')->withQueryString()->fragment('workflow-history');
+        $latestHistoryEntry = $project->workflowHistory()->with('user')->orderByDesc('id')->first();
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices', 'workflowHistory'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices', 'workflowHistory', 'latestHistoryEntry'));
     }
 
     /**

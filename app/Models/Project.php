@@ -33,7 +33,7 @@ class Project extends Model
     public function workflowHistory(): MorphMany
     {
         return $this->morphMany(ActivityLog::class, 'loggable')
-            ->whereIn('action', ['production_updated', 'qc_updated', 'qc_installation_updated']);
+            ->whereIn('action', ['production_updated', 'qc_updated', 'qc_installation_updated', 'delivery_updated', 'delivery_order_updated']);
     }
     public function deliveryOrder(): HasOne { return $this->hasOne(DeliveryOrder::class); }
     public function designRevisions(): HasMany { return $this->hasMany(DesignRevision::class)->orderByDesc('revision_number'); }

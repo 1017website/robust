@@ -7,12 +7,19 @@ use App\Models\DeliveryOrder;
 use App\Models\Project;
 use App\Services\CodeGenerator;
 use App\Services\DeliveryOrderPdf;
+use App\Services\Logger;
 use App\Support\ProjectAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DeliveryOrderController extends Controller
 {
     public function store(Request $request, Project $project)
+    {
+        return DB::transaction(fn () => $this->save($request, $project));
+    }
+
+    private function save(Request $request, Project $project)
     {
         abort_unless(ProjectAccess::canView($request->user(), $project), 403);
         abort_unless($project->workflow?->qc_completed, 422, 'Delivery Order baru dapat dibuat setelah QC Produksi selesai.');
@@ -38,6 +45,7 @@ class DeliveryOrderController extends Controller
         ])->values()->all();
 
         $deliveryOrder = $project->deliveryOrder;
+        $before = $deliveryOrder?->only(['code', 'delivery_date', 'delivery_address', 'recipient_name', 'driver_name', 'vehicle_number', 'notes', 'items']) ?? [];
         $values = [
             'delivery_date' => $data['delivery_date'],
             'delivery_address' => $data['delivery_address'],
@@ -61,7 +69,12 @@ class DeliveryOrderController extends Controller
             $message = "Delivery Order {$deliveryOrder->code} berhasil dibuat.";
         }
 
-        return back()->with('success', $message)->withFragment('operations');
+        Logger::record('delivery_order_updated', 'Delivery Order disimpan', $project, [
+            'stage' => 'Delivery Order', 'before' => $before,
+            'after' => $deliveryOrder->only(['code', 'delivery_date', 'delivery_address', 'recipient_name', 'driver_name', 'vehicle_number', 'notes', 'items']),
+        ]);
+
+        return back()->with('success', $message)->withFragment('delivery');
     }
 
     public function pdf(Request $request, Project $project, DeliveryOrderPdf $pdf)

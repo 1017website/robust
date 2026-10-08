@@ -29,7 +29,9 @@
     .workspace-tabs { border-bottom: 1px solid #e6eaf0; gap: .35rem; }
     .workspace-tabs .nav-link { color: #667085; font-weight: 700; border: 0; border-bottom: 3px solid transparent; padding: .85rem 1rem; }
     .workspace-tabs .nav-link.active { color: #0b63ce; border-bottom-color: #0b63ce; background: transparent; }
-    .workflow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .qc-stage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .work-stage-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .work-stage-list > div { min-width: 0; }
     .workflow-card { border: 1px solid #e7ebf1; border-radius: 14px; padding: 1rem; background: #fff; }
     .workflow-card h3 { font-size: 1rem; font-weight: 800; margin: 0; }
     .attachment-box { border: 1px dashed #cfd7e3; border-radius: 10px; padding: .8rem; background: #f8fafc; }
@@ -37,7 +39,7 @@
     .qc-item + .qc-item { border-top: 1px solid #e7ebf1; margin-top: .75rem; padding-top: .75rem; }
     .revision-note { max-width: 430px; white-space: normal; }
     .progress-range-value { min-width: 64px; text-align: center; font-size: 1.35rem; font-weight: 800; color: #0b63ce; }
-    @media (max-width: 991px) { .workflow-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 991px) { .qc-stage-grid, .work-stage-list { grid-template-columns: 1fr; } }
 </style>
 @endpush
 
@@ -51,12 +53,15 @@
     <ul class="nav workspace-tabs px-3" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#project-info" type="button">Informasi Project</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">{{ $directProduction ? 'Spesifikasi Penawaran' : 'Design Request' }} <span class="badge text-bg-light ms-1">{{ $directProduction ? ($project->quotation?->items?->count() ?? 0) : 1 }}</span></button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#operations" type="button">Production, QC & Delivery</button></li>
+        <li class="nav-item"><button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab" aria-controls="production" aria-selected="false">Produksi</button></li>
+        <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">QC</button></li>
+        <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Delivery</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-revisions" type="button">Design Revision <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></button></li>
     </ul>
 
     <div class="tab-content p-3 p-lg-4">
         <div class="tab-pane fade show active" id="project-info">
+            @include('projects._work-summary')
             <div class="row g-3">
                 <div class="col-lg-8">
                     <div class="workflow-card h-100">
@@ -98,13 +103,14 @@
                     </div>
                 </div>
             </div>
+            @include('projects._workflow-history')
         </div>
 
         <div class="tab-pane fade" id="design-request">
             @include('projects._design-request', ['designRequest' => $designRequest, 'quotation' => $project->quotation, 'showPrices' => $showPrices])
         </div>
 
-        <div class="tab-pane fade" id="operations">
+        <div class="tab-pane fade" id="production" role="tabpanel" aria-labelledby="production-tab">
             <section class="workflow-card mb-3">
                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                     <div>
@@ -137,7 +143,6 @@
                 </div>
             </section>
 
-            <div class="workflow-grid">
                 <section class="workflow-card">
                     <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Progress Desain & Produksi</h3><small class="text-muted-2">Perkiraan progres serta foto/dokumen pekerjaan</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
                     @if($canProduction)
@@ -170,12 +175,20 @@
                     @endif
                 </section>
 
+        </div>
+
+        <div class="tab-pane fade" id="qc" role="tabpanel" aria-labelledby="qc-tab">
+            <div class="qc-stage-grid">
                 <section class="workflow-card">
                     @include('projects._qc-stage', ['installation' => false])
-                    <hr class="my-4">
+                </section>
+                <section class="workflow-card">
                     @include('projects._qc-stage', ['installation' => true])
                 </section>
+            </div>
+        </div>
 
+        <div class="tab-pane fade" id="delivery" role="tabpanel" aria-labelledby="delivery-tab">
                 <section class="workflow-card">
                     <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Delivery</h3><small class="text-muted-2">Jadwal, POD, dan penerimaan customer</small></div><x-status-badge :status="$workflow->delivery_status === 'completed' ? 'completed' : 'pending'" :label="$deliveryStatusLabel" /></div>
                     @if($canDelivery)
@@ -247,7 +260,6 @@
                         </div>
                     @endif
                 </section>
-            </div>
         </div>
 
         <div class="tab-pane fade" id="design-revisions">
@@ -295,7 +307,6 @@
         </div>
     </div>
 </div>
-@include('projects._workflow-history')
 @endsection
 
 @push('scripts')
@@ -323,9 +334,31 @@ document.addEventListener('DOMContentLoaded', function () {
             syncProgress();
         });
     });
-    if (!location.hash) return;
-    const trigger = document.querySelector('[data-bs-target="' + location.hash + '"]');
-    if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+    const legacyTab = @json($role === 'qc' ? '#qc' : ($role === 'delivery' ? '#delivery' : '#production'));
+    const errorFields = @json($errors->keys());
+    const errorTab = errorFields.some(key => key.startsWith('production_') || key.startsWith('progress_files') || ['file', 'documentable_id'].includes(key)) ? '#production'
+        : errorFields.some(key => key.startsWith('qc_')) ? '#qc'
+        : errorFields.some(key => ['revision_file', 'revision_date', 'status'].includes(key)) ? '#design-revisions'
+        : errorFields.some(key => /^(delivery_|customer_|recipient_|items|pod|driver_name|vehicle_number)/.test(key)) ? '#delivery' : '';
+    function showHashTab(preferErrors = false) {
+        const requested = preferErrors && errorTab ? errorTab : location.hash;
+        const hash = requested === '#operations' ? legacyTab
+            : (requested === '#workflow-history' ? '#project-info' : requested);
+        const trigger = Array.from(document.querySelectorAll('.workspace-tabs [data-bs-target]'))
+            .find(button => button.dataset.bsTarget === hash);
+        if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+    }
+    showHashTab(true);
+    window.addEventListener('hashchange', () => showHashTab());
+    document.querySelectorAll('.workspace-tabs [data-bs-target]').forEach(button => {
+        button.addEventListener('shown.bs.tab', () => {
+            if (location.hash === '#workflow-history' && button.dataset.bsTarget === '#project-info') {
+                document.getElementById('workflow-history').scrollIntoView();
+                return;
+            }
+            history.replaceState(null, '', button.dataset.bsTarget);
+        });
+    });
 });
 </script>
 @endpush

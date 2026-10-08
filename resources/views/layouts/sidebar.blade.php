@@ -89,11 +89,13 @@
         $pushLabel($menuGroups, 'SISTEM');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'qc') {
-        $pushItem($menuGroups, 'QC Attachment', 'drafter.projects.index', 'drafter.projects.*', 'bi-patch-check');
+        $pushLabel($menuGroups, 'PEKERJAAN QC');
+        $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-patch-check');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'delivery') {
-        $pushItem($menuGroups, 'Delivery Monitoring', 'drafter.projects.index', 'drafter.projects.*', 'bi-truck');
+        $pushLabel($menuGroups, 'PEKERJAAN DELIVERY');
+        $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-truck');
         $pushItem($menuGroups, 'Calendar', 'drafter.calendar.index', 'drafter.calendar.*', 'bi-calendar3');
         $pushItem($menuGroups, 'Settings', 'profile.edit', 'profile.*', 'bi-gear');
     } elseif ($role === 'drafter') {

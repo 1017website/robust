@@ -41,6 +41,7 @@ class ProjectController extends Controller
             ? $projects->getCollection()->firstWhere('id', (int) $request->get('project'))
             : null;
         $selectedProject ??= $projects->first();
+        $latestWorkEntry = $selectedProject?->workflowHistory()->with('user')->orderByDesc('id')->first();
 
         $base = Project::query();
         $applyRoleScope($base);
@@ -54,6 +55,6 @@ class ProjectController extends Controller
             'overdue' => (clone $base)->whereNotIn('status', ['done', 'cancelled'])->whereDate('target_date', '<', today())->count(),
         ];
 
-        return view('drafter.projects.index', compact('projects', 'selectedProject', 'stats'));
+        return view('drafter.projects.index', compact('projects', 'selectedProject', 'stats', 'latestWorkEntry'));
     }
 }

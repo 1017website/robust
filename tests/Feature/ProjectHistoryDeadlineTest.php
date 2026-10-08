@@ -57,7 +57,7 @@ class ProjectHistoryDeadlineTest extends TestCase
             }
         }
         $this->actingAs($sales)->get(route('sales.projects.show', $project))->assertOk()
-            ->assertSee('Riwayat Produksi &amp; QC', false)->assertSee('Catatan 35')->assertSee('Catatan 70');
+            ->assertSee('Riwayat Pekerjaan')->assertSee('Catatan 35')->assertSee('Catatan 70');
         $this->get(route('project-workflow.history-attachment', [$project, $history[0], 0]))
             ->assertDownload('checklist-35.pdf');
         $other = $this->project($sales);
@@ -174,5 +174,99 @@ class ProjectHistoryDeadlineTest extends TestCase
             ->assertDontSee('Catatan rahasia project lain')->assertDontSee('Riwayat nomor 1<', false);
         $this->get(route('project-workspace.show', [$project, 'history_page' => 2]))->assertOk()
             ->assertSee('Riwayat nomor 1')->assertDontSee('Riwayat nomor 16');
+    }
+
+    public function test_work_sections_are_separate_and_overview_includes_history_for_every_role(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $project = $this->project($sales);
+        $project->workflow()->create(['production_status' => 'production_finished', 'qc_completed' => true]);
+        foreach (['sales', 'production', 'qc', 'delivery'] as $role) {
+            $user = $role === 'sales' ? $sales : User::factory()->create(['role' => $role]);
+            $response = $this->actingAs($user)->get(route('project-workspace.show', $project))->assertOk()
+                ->assertDontSee('Production, QC &amp; Delivery', false);
+            $dom = new \DOMDocument;
+            @$dom->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($dom);
+            foreach (['production', 'qc', 'delivery'] as $stage) {
+                $this->assertSame(1, $xpath->query("//*[@id='{$stage}']")->length);
+                $this->assertSame(1, $xpath->query("//button[@data-bs-target='#{$stage}']")->length);
+            }
+            $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='work-summary-title']")->length);
+            $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='workflow-history']")->length);
+            $this->assertSame(0, $xpath->query("//*[@id='operations']")->length);
+            if ($role !== 'sales') {
+                $this->assertSame($role === 'production' ? 1 : 2, $xpath->query("//*[@id='{$role}']//form[contains(@action,'/{$role}')]")->length);
+            }
+        }
+    }
+
+    public function test_delivery_and_do_updates_are_logged_and_latest_work_is_independent_of_history_page(): void
+    {
+        Storage::fake('public');
+        $this->freezeTime();
+        $sales = User::factory()->create(['role' => 'sales']);
+        $delivery = User::factory()->create(['role' => 'delivery', 'name' => 'Petugas Delivery Uji']);
+        $project = $this->project($sales);
+        $project->workflow()->create(['production_status' => 'production_finished', 'qc_completed' => true]);
+        $workspace = route('project-workspace.show', $project);
+        foreach (['scheduling', 'scheduled'] as $status) {
+            $this->actingAs($delivery)->from($workspace)->put(route('project-workflow.delivery', $project), [
+                'delivery_status' => $status, 'delivery_scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'delivery_note' => 'Pengiriman '.$status,
+                'pod' => UploadedFile::fake()->create($status.'.pdf', 10, 'application/pdf'),
+            ])->assertRedirect($workspace.'#delivery')->assertSessionHasNoErrors();
+        }
+        $entries = $project->workflowHistory()->orderBy('id')->get();
+        $this->assertCount(2, $entries);
+        $this->assertSame('scheduling', $entries[1]->meta['before']['status']);
+        $this->assertSame('scheduled', $entries[1]->meta['after']['status']);
+        Storage::disk('public')->assertExists($entries[0]->meta['attachments'][0]['path']);
+        $this->get(route('project-workflow.history-attachment', [$project, $entries[0], 0]))->assertDownload('scheduling.pdf');
+        $this->post(route('delivery-orders.store', $project), [
+            'delivery_date' => today()->toDateString(), 'delivery_address' => 'Alamat DO Uji',
+            'notes' => 'DO siap dikirim', 'items' => [['name' => 'Cabinet Uji', 'qty' => 1, 'unit' => 'Unit']],
+        ])->assertRedirect($workspace.'#delivery')->assertSessionHasNoErrors();
+        $this->assertSame(3, $project->workflowHistory()->count());
+        $this->actingAs($sales)->get($workspace.'?history_page=2')->assertOk()->assertSee('DO siap dikirim');
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($this->get($workspace)->getContent());
+        $summary = (new \DOMXPath($dom))->query("//section[@aria-labelledby='work-summary-title']")->item(0)->textContent;
+        $this->assertStringContainsString('Delivery Order', $summary);
+        $this->assertStringContainsString('Petugas Delivery Uji', $summary);
+        $this->assertStringContainsString('DO siap dikirim', $summary);
+        $this->actingAs($delivery)->from($workspace)->put(route('project-workflow.delivery', $project), ['delivery_status' => 'completed'])
+            ->assertSessionHasErrors('customer_receiver_name');
+        $this->assertSame(3, $project->workflowHistory()->count());
+    }
+
+    public function test_each_operational_user_sees_their_work_status_and_direct_work_links(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $project = $this->project($sales, ['progress' => 61]);
+        $project->workflow()->create([
+            'production_status' => 'production_finished', 'production_progress' => 100,
+            'qc_completed' => true, 'qc_progress' => 100, 'qc_installation_progress' => 25,
+            'delivery_status' => 'in_transit', 'delivery_scheduled_at' => now()->addDay(),
+        ]);
+        $project->workflowHistory()->create([
+            'user_id' => $sales->id, 'action' => 'delivery_updated', 'description' => 'Delivery diperbarui',
+            'meta' => ['stage' => 'Delivery', 'after' => ['note' => 'Barang sedang dikirim ke customer.']],
+        ]);
+        foreach (['production' => 'Produksi', 'qc' => 'QC', 'delivery' => 'Delivery'] as $role => $label) {
+            $user = User::factory()->create(['role' => $role]);
+            $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('drafter.projects.index'));
+            $response = $this->get(route('drafter.projects.index'))->assertOk()
+                ->assertSee('Pekerjaan '.$label)->assertSee('Pembaruan Terakhir')->assertSee('Barang sedang dikirim ke customer.')
+                ->assertSee(route('project-workspace.show', $project).'#'.$role)
+                ->assertSee(route('project-workspace.show', $project).'#project-info')
+                ->assertSee(route('project-workspace.show', $project).'#workflow-history')
+                ->assertDontSee('61%')->assertDontSee('QC Attachment')->assertDontSee('Delivery Monitoring');
+            match ($role) {
+                'production' => $response->assertSee('Produksi 100%'),
+                'qc' => $response->assertSee('QC Pemasangan')->assertSee('25%'),
+                'delivery' => $response->assertSee('Dalam Pengiriman')->assertSee('DO/BA kembali'),
+            };
+        }
     }
 }
