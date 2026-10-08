@@ -149,7 +149,6 @@
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Berlaku s/d</span><span class="fw-semibold">{{ $quotation->valid_until?->format('d M Y') }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Pengiriman</span><span class="fw-semibold">{{ ucfirst($quotation->delivery_method) }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Prioritas</span><span class="fw-semibold">{{ ['low'=>'Rendah','medium'=>'Sedang','high'=>'Tinggi'][$quotation->priority] ?? ucfirst((string) $quotation->priority) }}</span></div>
-            <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Mata Uang</span><span class="fw-semibold">{{ $quotation->currency ?: 'IDR' }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Dikirim</span><span class="fw-semibold">{{ $quotation->sent_at?->format('d M Y H:i') ?: 'Belum dikirim' }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Respon Customer</span><span class="fw-semibold">{{ $quotation->customer_response_at?->format('d M Y H:i') ?: 'Belum ada' }}</span></div>
             <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Sales</span><span class="fw-semibold">{{ $quotation->sales?->name ?: '—' }}</span></div>

@@ -1138,7 +1138,8 @@ canvas{display:block;max-width:100%}
 
 .quotation-spec-summary{display:grid;gap:3px;margin-top:7px;color:#6f7f99;font-size:11px}
 .quotation-spec-summary span{display:flex;align-items:center;gap:5px}
-.quotation-item-table .it-spec-cell{min-width:190px;max-width:240px}
+.quotation-item-table .it-spec-cell{width:160px;min-width:160px;max-width:160px}
+.quotation-spec-summary .quotation-spec-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 @media (max-width: 991.98px){
     .quotation-item-card-head{grid-template-columns:minmax(0,1fr) repeat(2,minmax(95px,auto))}

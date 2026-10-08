@@ -7,7 +7,7 @@ use App\Models\Document;
 use App\Models\Project;
 use App\Models\Quotation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -15,7 +15,59 @@ use ZipArchive;
 
 class QuotationWorkflowSimplificationTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
+
+    private function uploadPayload(): array
+    {
+        return [
+            'customer_name' => 'Customer Upload', 'project_name' => 'Project Upload',
+            'delivery_method' => 'email', 'quote_date' => today()->toDateString(),
+            'valid_until' => today()->addMonth()->toDateString(), 'priority' => 'medium',
+            'quotation_mode' => 'upload', 'action' => 'publish',
+            'quotation_file' => UploadedFile::fake()->createWithContent('penawaran.pdf', "%PDF-1.4\n%%EOF"),
+            'items' => [['name' => 'Cabinet', 'qty' => 2, 'unit' => 'Unit', 'unit_price' => 1500000]],
+        ];
+    }
+
+    public function test_upload_requires_items_and_prices_before_creating_a_quotation(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'sales']));
+        $payload = $this->uploadPayload();
+        unset($payload['items']);
+        $this->post(route('sales.quotations.store'), $payload)->assertSessionHasErrors('items');
+        $payload = $this->uploadPayload();
+        unset($payload['items'][0]['unit_price']);
+        $this->post(route('sales.quotations.store'), $payload)->assertSessionHasErrors('items.0.unit_price');
+        $payload['items'][0]['unit_price'] = -1;
+        $this->post(route('sales.quotations.store'), $payload)->assertSessionHasErrors('items.0.unit_price');
+        $this->assertDatabaseCount('quotations', 0);
+        $this->assertDatabaseCount('documents', 0);
+    }
+
+    public function test_upload_updates_keep_the_file_and_recalculate_item_prices(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'sales']));
+        $payload = $this->uploadPayload();
+        $this->post(route('sales.quotations.store'), $payload)->assertSessionHasNoErrors();
+        $quotation = Quotation::sole();
+        $document = $quotation->uploadedFile();
+        $this->assertSame(3000000.0, (float) $quotation->grand_total);
+        unset($payload['quotation_file']);
+        $invalid = $payload;
+        unset($invalid['items']);
+        $this->put(route('sales.quotations.update', $quotation), $invalid)->assertSessionHasErrors('items');
+        $this->assertSame(3000000.0, (float) $quotation->fresh()->grand_total);
+        $payload['items'][0]['unit_price'] = 2000000;
+        $payload['tax_percent'] = 11;
+        $this->put(route('sales.quotations.update', $quotation), $payload)->assertSessionHasNoErrors();
+        $quotation->refresh();
+        $this->assertSame(4440000.0, (float) $quotation->grand_total);
+        $this->assertSame($document->id, $quotation->uploadedFile()->id);
+        $this->get(route('sales.quotations.show', $quotation))->assertOk()->assertDontSee('Mata Uang');
+        $this->get(route('sales.quotations.edit', $quotation))->assertOk()->assertDontSee('name="currency"', false);
+    }
 
     public function test_sales_can_upload_and_preview_an_xlsx_quotation_without_spv_approval(): void
     {
@@ -30,8 +82,8 @@ class QuotationWorkflowSimplificationTest extends TestCase
             'quote_date' => today()->format('Y-m-d'),
             'valid_until' => today()->addMonth()->format('Y-m-d'),
             'priority' => 'medium',
-            'currency' => 'IDR',
             'quotation_mode' => 'upload',
+            'items' => [['name' => 'Wall Bench', 'qty' => 1, 'unit' => 'Unit', 'unit_price' => 1250000]],
             'quotation_file' => UploadedFile::fake()->createWithContent('penawaran-a.xlsx', $this->xlsxFixture()),
             'action' => 'publish',
         ]);
@@ -40,7 +92,9 @@ class QuotationWorkflowSimplificationTest extends TestCase
         $response->assertRedirect(route('sales.quotations.show', $quotation));
         $this->assertSame('ready', $quotation->status);
         $this->assertSame('upload', $quotation->creation_mode);
-        $this->assertCount(0, $quotation->items);
+        $this->assertCount(1, $quotation->items);
+        $this->assertSame('IDR', $quotation->currency);
+        $this->assertSame(1250000.0, (float) $quotation->grand_total);
         $document = $quotation->documents()->where('category', 'quotation_file')->firstOrFail();
 
         $this->actingAs($sales)->get(route('documents.preview', $document))

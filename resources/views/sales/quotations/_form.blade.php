@@ -122,13 +122,12 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-4"><label class="form-label small fw-semibold">Mata Uang</label><input name="currency" value="{{ old('currency', $quotation?->currency ?? 'IDR') }}" class="form-control"></div>
                 <div class="col-12"><label class="form-label small fw-semibold">Catatan untuk Customer</label><textarea name="customer_note" rows="2" class="form-control">{{ old('customer_note', $quotation?->customer_note) }}</textarea></div>
                 <div class="col-12">
                     <label class="form-label small fw-semibold">Cara Membuat Penawaran *</label>
                     <div class="row g-2">
                         <div class="col-md-6"><label class="border rounded-3 p-3 w-100 h-100 d-flex gap-2 align-items-start"><input class="form-check-input quotation-mode" type="radio" name="quotation_mode" value="builder" @checked($quotationMode === 'builder')><span><strong>Buat Penawaran</strong><small class="d-block text-muted-2">Isi item dan harga langsung di sistem.</small></span></label></div>
-                        <div class="col-md-6"><label class="border rounded-3 p-3 w-100 h-100 d-flex gap-2 align-items-start"><input class="form-check-input quotation-mode" type="radio" name="quotation_mode" value="upload" @checked($quotationMode === 'upload')><span><strong>Upload Penawaran</strong><small class="d-block text-muted-2">Upload Excel/PDF yang sudah dibuat untuk dokumentasi dan preview.</small></span></label></div>
+                        <div class="col-md-6"><label class="border rounded-3 p-3 w-100 h-100 d-flex gap-2 align-items-start"><input class="form-check-input quotation-mode" type="radio" name="quotation_mode" value="upload" @checked($quotationMode === 'upload')><span><strong>Upload Penawaran</strong><small class="d-block text-muted-2">Upload file penawaran, lalu isi daftar item dan harga di sistem.</small></span></label></div>
                     </div>
                     <div id="quotationFileBox" class="mt-3 {{ $quotationMode === 'upload' ? '' : 'd-none' }}">
                         <label class="form-label small fw-semibold">File Penawaran {{ $quotation?->uploadedFile() ? '(ganti bila perlu)' : '*' }}</label>
@@ -172,7 +171,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="min-width:300px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="width:160px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -282,7 +281,7 @@ function renderSpecificationSummary(tr){
     const input = tr.querySelector('.it-specification');
     const summary = specificationSummary(input.value);
     const box = tr.querySelector('.quotation-spec-summary');
-    box.innerHTML = `<span><i class="bi bi-layers"></i>${esc(summary.label)}</span><span><i class="bi bi-list-check"></i>${summary.rowCount} detail</span>`;
+    box.innerHTML = `<span class="quotation-spec-title" title="${esc(summary.label)}">${esc(summary.label)}</span><span>${summary.rowCount} detail</span>`;
 }
 
 document.getElementById('saveQuotationSpecification').addEventListener('click', () => {
@@ -309,19 +308,22 @@ function syncQuotationMode(){
     document.getElementById('quotationFileBox').classList.toggle('d-none',!upload);
     const file=document.getElementById('quotationFile');
     file.required=upload && !hasStoredQuotationFile;
-    document.querySelectorAll('[data-pane="2"] input,[data-pane="2"] select,[data-pane="2"] textarea,[data-pane="3"] input,[data-pane="3"] select,[data-pane="3"] textarea').forEach(el=>el.disabled=upload);
-    document.querySelectorAll('.step[data-step="2"],.step[data-step="3"]').forEach(el=>el.classList.toggle('d-none',upload));
 }
 document.querySelectorAll('.quotation-mode').forEach(input=>input.addEventListener('change',syncQuotationMode));
-document.querySelectorAll('.next-step').forEach(b=>b.onclick=()=>{ if(validateStep()) showStep(currentQuotationMode()==='upload' && step===1 ? 4 : Math.min(step+1,4)); });
-document.querySelectorAll('.prev-step').forEach(b=>b.onclick=()=>showStep(currentQuotationMode()==='upload' && step===4 ? 1 : Math.max(step-1,1)));
+document.querySelectorAll('.next-step').forEach(b=>b.onclick=()=>{ if(validateStep()) showStep(Math.min(step+1,4)); });
+document.querySelectorAll('.prev-step').forEach(b=>b.onclick=()=>showStep(Math.max(step-1,1)));
 
 function validateStep(){
     if(step===1){
         const req = document.querySelectorAll('[data-pane="1"] [required]');
         for(const el of req){ if(!el.value){ el.focus(); el.classList.add('is-invalid'); return false; } el.classList.remove('is-invalid'); }
     }
-    if(step===2 && currentQuotationMode()==='builder' && document.querySelectorAll('#itemTable tbody tr').length===0){ alert('Tambahkan minimal 1 item.'); return false; }
+    if(step===2 && document.querySelectorAll('#itemTable tbody tr').length===0){ alert('Tambahkan minimal 1 item.'); return false; }
+    if(step===2){
+        for(const input of document.querySelectorAll('#itemTable [required]')){
+            if(!input.checkValidity()){ input.reportValidity(); return false; }
+        }
+    }
     return true;
 }
 
@@ -336,7 +338,7 @@ function addItem(data={}){
         <td><input type="hidden" name="items[${i}][id]" value="${esc(data.id)}"><input type="hidden" name="items[${i}][source_design_request_item_id]" value="${esc(data.source_design_request_item_id)}"><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
         <td><input name="items[${i}][name]" class="form-control form-control-sm mb-1 it-name" value="${esc(data.name)}" required placeholder="Nama item"><input name="items[${i}][variant]" class="form-control form-control-sm it-variant" value="${esc(data.variant)}" placeholder="Detail: Laci 3 / Layout L / Layout U"></td>
-        <td class="it-spec-cell"><textarea name="items[${i}][specification]" class="d-none it-specification">${esc(data.specification)}</textarea><button type="button" class="btn btn-soft btn-sm w-100 it-spec-edit"><i class="bi bi-sliders me-1"></i>Atur Spesifikasi</button><div class="quotation-spec-summary"></div></td>
+        <td class="it-spec-cell"><textarea name="items[${i}][specification]" class="d-none it-specification">${esc(data.specification)}</textarea><button type="button" class="btn btn-soft btn-sm w-100 it-spec-edit" aria-label="Atur spesifikasi item"><i class="bi bi-sliders me-1"></i>Atur</button><div class="quotation-spec-summary"></div></td>
         <td class="it-image-cell">
             <div class="quotation-image-preview">
                 <img src="${hasImage ? `${storageBase}/${esc(data.quotation_image_path)}` : ''}" alt="Preview gambar item" class="it-image-preview ${hasImage ? '' : 'd-none'}">
@@ -461,11 +463,8 @@ function recalc(){
 
 function buildReview(){
     recalc();
-    if(currentQuotationMode()==='upload'){
-        const file=document.getElementById('quotationFile')?.files?.[0];
-        document.getElementById('reviewBox').innerHTML=`<div class="alert alert-info mb-0"><strong>Penawaran upload</strong><br>${file ? esc(file.name) : 'Menggunakan file penawaran yang sudah tersimpan.'}<br><small>File dapat dipreview dari halaman detail setelah disimpan.</small></div>`;
-        return;
-    }
+    const file=document.getElementById('quotationFile')?.files?.[0];
+    const uploadSummary=currentQuotationMode()==='upload' ? `<div class="alert alert-info"><strong>File penawaran</strong><br>${file ? esc(file.name) : 'Menggunakan file penawaran yang sudah tersimpan.'}</div>` : '';
     const g=v=>document.querySelector(`[name="${v}"]`)?.value||'-';
     let rows='';
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
@@ -474,6 +473,7 @@ function buildReview(){
         rows+=`<tr><td>${esc(n)}${optional?' <span class="badge text-bg-secondary">Opsional</span>':''}</td><td>${q}</td><td class="fw-num">${rupiah(p)}</td><td class="fw-num">${rupiah(q*p)}</td></tr>`;
     });
     document.getElementById('reviewBox').innerHTML=`
+        ${uploadSummary}
         <div class="row g-2 mb-3">
             <div class="col-md-4"><div class="text-muted-2">Customer</div><div class="fw-semibold">${esc(g('customer_name'))}</div></div>
             <div class="col-md-4"><div class="text-muted-2">Proyek</div><div class="fw-semibold">${esc(g('project_name'))}</div></div>

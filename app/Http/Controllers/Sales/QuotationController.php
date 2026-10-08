@@ -100,7 +100,7 @@ class QuotationController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            $this->syncItems($quotation, $data['quotation_mode'] === 'builder' ? ($data['items'] ?? []) : []);
+            $this->syncItems($quotation, $data['items']);
             $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
             $this->storeUploadedQuotationFile($quotation, $data['quotation_file'] ?? null);
             $quotation->load('items', 'designRequest');
@@ -202,7 +202,7 @@ class QuotationController extends Controller
                 'revision_note' => null,
             ]);
 
-            $this->syncItems($quotation, $data['quotation_mode'] === 'builder' ? ($data['items'] ?? []) : []);
+            $this->syncItems($quotation, $data['items']);
             $this->storeQuotationDocuments($quotation, $data['documents'] ?? []);
             $this->storeUploadedQuotationFile($quotation, $data['quotation_file'] ?? null);
             $quotation->load('items', 'designRequest');
@@ -349,7 +349,7 @@ class QuotationController extends Controller
 
     protected function validatedData(Request $request, ?Quotation $quotation = null): array
     {
-        $request->merge(['quotation_mode' => $request->input('quotation_mode', 'builder')]);
+        $request->merge(['quotation_mode' => $request->input('quotation_mode', 'builder'), 'currency' => 'IDR']);
         if ($request->input('quotation_mode') === 'upload') {
             $request->merge([
                 'discount_type' => $request->input('discount_type', 'percent'),
@@ -385,7 +385,7 @@ class QuotationController extends Controller
             'additional_costs' => ['nullable', 'array'],
             'additional_costs.*.label' => ['nullable', 'string', 'max:100'],
             'additional_costs.*.amount' => ['nullable', 'numeric', 'min:0'],
-            'items' => ['required_if:quotation_mode,builder', 'nullable', 'array', 'min:1'],
+            'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['nullable', 'integer', 'exists:quotation_items,id'],
             'items.*.source_design_request_item_id' => ['nullable', 'integer', 'exists:design_request_items,id'],
             'items.*.category' => ['nullable', 'string', 'max:100'],
@@ -396,7 +396,7 @@ class QuotationController extends Controller
             'items.*.quotation_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
             'items.*.qty' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit' => ['nullable', 'string', 'max:50'],
-            'items.*.unit_price' => ['required_if:quotation_mode,builder', 'nullable', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.margin' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'items.*.is_optional' => ['nullable', 'boolean'],
         ]);
