@@ -3,6 +3,8 @@
 
 @php
     $role = auth()->user()->role;
+    $visibleWorkTabs = in_array($role, ['production', 'qc', 'delivery'], true)
+        ? [$role] : ['production', 'qc', 'delivery'];
     $canProduction = in_array($role, ['administrator', 'production'], true);
     $canQc = in_array($role, ['administrator', 'qc'], true);
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
@@ -53,9 +55,15 @@
     <ul class="nav workspace-tabs px-3" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#project-info" type="button">Informasi Project</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">{{ $directProduction ? 'Spesifikasi Penawaran' : 'Design Request' }} <span class="badge text-bg-light ms-1">{{ $directProduction ? ($project->quotation?->items?->count() ?? 0) : 1 }}</span></button></li>
-        <li class="nav-item"><button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab" aria-controls="production" aria-selected="false">Produksi</button></li>
-        <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">QC</button></li>
-        <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Delivery</button></li>
+        @if(in_array('production', $visibleWorkTabs, true))
+            <li class="nav-item"><button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab" aria-controls="production" aria-selected="false">Produksi</button></li>
+        @endif
+        @if(in_array('qc', $visibleWorkTabs, true))
+            <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">QC</button></li>
+        @endif
+        @if(in_array('delivery', $visibleWorkTabs, true))
+            <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Delivery</button></li>
+        @endif
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-revisions" type="button">Design Revision <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></button></li>
     </ul>
 
@@ -110,6 +118,7 @@
             @include('projects._design-request', ['designRequest' => $designRequest, 'quotation' => $project->quotation, 'showPrices' => $showPrices])
         </div>
 
+        @if(in_array('production', $visibleWorkTabs, true))
         <div class="tab-pane fade" id="production" role="tabpanel" aria-labelledby="production-tab">
             <section class="workflow-card mb-3">
                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
@@ -177,6 +186,9 @@
 
         </div>
 
+        @endif
+
+        @if(in_array('qc', $visibleWorkTabs, true))
         <div class="tab-pane fade" id="qc" role="tabpanel" aria-labelledby="qc-tab">
             <div class="qc-stage-grid">
                 <section class="workflow-card">
@@ -188,6 +200,9 @@
             </div>
         </div>
 
+        @endif
+
+        @if(in_array('delivery', $visibleWorkTabs, true))
         <div class="tab-pane fade" id="delivery" role="tabpanel" aria-labelledby="delivery-tab">
                 <section class="workflow-card">
                     <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Delivery</h3><small class="text-muted-2">Jadwal, POD, dan penerimaan customer</small></div><x-status-badge :status="$workflow->delivery_status === 'completed' ? 'completed' : 'pending'" :label="$deliveryStatusLabel" /></div>
@@ -261,6 +276,8 @@
                     @endif
                 </section>
         </div>
+
+        @endif
 
         <div class="tab-pane fade" id="design-revisions">
             @if($canRevision)

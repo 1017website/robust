@@ -45,7 +45,11 @@
     <div class="work-stage-list">
         @foreach($stages as $stage)
             <div>
-                <a class="fw-semibold" href="#{{ $stage['tab'] }}">{{ $stage['label'] }}</a>
+                @if(in_array($stage['tab'], $visibleWorkTabs, true))
+                    <a class="fw-semibold" href="#{{ $stage['tab'] }}">{{ $stage['label'] }}</a>
+                @else
+                    <span class="fw-semibold">{{ $stage['label'] }}</span>
+                @endif
                 <div class="mt-1">{{ $stage['status'] }}@if($stage['progress'] !== null) · {{ $stage['progress'] }}%@endif</div>
                 @if($stage['time'])
                     <div class="small mt-1">{{ $stage['time']->timezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB · {{ $stage['user']?->name ?? 'Pengguna tidak tersedia' }}</div>

@@ -181,7 +181,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $sales = User::factory()->create(['role' => 'sales']);
         $project = $this->project($sales);
         $project->workflow()->create(['production_status' => 'production_finished', 'qc_completed' => true]);
-        foreach (['sales', 'production', 'qc', 'delivery'] as $role) {
+        foreach (['administrator', 'sales', 'production', 'qc', 'delivery'] as $role) {
             $user = $role === 'sales' ? $sales : User::factory()->create(['role' => $role]);
             $response = $this->actingAs($user)->get(route('project-workspace.show', $project))->assertOk()
                 ->assertDontSee('Production, QC &amp; Delivery', false);
@@ -189,13 +189,17 @@ class ProjectHistoryDeadlineTest extends TestCase
             @$dom->loadHTML($response->getContent());
             $xpath = new \DOMXPath($dom);
             foreach (['production', 'qc', 'delivery'] as $stage) {
-                $this->assertSame(1, $xpath->query("//*[@id='{$stage}']")->length);
-                $this->assertSame(1, $xpath->query("//button[@data-bs-target='#{$stage}']")->length);
+                $visible = in_array($role, ['administrator', 'sales'], true) || $role === $stage;
+                $this->assertSame($visible ? 1 : 0, $xpath->query("//*[@id='{$stage}']")->length);
+                $this->assertSame($visible ? 1 : 0, $xpath->query("//button[@data-bs-target='#{$stage}']")->length);
+                if (!$visible) {
+                    $this->assertSame(0, $xpath->query("//a[@href='#{$stage}']")->length);
+                }
             }
             $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='work-summary-title']")->length);
             $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='workflow-history']")->length);
             $this->assertSame(0, $xpath->query("//*[@id='operations']")->length);
-            if ($role !== 'sales') {
+            if (in_array($role, ['production', 'qc', 'delivery'], true)) {
                 $this->assertSame($role === 'production' ? 1 : 2, $xpath->query("//*[@id='{$role}']//form[contains(@action,'/{$role}')]")->length);
             }
         }
