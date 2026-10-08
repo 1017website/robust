@@ -48,15 +48,12 @@ class ProjectOrderItemsTest extends TestCase
             ->assertOk()->assertSeeInOrder([$newer->code, $older->code]);
     }
 
-    public function test_direct_po_requires_items_specifications_and_matching_total_without_creating_partial_projects(): void
+    public function test_direct_po_requires_items_and_matching_total_without_creating_partial_projects(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'sales']));
         $payload = $this->directPayload();
         unset($payload['order_items']);
         $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('order_items');
-        $payload = $this->directPayload();
-        unset($payload['order_items'][0]['specification']);
-        $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('order_items.0.specification');
         $payload = $this->directPayload();
         $payload['po_total'] = 1000;
         $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('po_total');
@@ -106,18 +103,36 @@ class ProjectOrderItemsTest extends TestCase
         $this->assertDatabaseCount('projects', 2);
     }
 
-    public function test_linked_quotation_cannot_start_without_specs_or_with_an_incorrect_po_value(): void
+    public function test_linked_quotation_cannot_start_without_items_or_with_an_incorrect_po_value(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $quotation = $this->quotation($sales, 'upload');
         $payload = ['quotation_id' => $quotation->id, 'customer_name' => 'Customer PO', 'request_date' => today()->toDateString(), 'po_total' => 3000000];
-        $this->actingAs($sales)->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('order_items.0.specification');
-        $quotation->items()->update(['specification' => 'Warna: Putih']);
+        $this->actingAs($sales);
         $payload['po_total'] = 1;
         $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('po_total');
         $this->assertDatabaseCount('projects', 0);
         $quotation->items()->delete();
         $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasErrors('order_items');
+    }
+
+    public function test_projects_can_be_submitted_without_item_specifications(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($sales);
+        $payload = $this->directPayload();
+        unset($payload['order_items'][0]['specification']);
+        $this->post(route('admin.purchase-order-requests.store'), $payload)->assertSessionHasNoErrors();
+
+        foreach (['builder', 'upload'] as $mode) {
+            $quotation = $this->quotation($sales, $mode);
+            $this->post(route('admin.purchase-order-requests.store'), [
+                'quotation_id' => $quotation->id, 'customer_name' => 'Customer PO',
+                'request_date' => today()->toDateString(), 'po_total' => 3000000,
+                'order_items' => [['id' => $quotation->items->sole()->id, 'specification' => '']],
+            ])->assertSessionHasNoErrors();
+        }
+        $this->assertDatabaseCount('projects', 3);
     }
 
     public function test_direct_po_draft_preserves_items_and_can_be_completed_before_submission(): void

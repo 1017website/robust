@@ -14,7 +14,7 @@ function addOrderItem(item = {}, index = null) {
         <td><input aria-label="Jumlah" class="form-control form-control-sm" style="min-width:70px" name="order_items[${i}][qty]" value="${orderEsc(item.qty ?? 1)}" data-qty required ${readonly}></td>
         <td><input aria-label="Unit" class="form-control form-control-sm" style="min-width:70px" name="order_items[${i}][unit]" value="${orderEsc(item.unit ?? 'Unit')}" required ${readonly}></td>
         <td><input aria-label="Harga satuan" class="form-control form-control-sm" style="min-width:130px" name="order_items[${i}][unit_price]" value="${orderEsc(item.unit_price ?? '')}" data-rupiah required ${readonly}></td>
-        <td><textarea aria-label="Spesifikasi item" class="form-control form-control-sm" style="min-width:220px" name="order_items[${i}][specification]" rows="3" required>${orderEsc(item.specification)}</textarea></td>
+        <td><textarea aria-label="Spesifikasi item (opsional)" class="form-control form-control-sm" style="min-width:220px" name="order_items[${i}][specification]" rows="3">${orderEsc(item.specification)}</textarea></td>
         <td>${item.quotation_image_path ? `<a href="${@json(asset('storage'))}/${orderEsc(item.quotation_image_path)}" target="_blank" rel="noopener">Lihat gambar</a>` : ''}<input aria-label="Gambar item" class="form-control form-control-sm" name="order_items[${i}][image]" type="file" accept=".jpg,.jpeg,.png,.webp"></td>
         <td>${orderDirect() ? '<button type="button" class="btn btn-soft btn-sm remove-order-item" aria-label="Hapus item">Hapus</button>' : ''}</td>`;
     orderRows.appendChild(tr);

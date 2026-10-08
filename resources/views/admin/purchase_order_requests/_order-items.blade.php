@@ -1,6 +1,6 @@
 <div class="card-r">
     <div class="card-head"><h2>Item untuk Produksi &amp; QC</h2><button type="button" id="addOrderItem" class="btn btn-soft btn-sm">Tambah Item</button></div>
-    <p class="small text-muted-2">Nama barang, jumlah, unit, dan spesifikasi wajib lengkap sebelum project diajukan. Gambar dapat ditambahkan sebagai acuan.</p>
+    <p class="small text-muted-2">Nama barang, jumlah, unit, dan harga wajib lengkap sebelum project diajukan. Spesifikasi dan gambar dapat ditambahkan sebagai acuan.</p>
     <div class="table-wrap">
         <table class="table-r" style="min-width:1000px"><thead><tr><th>Nama Item</th><th>Qty</th><th>Unit</th><th>Harga Satuan</th><th>Spesifikasi</th><th>Gambar (opsional)</th><th></th></tr></thead><tbody id="orderItemRows"></tbody></table>
     </div>

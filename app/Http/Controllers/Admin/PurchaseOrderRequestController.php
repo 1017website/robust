@@ -439,9 +439,9 @@ class PurchaseOrderRequestController extends Controller
             }
             foreach ($rows as $index => $row) {
                 if (! $asDraft) {
-                    foreach (['name', 'qty', 'unit', 'unit_price', 'specification'] as $field) {
+                    foreach (['name', 'qty', 'unit', 'unit_price'] as $field) {
                         if (! isset($row[$field]) || trim((string) $row[$field]) === '') {
-                            $errors["order_items.{$index}.{$field}"] = 'Lengkapi nama, jumlah, unit, harga, dan spesifikasi setiap item.';
+                            $errors["order_items.{$index}.{$field}"] = 'Lengkapi nama, jumlah, unit, dan harga setiap item.';
                         }
                     }
                 }
@@ -502,9 +502,6 @@ class PurchaseOrderRequestController extends Controller
             foreach ($quotation->items as $index => $item) {
                 if (! filled($item->name) || (float) $item->qty <= 0 || ! filled($item->unit)) {
                     $errors['order_items'] = 'Lengkapi nama, jumlah, dan unit pada item penawaran terlebih dahulu.';
-                }
-                if (! filled($item->specification)) {
-                    $errors["order_items.{$index}.specification"] = "Lengkapi spesifikasi {$item->name} untuk Produksi dan QC.";
                 }
             }
         }
