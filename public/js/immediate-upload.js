@@ -17,6 +17,8 @@
     }
 
     function render(state) {
+        state.input.dataset.uploadCount = String(state.records.filter((record) => record.token).length);
+        state.input.dataset.uploadNames = JSON.stringify(state.records.filter((record) => record.token).map((record) => record.file.name));
         state.status.replaceChildren();
         state.records.forEach((record) => {
             const row = document.createElement('div');

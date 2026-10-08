@@ -144,7 +144,7 @@ class Quotation extends Model
     {
         return match ($this->creation_mode) {
             'upload' => 'Upload file',
-            'external' => 'Penawaran eksternal / Non-CRM',
+            'external' => 'Langsung dari PO',
             default => 'Dibuat di sistem',
         };
     }

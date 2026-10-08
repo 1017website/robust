@@ -3,11 +3,8 @@
 @section('content')
 @php
     $isEditingDraft = (bool) $requestPo;
-    // Penawaran hasil upload tidak dirinci di CRM, jadi Project-nya otomatis memakai mode PO Existing / Non-CRM.
-    $uploadedQuotation = $quotation?->isUploaded() ? $quotation : null;
-    $externalQuotation = $requestPo?->quotation?->isExternal() ? $requestPo->quotation : $uploadedQuotation;
+    $externalQuotation = $requestPo?->quotation?->isExternal() ? $requestPo->quotation : null;
     $defaultSource = $externalQuotation ? 'external' : 'crm';
-    $externalOrderValue = (float) $externalQuotation?->grand_total > 0 ? $externalQuotation->grand_total : null;
     $purchaseSource = old('purchase_source', $defaultSource);
     $value = fn (string $field, $fallback = null) => old($field, $requestPo?->{$field} ?? $fallback);
     $checklistItems = old('checklist_present')
@@ -21,6 +18,16 @@
             ->values()
             ->all()
         : ($requestPo ? $requestPo->checklistItems() : (new \App\Models\PurchaseOrderRequest)->checklistItems());
+
+    $orderItemValues = old('order_items', $quotation?->items?->toArray() ?? []);
+    $orderQuotationData = $quotations->keyBy('id')->map(fn ($q) => [
+        'total' => $q->grand_total, 'discount_type' => $q->discount_type,
+        'discount_value' => $q->discount_value, 'tax_percent' => $q->tax_percent,
+        'additional_cost' => $q->additional_total,
+        'items' => $q->items->map(fn ($item) => collect($item->toArray())->only([
+            'id', 'name', 'qty', 'unit', 'unit_price', 'specification', 'quotation_image_path', 'is_optional',
+        ])->all())->values(),
+    ]);
 @endphp
 <x-page-header
     :title="$isEditingDraft ? 'Lanjutkan Draf '.$requestPo->code : 'Project Baru'"
@@ -30,6 +37,9 @@
 
 <form method="POST" action="{{ $isEditingDraft ? route('admin.purchase-order-requests.draft', $requestPo) : route('admin.purchase-order-requests.store') }}" enctype="multipart/form-data">
     @csrf
+    @if($errors->any())
+        <div class="alert alert-danger"><strong>Project belum dapat disimpan.</strong><ul class="mb-0 mt-2">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+    @endif
     @if($isEditingDraft)@method('PUT')@endif
     <div class="row g-3">
         <div class="col-lg-8">
@@ -45,13 +55,13 @@
                     <div class="col-md-6">
                         <label class="info-card d-flex gap-2 align-items-start h-100">
                             <input class="form-check-input mt-1" type="radio" name="purchase_source" value="crm" @checked($purchaseSource === 'crm')>
-                            <span><strong>Penawaran CRM</strong><small class="d-block text-muted-2 mt-1">Gunakan penawaran yang sudah tersimpan di CRM.</small></span>
+                            <span><strong>Dari Penawaran</strong><small class="d-block text-muted-2 mt-1">Pilih penawaran biasa atau penawaran upload yang tersimpan.</small></span>
                         </label>
                     </div>
                     <div class="col-md-6">
                         <label class="info-card d-flex gap-2 align-items-start h-100">
                             <input class="form-check-input mt-1" type="radio" name="purchase_source" value="external" @checked($purchaseSource === 'external')>
-                            <span><strong>PO Existing / Non-CRM</strong><small class="d-block text-muted-2 mt-1">Untuk order yang penawarannya dibuat di luar CRM.</small></span>
+                            <span><strong>Langsung dari PO</strong><small class="d-block text-muted-2 mt-1">Untuk order tanpa penawaran di sistem. Rincian item wajib diisi.</small></span>
                         </label>
                     </div>
                 </div>
@@ -73,18 +83,10 @@
                 </div>
 
                 <div id="externalQuotationFields" class="mb-3 {{ $purchaseSource === 'external' ? '' : 'd-none' }}">
-                    @if($uploadedQuotation)
-                        <input type="hidden" name="source_quotation_id" value="{{ $uploadedQuotation->id }}">
-                        <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>Project ini dibuat dari penawaran upload <strong>{{ $uploadedQuotation->code }}</strong> dan tetap terhubung ke penawaran tersebut. Isi total nilai sesuai PO customer.</div>
-                    @else
-                        <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>CRM akan membuat catatan penawaran eksternal otomatis agar alur Project dan Invoice tetap terhubung.</div>
-                    @endif
+                    <div class="form-text mb-3">Isi rincian barang pada PO agar Produksi dan QC memiliki acuan pekerjaan.</div>
                     <div class="row g-3">
-                        <div class="{{ $uploadedQuotation ? 'col-md-12' : 'col-md-8' }}"><label class="form-label small fw-semibold">Nama Project / Order <span class="text-danger">*</span></label><input name="external_project_name" value="{{ old('external_project_name', $externalQuotation?->project_name) }}" class="form-control" placeholder="Nama project pada PO customer" required></div>
-                        @unless($uploadedQuotation)
-                            <div class="col-md-4"><label class="form-label small fw-semibold">No Penawaran Eksternal</label><input name="external_quotation_number" value="{{ old('external_quotation_number') }}" class="form-control" placeholder="Opsional"></div>
-                        @endunless
-                        <div class="col-md-6"><label class="form-label small fw-semibold">Total Nilai PO <span class="text-danger">*</span></label><input data-rupiah name="external_order_value" value="{{ old('external_order_value', $externalOrderValue) }}" class="form-control" inputmode="numeric" placeholder="Rp 0" required><div class="form-text">Masukkan total akhir termasuk pajak jika berlaku.</div></div>
+                        <div class="col-md-8"><label class="form-label small fw-semibold">Nama Project / Order *</label><input name="external_project_name" value="{{ old('external_project_name', $externalQuotation?->project_name) }}" class="form-control" required></div>
+                        <div class="col-md-4"><label class="form-label small fw-semibold">Referensi Penawaran (opsional)</label><input name="external_quotation_number" value="{{ old('external_quotation_number') }}" class="form-control"></div>
                         @unless(auth()->user()->isSales())
                             <div class="col-md-6"><label class="form-label small fw-semibold">Sales Penanggung Jawab <span class="text-danger">*</span></label><select name="external_sales_id" class="form-select" required><option value="">Pilih Sales</option>@foreach($salesList as $sales)<option value="{{ $sales->id }}" @selected(old('external_sales_id', $externalQuotation?->sales_id) == $sales->id)>{{ $sales->name }}</option>@endforeach</select></div>
                         @endunless
@@ -114,6 +116,7 @@
                 </div>
             </div>
 
+            @include('admin.purchase_order_requests._order-items')
             <div class="card-r">
                 <div class="card-head"><h2>Data Pengiriman &amp; Penagihan</h2></div>
                 <div class="row g-3">
@@ -137,7 +140,7 @@
             <div class="card-r">
                 <div class="card-head"><h2>Alur</h2></div>
                 <ol class="small mb-0 ps-3">
-                    <li>Pilih penawaran CRM atau mode PO Existing / Non-CRM.</li>
+                    <li>Pilih penawaran atau mode Langsung dari PO.</li>
                     <li>Lengkapi data customer, nomor PO customer, dan pengiriman.</li>
                     <li>Ajukan Project; statusnya langsung Berjalan dan Request Process terbentuk otomatis.</li>
                     <li>Status menjadi Lunas sendiri setelah seluruh termin invoice terbayar.</li>
@@ -164,9 +167,9 @@ function syncPurchaseSource(){
     externalFields?.classList.toggle('d-none',source!=='external');
     if(quotationSelect){quotationSelect.required=source==='crm';quotationSelect.disabled=source!=='crm';}
     externalFields?.querySelectorAll('input,select').forEach(el=>{el.disabled=source!=='external';});
+    renderOrderItems();
 }
 purchaseSourceInputs.forEach(el=>el.addEventListener('change',syncPurchaseSource));
-syncPurchaseSource();
 // Isian yang ditarik otomatis dari penawaran terpilih. Ganti penawaran berapa kali pun
 // tetap memperbarui isinya; hanya field yang sudah diketik manual yang dipertahankan.
 const autofillMap={customerName:'customer',customerArea:'area',customerDivision:'division',deliveryAddress:'address',deliveryPic:'pic',deliveryPhone:'phone'};
@@ -189,5 +192,6 @@ quotationSelect?.addEventListener('change', function(){
         el.dataset.autofilled='1';
     });
 });
+@include('admin.purchase_order_requests._order-items-script')
 </script>@endpush
 @endsection

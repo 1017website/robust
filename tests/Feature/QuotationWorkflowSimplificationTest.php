@@ -29,6 +29,74 @@ class QuotationWorkflowSimplificationTest extends TestCase
         ];
     }
 
+    public function test_failed_quotation_save_reuses_uploaded_files_until_create_succeeds(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $sales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($sales);
+        $token = $this->postJson(route('temporary-uploads.store'), [
+            'file' => UploadedFile::fake()->createWithContent('penawaran.pdf', "%PDF-1.4\n%%EOF"),
+        ])->assertCreated()->json('token');
+        $support = $this->postJson(route('temporary-uploads.store'), [
+            'file' => UploadedFile::fake()->createWithContent('pendukung.pdf', "%PDF-1.4\n%%EOF"),
+        ])->assertCreated()->json('token');
+        $payload = $this->uploadPayload();
+        unset($payload['quotation_file']);
+        $payload['_uploaded_files'] = [
+            ['field' => 'quotation_file', 'token' => $token],
+            ['field' => 'documents.0', 'token' => $support],
+        ];
+        $payload['items'] = [5 => $payload['items'][0]];
+        $payload['items'][5]['unit_price'] = '';
+        $this->postJson(route('sales.quotations.store'), $payload)->assertUnprocessable()->assertJsonValidationErrors('items.5.unit_price');
+        Storage::disk('local')->assertExists("temporary-uploads/{$sales->id}/{$token}/file");
+        Storage::disk('local')->assertExists("temporary-uploads/{$sales->id}/{$support}/file");
+        $this->assertDatabaseCount('quotations', 0);
+        $payload['items'][5]['unit_price'] = 1500000;
+        $response = $this->postJson(route('sales.quotations.store'), $payload)->assertCreated();
+        $quotation = Quotation::sole();
+        $response->assertJsonPath('redirect', route('sales.quotations.show', $quotation));
+        $this->assertSame(3000000.0, (float) $quotation->grand_total);
+        $this->assertSame(2, $quotation->documents()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles('temporary-uploads'));
+    }
+
+    public function test_normal_validation_redirect_preserves_sparse_item_indexes_and_file_tokens(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'sales']));
+        $token = $this->postJson(route('temporary-uploads.store'), [
+            'file' => UploadedFile::fake()->image('gambar.jpg'),
+        ])->assertCreated()->json('token');
+        $payload = $this->uploadPayload();
+        unset($payload['quotation_file']);
+        $payload['quotation_mode'] = 'builder';
+        $payload['discount_type'] = 'percent';
+        $payload['tax_percent'] = 11;
+        $payload['_wizard_step'] = 4;
+        $payload['items'] = [5 => $payload['items'][0]];
+        $payload['items'][5]['unit_price'] = '';
+        $payload['_uploaded_files'] = [['field' => 'items.5.quotation_image', 'token' => $token]];
+        $this->from(route('sales.quotations.create'))->post(route('sales.quotations.store'), $payload)
+            ->assertRedirect(route('sales.quotations.create'))->assertSessionHasErrors('items.5.unit_price')
+            ->assertSessionHas('_old_input.items.5.name', 'Cabinet')
+            ->assertSessionHas('_old_input._uploaded_files.0.name', 'gambar.jpg');
+        $this->get(route('sales.quotations.create'))->assertOk()->assertSee('Cabinet')->assertSee('gambar.jpg');
+        $payload['items'][5]['unit_price'] = 1500000;
+        $response = $this->postJson(route('sales.quotations.store'), $payload)->assertCreated();
+        $quotation = Quotation::sole();
+        $this->assertNotNull($quotation->items()->sole()->quotation_image_path);
+        $update = $payload;
+        unset($update['_uploaded_files']);
+        $update['items'][5]['id'] = $quotation->items()->sole()->id;
+        $update['items'][5]['qty'] = 3;
+        $this->putJson(route('sales.quotations.update', $quotation), $update)->assertOk()
+            ->assertJsonPath('redirect', route('sales.quotations.show', $quotation));
+        $this->assertSame(4995000.0, (float) $quotation->fresh()->grand_total);
+    }
+
     public function test_upload_requires_items_and_prices_before_creating_a_quotation(): void
     {
         Storage::fake('public');

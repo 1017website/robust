@@ -126,6 +126,11 @@ class QuotationController extends Controller
             ? 'Penawaran berhasil dibuat dan siap dikirim. SPV dapat melihat pencatatannya tanpa proses approval.'
             : 'Penawaran berhasil disimpan sebagai draft.';
 
+        if ($request->expectsJson()) {
+            session()->flash('success', $message);
+            return response()->json(['message' => $message, 'redirect' => route('sales.quotations.show', $quotation)], 201);
+        }
+
         return redirect()->route('sales.quotations.show', $quotation)->with('success', $message);
     }
 
@@ -160,6 +165,9 @@ class QuotationController extends Controller
         $this->ensureOwner($quotation);
 
         if (! $quotation->canBeEdited()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Penawaran yang sudah diproses customer tidak dapat diedit.'], 422);
+            }
             return redirect()->route('sales.quotations.show', $quotation)->with('error', 'Penawaran yang sudah diproses customer tidak dapat diedit.');
         }
 
@@ -223,7 +231,13 @@ class QuotationController extends Controller
 
         Logger::record('updated', "Penawaran {$quotation->code} diperbarui", $quotation);
 
-        return redirect()->route('sales.quotations.show', $quotation)->with('success', $publish ? 'Penawaran berhasil diperbarui dan siap dikirim.' : 'Penawaran berhasil diperbarui.');
+        $message = $publish ? 'Penawaran berhasil diperbarui dan siap dikirim.' : 'Penawaran berhasil diperbarui.';
+        if ($request->expectsJson()) {
+            session()->flash('success', $message);
+            return response()->json(['message' => $message, 'redirect' => route('sales.quotations.show', $quotation)]);
+        }
+
+        return redirect()->route('sales.quotations.show', $quotation)->with('success', $message);
     }
 
     public function submitApproval(Quotation $quotation)

@@ -23,7 +23,7 @@
             @forelse($requests as $r)
                 <tr>
                     <td class="fw-semibold">{{ $r->projectNumber() ?: '—' }}</td>
-                    <td>{{ $r->quotation?->code ?: '—' }} @if($r->quotation?->isExternal())<span class="badge text-bg-info ms-1">Non-CRM</span>@endif</td>
+                    <td>{{ $r->quotation?->code ?: '—' }} @if($r->quotation?->isExternal())<span class="badge text-bg-info ms-1">Langsung dari PO</span>@endif</td>
                     <td>{{ $r->customer_name ?: ($r->quotation?->customer_name ?: '—') }}</td>
                     <td>{{ $r->quotation?->project_name ?: '—' }}</td>
                     <td>{{ $r->quotation?->sales?->name ?: '—' }}</td>

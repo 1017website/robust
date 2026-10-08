@@ -19,15 +19,15 @@ class NormalizeCurrencyInput
     /** Nama field eksak yang dinormalkan. */
     protected array $exact = [
         'est_value_min', 'est_value_max', 'project_value', 'tax_amount',
-        'discount_value', 'subtotal', 'grand_total', 'total', 'total_value',
+        'discount_value', 'subtotal', 'grand_total', 'total', 'total_value', 'po_total', 'order_additional_cost',
         'probability', 'target_margin', 'qty', 'margin', 'tax_percent',
-        'percentage', 'percent', 'progress', 'duration_minutes',
+        'percentage', 'percent', 'progress', 'duration_minutes', 'order_tax_percent', 'order_discount_value',
     ];
 
     /** Field decimal/non-rupiah yang boleh mempertahankan pecahan. */
     protected array $decimalExact = [
         'probability', 'target_margin', 'qty', 'margin', 'tax_percent',
-        'percentage', 'percent', 'progress', 'duration_minutes',
+        'percentage', 'percent', 'progress', 'duration_minutes', 'order_tax_percent', 'order_discount_value',
     ];
 
     /** Pola akhiran nama field yang dinormalkan. */

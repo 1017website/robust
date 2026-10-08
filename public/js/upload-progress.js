@@ -174,9 +174,10 @@
                 setBusy(false);
                 bar.classList.remove('progress-bar-animated');
                 bar.classList.add('bg-danger');
-                setProgress(0, 'Upload gagal', 'Periksa pesan kesalahan di bawah.');
+                setProgress(0, 'Data belum tersimpan', 'Isian dan file tetap tersedia. Perbaiki kesalahan lalu simpan kembali.');
 
                 if (xhr.status === 422 && payload.errors) {
+                    form.dispatchEvent(new CustomEvent('form:validation-error', { detail: { errors: payload.errors } }));
                     showErrors(Object.values(payload.errors).flat());
                 } else if (xhr.status === 413) {
                     showErrors(['Total ukuran upload melebihi batas yang diizinkan server. Kurangi jumlah atau ukuran file, lalu coba lagi.']);

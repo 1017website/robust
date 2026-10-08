@@ -17,7 +17,7 @@
 <div class="row g-3">
     <div class="col-lg-8">
         <div class="card-r">
-            <div class="card-head"><h2>Data Order</h2><div class="d-flex gap-2 align-items-center">@if($requestPo->quotation?->isExternal())<span class="badge text-bg-info">PO Existing / Non-CRM</span>@endif<x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div></div>
+            <div class="card-head"><h2>Data Order</h2><div class="d-flex gap-2 align-items-center">@if($requestPo->quotation?->isExternal())<span class="badge text-bg-info">Langsung dari PO</span>@endif<x-status-badge :status="$requestPo->status" :label="\App\Models\PurchaseOrderRequest::statuses()[$requestPo->status] ?? $requestPo->status" /></div></div>
             <div class="row g-3 small">
                 <div class="col-md-3"><div class="text-muted-2">Nomor Proyek</div><div class="fw-semibold">{{ $requestPo->projectNumber() ?: '—' }}</div></div>
                 <div class="col-md-3"><div class="text-muted-2">Area / Lokasi</div><div class="fw-semibold">{{ $requestPo->customer_area ?: '—' }}</div></div>
@@ -29,6 +29,17 @@
                 <div class="col-md-4"><div class="text-muted-2">Nilai Penawaran</div><div class="fw-semibold fw-num">{{ \App\Support\Format::rupiah($requestPo->quotation?->grand_total ?? 0) }}</div></div>
             </div>
         </div>
+
+        @if($requestPo->quotation?->items->isNotEmpty())
+        <div class="card-r">
+            <div class="card-head"><h2>Item Project</h2></div>
+            <div class="quotation-item-list">
+                @foreach($requestPo->quotation->items as $item)
+                    <x-quotation-item-card :item="$item" :show-cost="false" />
+                @endforeach
+            </div>
+        </div>
+        @endif
 
         @unless($requestPo->isDraft())
         <div class="card-r">

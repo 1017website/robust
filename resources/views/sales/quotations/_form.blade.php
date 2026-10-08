@@ -62,8 +62,9 @@
     </div>
 @endif
 
-<form method="POST" action="{{ $formAction }}" id="quoteForm" enctype="multipart/form-data">
+<form method="POST" action="{{ $formAction }}" id="quoteForm" enctype="multipart/form-data" data-upload-progress>
     @csrf
+    <input type="hidden" name="_wizard_step" id="quotationWizardStep" value="{{ old('_wizard_step', 1) }}">
     @if(($formMethod ?? 'POST') !== 'POST')
         @method($formMethod)
     @endif
@@ -225,6 +226,7 @@
             </div>
         </div>
     </div>
+    <x-upload-progress />
 </form>
 
 <div class="modal fade" id="quotationSpecificationModal" tabindex="-1" aria-hidden="true">
@@ -293,6 +295,7 @@ document.getElementById('saveQuotationSpecification').addEventListener('click', 
 
 function showStep(s){
     step = s;
+    document.getElementById('quotationWizardStep').value = s;
     document.querySelectorAll('.wizard-pane').forEach(p=>p.classList.toggle('d-none', +p.dataset.pane!==s));
     document.querySelectorAll('.step').forEach(el=>{
         const n=+el.dataset.step;
@@ -309,7 +312,7 @@ function syncQuotationMode(){
     document.querySelector('.quotation-item-name-heading').textContent=upload ? 'Nama Item' : 'Item / Detail';
     document.getElementById('quotationFileBox').classList.toggle('d-none',!upload);
     const file=document.getElementById('quotationFile');
-    file.required=upload && !hasStoredQuotationFile;
+    file.required=upload && !hasStoredQuotationFile && !(Number(file.dataset.uploadCount) > 0);
 }
 document.querySelectorAll('.quotation-mode').forEach(input=>input.addEventListener('change',syncQuotationMode));
 document.querySelectorAll('.next-step').forEach(b=>b.onclick=()=>{ if(validateStep()) showStep(Math.min(step+1,4)); });
@@ -329,8 +332,9 @@ function validateStep(){
     return true;
 }
 
-function addItem(data={}){
-    const i = itemIdx++;
+function addItem(data={}, restoredIndex=null){
+    const i = restoredIndex === null ? itemIdx : Number(restoredIndex);
+    itemIdx = Math.max(itemIdx, i + 1);
     const imageInputId = `quotationImage${i}`;
     const hasImage = Boolean(data.quotation_image_path);
     const imageOrigin = data.source_design_request_item_id ? 'Dari Design Request' : 'Gambar penawaran';
@@ -398,7 +402,7 @@ function rowTotal(tr){
     return {qty:q,price:p,total:q*p,optional:tr.querySelector('[name$="[is_optional]"]').checked};
 }
 document.getElementById('addItem').onclick=()=>addItem();
-if(itemsData.length){ itemsData.forEach(addItem); } else { addItem(); }
+if(Object.keys(itemsData).length){ Object.entries(itemsData).forEach(([index,data])=>addItem(data,index)); } else { addItem(); }
 
 function addCost(data={}){
     const i = costIdx++;
@@ -466,7 +470,8 @@ function recalc(){
 function buildReview(){
     recalc();
     const file=document.getElementById('quotationFile')?.files?.[0];
-    const uploadSummary=currentQuotationMode()==='upload' ? `<div class="alert alert-info"><strong>File penawaran</strong><br>${file ? esc(file.name) : 'Menggunakan file penawaran yang sudah tersimpan.'}</div>` : '';
+    const restoredNames=JSON.parse(document.getElementById('quotationFile').dataset.uploadNames || '[]');
+    const uploadSummary=currentQuotationMode()==='upload' ? `<div class="alert alert-info"><strong>File penawaran</strong><br>${file ? esc(file.name) : (restoredNames.length ? esc(restoredNames.join(', ')) : 'Menggunakan file penawaran yang sudah tersimpan.')}</div>` : '';
     const g=v=>document.querySelector(`[name="${v}"]`)?.value||'-';
     let rows='';
     document.querySelectorAll('#itemTable tbody tr').forEach(tr=>{
@@ -492,5 +497,22 @@ function buildReview(){
 }
 recalc();
 syncQuotationMode();
+function quotationErrorStep(fields){
+    if(fields.some(field=>field==='items' || field.startsWith('items.'))) return 2;
+    if(fields.some(field=>['discount_type','discount_value','discount_reason','tax_percent','additional_costs'].some(prefix=>field===prefix || field.startsWith(prefix+'.')))) return 3;
+    return 1;
+}
+document.getElementById('quoteForm').addEventListener('form:validation-error', event=>{
+    const fields=Object.keys(event.detail.errors);
+    showStep(quotationErrorStep(fields));
+    document.querySelectorAll('#quoteForm .is-invalid').forEach(input=>input.classList.remove('is-invalid'));
+    fields.forEach(field=>{
+        const parts=field.split('.');
+        const name=parts.shift()+parts.map(part=>'['+part+']').join('');
+        document.querySelectorAll('#quoteForm [name="'+CSS.escape(name)+'"]').forEach(input=>input.classList.add('is-invalid'));
+    });
+});
+const initialErrors = @json($errors->keys());
+showStep(initialErrors.length ? quotationErrorStep(initialErrors) : Math.min(4,Math.max(1,Number(document.getElementById('quotationWizardStep').value)||1)));
 </script>
 @endpush

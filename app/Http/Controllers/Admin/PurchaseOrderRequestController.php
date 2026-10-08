@@ -10,8 +10,10 @@ use App\Services\CodeGenerator;
 use App\Services\Logger;
 use App\Services\OperationalDocumentPdf;
 use App\Services\ProjectProvisioner;
+use App\Services\QuotationCalculator;
 use App\Services\PurchaseOrderNumberGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +50,7 @@ class PurchaseOrderRequestController extends Controller
     public function create(Request $request)
     {
         $quotation = $request->get('quotation')
-            ? Quotation::with('sales', 'customer.primaryPic', 'purchaseOrderRequest')
+            ? Quotation::with('sales', 'customer.primaryPic', 'purchaseOrderRequest', 'items')
                 ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
                 ->findOrFail($request->get('quotation'))
             : null;
@@ -69,7 +71,7 @@ class PurchaseOrderRequestController extends Controller
 
         return view('admin.purchase_order_requests.create', [
             'requestPo' => $purchaseOrderRequest,
-            'quotation' => $purchaseOrderRequest->quotation?->load('sales', 'customer.primaryPic'),
+            'quotation' => $purchaseOrderRequest->quotation?->load('sales', 'customer.primaryPic', 'items'),
             'quotations' => $this->selectableQuotations($purchaseOrderRequest),
             'salesList' => User::assignableSales(),
         ]);
@@ -80,12 +82,8 @@ class PurchaseOrderRequestController extends Controller
         $asDraft = $this->wantsDraft($request);
         $data = $this->validatedData($request, true, $asDraft);
 
-        if ($request->hasFile('customer_po_file')) {
-            $data['customer_po_file'] = $request->file('customer_po_file')->store('purchase-order-requests', 'public');
-        }
-
         $isExternal = $data['purchase_source'] === 'external';
-        $quotation = $this->uploadedSourceQuotation($data);
+        $quotation = null;
 
         if (! $isExternal && ! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
@@ -96,10 +94,12 @@ class PurchaseOrderRequestController extends Controller
         }
 
         $poRequest = DB::transaction(function () use ($data, $isExternal, $asDraft, $quotation, $projectProvisioner) {
-            if ($isExternal && ! $asDraft) {
-                $quotation = $quotation
-                    ? $this->applyExternalOrder($quotation, $data)
-                    : $this->createExternalQuotation($data);
+            if ($isExternal) {
+                $quotation = $this->createExternalQuotation($data);
+            }
+            $this->prepareOrderItems($quotation, $data, $asDraft, $isExternal);
+            if (($data['customer_po_file'] ?? null) instanceof UploadedFile) {
+                $data['customer_po_file'] = $data['customer_po_file']->store('purchase-order-requests', 'public');
             }
 
             $poRequest = PurchaseOrderRequest::create($this->attributes($data, $quotation) + [
@@ -123,7 +123,7 @@ class PurchaseOrderRequestController extends Controller
             $asDraft
                 ? "Draf Project {$poRequest->code} disimpan"
                 : ($isExternal
-                    ? "Project {$poRequest->code} dibuat dari PO existing / penawaran luar CRM"
+                    ? "Project {$poRequest->code} dibuat langsung dari PO"
                     : "Project {$poRequest->code} dibuat dari penawaran ".($poRequest->quotation?->code ?: '-')),
             $poRequest
         );
@@ -144,17 +144,12 @@ class PurchaseOrderRequestController extends Controller
         $asDraft = $this->wantsDraft($request);
         $data = $this->validatedData($request, true, $asDraft, $purchaseOrderRequest);
 
-        if ($request->hasFile('customer_po_file')) {
-            $data['customer_po_file'] = $request->file('customer_po_file')->store('purchase-order-requests', 'public');
-        }
-
         $isExternal = $data['purchase_source'] === 'external';
         $quotation = $purchaseOrderRequest->quotation;
 
         if ($isExternal) {
             // Catatan penawaran eksternal milik draf ini saja yang boleh dipakai ulang.
-            $quotation = $this->uploadedSourceQuotation($data, $purchaseOrderRequest)
-                ?? ($quotation?->isExternal() ? $quotation : null);
+            $quotation = $quotation?->isExternal() ? $quotation : null;
         } elseif (! empty($data['quotation_id'])) {
             $quotation = Quotation::with('purchaseOrderRequest')->findOrFail($data['quotation_id']);
             abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
@@ -166,20 +161,19 @@ class PurchaseOrderRequestController extends Controller
         }
 
         DB::transaction(function () use ($data, $isExternal, $asDraft, $purchaseOrderRequest, &$quotation, $projectProvisioner) {
-            if ($isExternal && ! $asDraft && ! $quotation) {
+            if ($isExternal && ! $quotation) {
                 $quotation = $this->createExternalQuotation($data);
             }
-            if ($isExternal && $quotation?->isUploaded()) {
-                if (! $asDraft) {
-                    $this->applyExternalOrder($quotation, $data);
-                }
-            } elseif ($isExternal && $quotation) {
+            if ($isExternal && $quotation) {
                 $quotation->update([
-                    'customer_name' => $data['customer_name'],
-                    'project_name' => $data['external_project_name'],
-                    'subtotal' => $data['external_order_value'],
-                    'grand_total' => $data['external_order_value'],
+                    'customer_name' => $data['customer_name'] ?? '-',
+                    'project_name' => $data['external_project_name'] ?? 'Draf Project',
+                    'sales_id' => Auth::user()->isSales() ? Auth::id() : ($data['external_sales_id'] ?? $quotation->sales_id),
                 ]);
+            }
+            $this->prepareOrderItems($quotation, $data, $asDraft, $isExternal);
+            if (($data['customer_po_file'] ?? null) instanceof UploadedFile) {
+                $data['customer_po_file'] = $data['customer_po_file']->store('purchase-order-requests', 'public');
             }
 
             $purchaseOrderRequest->update($this->attributes($data, $quotation) + [
@@ -395,7 +389,7 @@ class PurchaseOrderRequestController extends Controller
     /** Penawaran yang belum punya Project, ditambah penawaran milik draf yang sedang diubah. */
     protected function selectableQuotations(?PurchaseOrderRequest $requestPo = null)
     {
-        return Quotation::with('sales', 'customer.primaryPic')
+        return Quotation::with('sales', 'customer.primaryPic', 'items')
             // Samakan dengan Quotation::canCreatePurchaseOrderRequest(). Status 'approved'
             // sudah tidak dipakai sejak approval SPV dihapus.
             ->whereIn('status', ['ready', 'sent_to_customer', 'customer_accepted'])
@@ -407,71 +401,121 @@ class PurchaseOrderRequestController extends Controller
             ->get();
     }
 
-    /**
-     * Penawaran hasil upload file yang dibawa dari halaman detailnya. Nilainya tidak
-     * dirinci di CRM, jadi Project dicatat sebagai PO Existing / Non-CRM namun tetap
-     * terhubung ke penawaran upload tersebut, bukan membuat catatan eksternal baru.
-     */
-    protected function uploadedSourceQuotation(array $data, ?PurchaseOrderRequest $current = null): ?Quotation
-    {
-        if ($data['purchase_source'] !== 'external' || empty($data['source_quotation_id'])) {
-            return null;
-        }
-
-        $quotation = Quotation::with('purchaseOrderRequest')->find($data['source_quotation_id']);
-        if (! $quotation?->isUploaded()) {
-            return null;
-        }
-
-        abort_if((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()) && (int) $quotation->sales_id !== (int) Auth::id(), 403);
-
-        $linkedToCurrent = $current && (int) $quotation->id === (int) $current->quotation_id;
-        if (! $linkedToCurrent && ! $quotation->canCreatePurchaseOrderRequest()) {
-            throw ValidationException::withMessages([
-                'source_quotation_id' => 'Project hanya bisa dibuat dari penawaran yang sudah siap/dikirim/disetujui customer dan belum pernah dibuatkan Project.',
-            ]);
-        }
-
-        return $quotation;
-    }
-
-    /** Nilai PO yang diisi manual menjadi nilai penawaran upload yang dihubungkan. */
-    protected function applyExternalOrder(Quotation $quotation, array $data): Quotation
-    {
-        $quotation->update([
-            'project_name' => $data['external_project_name'],
-            'sales_id' => Auth::user()->isSales() ? $quotation->sales_id : ($data['external_sales_id'] ?? $quotation->sales_id),
-            'subtotal' => $data['external_order_value'],
-            'tax_amount' => 0,
-            'grand_total' => $data['external_order_value'],
-        ]);
-
-        return $quotation;
-    }
-
     protected function createExternalQuotation(array $data): Quotation
     {
         $externalReference = trim((string) ($data['external_quotation_number'] ?? ''));
 
         return Quotation::create([
             'code' => CodeGenerator::next(Quotation::class, 'EXTQ', 4, true),
-            'customer_name' => $data['customer_name'],
+            'customer_name' => $data['customer_name'] ?? '-',
             'pic_name' => $data['delivery_pic_name'] ?? null,
-            'project_name' => $data['external_project_name'],
-            'sales_id' => Auth::user()->isSales() ? Auth::id() : $data['external_sales_id'],
+            'project_name' => $data['external_project_name'] ?? 'Draf Project',
+            'sales_id' => Auth::user()->isSales() ? Auth::id() : ($data['external_sales_id'] ?? Auth::id()),
             'delivery_method' => 'hardcopy',
-            'quote_date' => $data['request_date'],
+            'quote_date' => $data['request_date'] ?? today(),
             'priority' => 'medium',
             'currency' => 'IDR',
             'creation_mode' => 'external',
-            'internal_note' => 'Penawaran dibuat di luar CRM'.($externalReference !== '' ? '. Nomor referensi: '.$externalReference : '.'),
-            'subtotal' => $data['external_order_value'],
+            'internal_note' => 'Project langsung dari PO'.($externalReference !== '' ? '. Nomor referensi: '.$externalReference : '.'),
+            'subtotal' => ($data['po_total'] ?? 0),
             'tax_percent' => 0,
             'tax_amount' => 0,
-            'grand_total' => $data['external_order_value'],
-            'status' => 'request_po_created',
+            'grand_total' => ($data['po_total'] ?? 0),
+            'status' => 'draft',
             'created_by' => Auth::id(),
         ]);
+    }
+
+    protected function prepareOrderItems(?Quotation $quotation, array $data, bool $asDraft, bool $direct): void
+    {
+        if (! $quotation) {
+            return;
+        }
+        $rows = $data['order_items'] ?? [];
+        $errors = [];
+        if ($direct) {
+            if (! $asDraft && ! $rows) {
+                $errors['order_items'] = 'Tambahkan minimal satu item untuk Produksi dan QC.';
+            }
+            foreach ($rows as $index => $row) {
+                if (! $asDraft) {
+                    foreach (['name', 'qty', 'unit', 'unit_price', 'specification'] as $field) {
+                        if (! isset($row[$field]) || trim((string) $row[$field]) === '') {
+                            $errors["order_items.{$index}.{$field}"] = 'Lengkapi nama, jumlah, unit, harga, dan spesifikasi setiap item.';
+                        }
+                    }
+                }
+            }
+            if ($errors) {
+                throw ValidationException::withMessages($errors);
+            }
+            $existing = $quotation->items()->get()->keyBy('id');
+            $kept = [];
+            foreach ($rows as $index => $row) {
+                $item = ! empty($row['id']) ? $existing->get($row['id']) : null;
+                if (! empty($row['id']) && ! $item) {
+                    throw ValidationException::withMessages(['order_items' => 'Item tidak sesuai dengan project ini.']);
+                }
+                $item ??= $quotation->items()->make();
+                $item->fill([
+                    'name' => $row['name'] ?? '', 'qty' => $row['qty'] ?? 1,
+                    'unit' => $row['unit'] ?? 'Unit', 'unit_price' => $row['unit_price'] ?? 0,
+                    'specification' => $row['specification'] ?? null,
+                    'total' => round(($row['qty'] ?? 1) * ($row['unit_price'] ?? 0), 2), 'sort_order' => $index,
+                ]);
+                if (! empty($row['image'])) {
+                    $item->quotation_image_path = $row['image']->store("quotation-items/{$quotation->id}", 'public');
+                    $item->quotation_image_name = $row['image']->getClientOriginalName();
+                }
+                $item->save();
+                $kept[] = $item->id;
+            }
+            $quotation->items()->whereNotIn('id', $kept)->delete();
+            $quotation->fill([
+                'discount_type' => $data['order_discount_type'] ?? 'percent',
+                'discount_value' => $data['order_discount_value'] ?? 0,
+                'tax_percent' => $data['order_tax_percent'] ?? 0,
+                'additional_costs' => [['label' => 'Biaya tambahan PO', 'amount' => $data['order_additional_cost'] ?? 0]],
+            ]);
+        } else {
+            $items = $quotation->items()->get()->keyBy('id');
+            foreach ($rows as $index => $row) {
+                $item = $items->get($row['id'] ?? 0);
+                if (! $item) {
+                    throw ValidationException::withMessages(['order_items' => 'Item harus berasal dari penawaran yang dipilih.']);
+                }
+                if (array_key_exists('specification', $row)) {
+                    $item->specification = $row['specification'];
+                }
+                if (! empty($row['image'])) {
+                    $item->quotation_image_path = $row['image']->store("quotation-items/{$quotation->id}", 'public');
+                    $item->quotation_image_name = $row['image']->getClientOriginalName();
+                }
+                $item->save();
+            }
+        }
+        $quotation->load('items');
+        if (! $asDraft) {
+            if ($quotation->items->where('is_optional', false)->isEmpty()) {
+                $errors['order_items'] = 'Penawaran harus memiliki minimal satu item utama. Lengkapi item penawaran terlebih dahulu.';
+            }
+            foreach ($quotation->items as $index => $item) {
+                if (! filled($item->name) || (float) $item->qty <= 0 || ! filled($item->unit)) {
+                    $errors['order_items'] = 'Lengkapi nama, jumlah, dan unit pada item penawaran terlebih dahulu.';
+                }
+                if (! filled($item->specification)) {
+                    $errors["order_items.{$index}.specification"] = "Lengkapi spesifikasi {$item->name} untuk Produksi dan QC.";
+                }
+            }
+        }
+        QuotationCalculator::recalculate($quotation);
+        if (! $asDraft && abs((float) $quotation->grand_total - (float) ($data['po_total'] ?? 0)) >= 0.01) {
+            $errors['po_total'] = 'Total nilai PO harus sama dengan rincian item setelah diskon, pajak, dan biaya tambahan.';
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+        $quotation->save();
     }
 
     /**
@@ -550,6 +594,9 @@ class PurchaseOrderRequestController extends Controller
      */
     protected function validatedData(Request $request, bool $withQuotationRule = false, bool $asDraft = false, ?PurchaseOrderRequest $current = null): array
     {
+        if ($request->filled('source_quotation_id') && $request->input('purchase_source') === 'external') {
+            $request->merge(['purchase_source' => 'crm', 'quotation_id' => $request->input('source_quotation_id')]);
+        }
         if (! $request->filled('purchase_source')) {
             $request->merge(['purchase_source' => 'crm']);
         }
@@ -588,9 +635,19 @@ class PurchaseOrderRequestController extends Controller
                 : ['nullable', 'required_if:purchase_source,external', 'string', 'max:255'],
             'external_quotation_number' => ['nullable', 'string', 'max:100'],
             'source_quotation_id' => ['nullable', 'integer'],
-            'external_order_value' => $asDraft
-                ? ['nullable', 'numeric', 'min:0']
-                : ['nullable', 'required_if:purchase_source,external', 'numeric', 'min:0.01'],
+            'po_total' => $required('numeric', 'min:0'),
+            'order_items' => ['nullable', 'array'],
+            'order_items.*.id' => ['nullable', 'integer'],
+            'order_items.*.name' => ['nullable', 'string', 'max:255'],
+            'order_items.*.qty' => ['nullable', 'numeric', 'min:0.01'],
+            'order_items.*.unit' => ['nullable', 'string', 'max:50'],
+            'order_items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'order_items.*.specification' => ['nullable', 'string', 'max:12000'],
+            'order_items.*.image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
+            'order_discount_type' => ['nullable', Rule::in(['percent', 'nominal'])],
+            'order_discount_value' => ['nullable', 'numeric', 'min:0'],
+            'order_tax_percent' => ['nullable', 'numeric', 'min:0'],
+            'order_additional_cost' => ['nullable', 'numeric', 'min:0'],
             'external_sales_id' => [
                 Rule::requiredIf(fn () => ! $asDraft && $request->input('purchase_source') === 'external' && ! Auth::user()->isSales()),
                 'nullable',
