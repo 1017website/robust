@@ -7,12 +7,12 @@ use App\Models\Invoice;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class OperationalPdfExportTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_request_po_pdf_is_modern_branded_and_scoped_to_the_sales_owner(): void
     {
@@ -36,6 +36,13 @@ class OperationalPdfExportTest extends TestCase
         $this->assertStringContainsString('WALL BENCH - STEEL STRUCTURE', $response->getContent());
         $this->assertStringContainsString('PENGIRIMAN & BILLING', $response->getContent());
         $this->assertStringContainsString('CHECKLIST KELENGKAPAN', $response->getContent());
+        $this->assertStringContainsString('INFORMASI ORDER', $response->getContent());
+        $this->assertStringContainsString('PO-CUST-PDF-001', $response->getContent());
+        $this->assertStringContainsString('Bandung', $response->getContent());
+        $this->assertStringContainsString('Diskon', $response->getContent());
+        $this->assertStringNotContainsString('ACC-PO-PDF-001', $response->getContent());
+        $this->assertStringNotContainsString('TANGGAL PO', $response->getContent());
+        $this->assertStringNotContainsString('ACCURATE', $response->getContent());
 
         $this->actingAs($otherSales)
             ->get(route('admin.purchase-order-requests.pdf', $requestPo))
@@ -66,6 +73,7 @@ class OperationalPdfExportTest extends TestCase
         $this->assertStringContainsString('ROBUST', $response->getContent());
         $this->assertStringContainsString('RINGKASAN TAGIHAN', $response->getContent());
         $this->assertStringContainsString('TERMIN PEMBAYARAN', $response->getContent());
+        $this->assertStringNotContainsString('ACC-PO-PDF-001', $response->getContent());
 
         $salesAdmin = User::factory()->create(['role' => 'sales_admin']);
         $this->actingAs($salesAdmin)->get(route('admin.invoices.pdf', $invoice))->assertOk();

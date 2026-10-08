@@ -58,7 +58,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         [$page, $y] = $this->documentHeader(
             'REQUEST PROCESS',
             $requestPo->code,
-            'Dokumen administrasi pemrosesan purchase order',
+            'Rincian order dan acuan pekerjaan project',
             PurchaseOrderRequest::statuses()[$requestPo->status] ?? str($requestPo->status)->headline(),
         );
 
@@ -70,22 +70,20 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             ['TANGGAL REQUEST', $requestPo->request_date?->format('d/m/Y')],
             ['SALES', $quotation?->sales?->name],
             ['DIBUAT OLEH', $requestPo->requester?->name],
-        ]);
-        $y -= 104;
+        ], true);
+        $y -= 86;
 
-        $page .= $this->sectionTitle($y, 'INFORMASI ORDER & ACCURATE', '01');
+        $page .= $this->sectionTitle($y, 'INFORMASI ORDER', '01');
         $y -= 22;
-        $page .= $this->detailPanel($y, 140, [
+        $page .= $this->detailPanel($y, 96, [
             ['No. PO Customer', $requestPo->customer_po_number],
-            ['No. PO', $requestPo->accurate_po_number],
-            ['Tanggal PO', $requestPo->accurate_po_date?->format('d/m/Y')],
-            ['Area / Lokasi', $requestPo->customer_area],
+            ['Referensi Penawaran', $quotation?->isExternal() ? 'Langsung dari PO' : $quotation?->code],
+            ['Area / Lokasi Customer', $requestPo->customer_area],
             ['Divisi Customer', $requestPo->customer_division],
             ['Estimasi Pengiriman', $requestPo->expected_delivery_date?->format('d/m/Y')],
             ['Termin Pembayaran', $requestPo->payment_term],
-            ['Nilai Penawaran', $this->money((float) ($quotation?->grand_total ?? 0))],
         ], 2);
-        $y -= 156;
+        $y -= 110;
 
         $page .= $this->sectionTitle($y, 'PENGIRIMAN & BILLING', '02');
         $y -= 22;
@@ -122,7 +120,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             );
         }
 
-        $page .= $this->sectionTitle($y, 'ITEM PENAWARAN', $checklistItems !== [] ? '04' : '03');
+        $page .= $this->sectionTitle($y, 'ITEM PROJECT', $checklistItems !== [] ? '04' : '03');
         $y -= 22;
         $page .= $this->requestItemHeader($y);
         $y -= 24;
@@ -167,7 +165,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             }
         }
 
-        if ($y < 170) {
+        if ($y < 190) {
             $pages[] = $page;
             [$page, $y] = $this->documentHeader(
                 'REQUEST PROCESS',
@@ -315,9 +313,9 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         return [$content, $dividerY - 18];
     }
 
-    private function metaGrid(float $top, array $fields): string
+    private function metaGrid(float $top, array $fields, bool $compact = false): string
     {
-        $height = 86;
+        $height = $compact ? 72 : 86;
         $content = $this->rect(self::LEFT, $top - $height, self::CONTENT_WIDTH, $height, [0.982, 0.986, 0.992]);
         $content .= $this->line(self::LEFT, $top, self::RIGHT, $top, [0.84, 0.88, 0.92], 0.6);
         $content .= $this->line(self::LEFT, $top - $height, self::RIGHT, $top - $height, [0.84, 0.88, 0.92], 0.6);
@@ -327,7 +325,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
             $column = $index % 3;
             $row = intdiv($index, 3);
             $x = self::LEFT + $column * $columnWidth + 14;
-            $y = $top - 18 - $row * 38;
+            $y = $top - 18 - $row * ($compact ? 32 : 38);
             if ($column > 0) {
                 $lineX = self::LEFT + $column * $columnWidth;
                 $content .= $this->line($lineX, $top - $height + 12, $lineX, $top - 12, [0.86, 0.90, 0.95], 0.55);
@@ -492,7 +490,8 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         }
 
         if (! $continued) {
-            $content .= $this->text(359, $top - 18, $this->quantity((float) $item->qty).' '.($item->unit ?: 'Unit'), 7.6, false, [0.10, 0.18, 0.30], 'center');
+            $content .= $this->text(359, $top - 18, $this->quantity((float) $item->qty), 8, true, [0.10, 0.18, 0.30], 'center');
+            $content .= $this->text(359, $top - 31, $this->truncate($item->unit ?: 'Unit', 10), 6.8, false, [0.39, 0.45, 0.55], 'center');
             $content .= $this->text(446, $top - 18, $this->money((float) $item->unit_price), 7.6, false, [0.10, 0.18, 0.30], 'right');
             $content .= $this->text(548, $top - 18, $this->money((float) $item->total), 8, true, [0.05, 0.12, 0.23], 'right');
         }
@@ -503,30 +502,27 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
     private function requestPoSummary(float $top, PurchaseOrderRequest $requestPo): string
     {
         $quotation = $requestPo->quotation;
-        $content = $this->rect(self::LEFT, $top - 116, 300, 116, [0.985, 0.988, 0.993]);
-        $content .= $this->line(self::LEFT, $top, self::LEFT + 300, $top, [0.055, 0.45, 0.92], 1.2);
+        $content = $this->rect(self::LEFT, $top - 116, 280, 116, [0.985, 0.988, 0.993]);
+        $content .= $this->line(self::LEFT, $top, self::LEFT + 280, $top, [0.055, 0.45, 0.92], 1.2);
         $content .= $this->text(self::LEFT + 14, $top - 20, 'CATATAN ADMINISTRASI', 7.5, true, [0.035, 0.086, 0.165]);
-        $noteLines = array_slice($this->wrap((string) ($requestPo->admin_note ?: 'Tidak ada catatan tambahan.'), 62), 0, 6);
+        $noteLines = array_slice($this->wrap((string) ($requestPo->admin_note ?: 'Tidak ada catatan tambahan.'), 56), 0, 7);
         $lineY = $top - 38;
         foreach ($noteLines as $line) {
             $content .= $this->text(self::LEFT + 14, $lineY, $line, 7.4, false, [0.30, 0.38, 0.49]);
             $lineY -= 11;
         }
-        if ($requestPo->accurate_note) {
-            $content .= $this->text(self::LEFT + 14, $top - 90, 'CATATAN: '.$this->truncate($requestPo->accurate_note, 58), 6.8, true, [0.08, 0.35, 0.62]);
-        }
-
-        $x = self::LEFT + 316;
+        $x = self::LEFT + 296;
         $width = self::RIGHT - $x;
         $content .= $this->rect($x, $top - 116, $width, 116, [1, 1, 1]);
         $content .= $this->line($x, $top, self::RIGHT, $top, [0.035, 0.086, 0.165], 1.4);
         $content .= $this->text($x, $top - 18, 'RINGKASAN NILAI', 8, true, [0.035, 0.086, 0.165]);
         $rows = [
             ['Subtotal', (float) ($quotation?->subtotal ?? 0)],
+            ['Diskon', -(float) ($quotation?->discount_amount ?? 0)],
             ['PPN', (float) ($quotation?->tax_amount ?? 0)],
             ['Biaya Tambahan', (float) ($quotation?->additional_total ?? 0)],
         ];
-        $rowY = $top - 47;
+        $rowY = $top - 38;
         foreach ($rows as [$label, $amount]) {
             $content .= $this->text($x, $rowY, $label, 7, false, [0.39, 0.45, 0.55]);
             $content .= $this->text(self::RIGHT - 14, $rowY, $this->money($amount), 7.5, true, [0.10, 0.18, 0.30], 'right');
@@ -614,7 +610,7 @@ class OperationalDocumentPdf extends SimpleQuotationPdf
         $requestPo = $invoice->purchaseOrderRequest;
         $info = [
             ['No. PO Customer', $requestPo?->customer_po_number],
-            ['No. PO', $requestPo?->accurate_po_number],
+            ['Tanggal Request', $requestPo?->request_date?->format('d/m/Y')],
             ['Termin', $requestPo?->payment_term],
             ['Diterbitkan oleh', $invoice->creator?->name],
         ];
