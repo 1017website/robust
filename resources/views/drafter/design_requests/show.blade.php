@@ -14,7 +14,8 @@
         : $designRequest->hasProductionReadyDocument();
     // Spesifikasi, HPP, dan item penawaran diisi Sales. Drafter dan Produksi
     // tetap boleh membuka halaman ini, tetapi hanya untuk melihat.
-    $isSpecEditor = auth()->user()->isSales() || auth()->user()->isAdministrator();
+    $showPrices = auth()->user()->canViewPrices();
+    $isSpecEditor = $showPrices;
     $canEditSpecs = $isSpecEditor && $productionReady;
     $backUrl = auth()->user()->isSales()
         ? route('sales.design-requests.index')
@@ -49,18 +50,20 @@
         </aside>
 
         <main class="center-feedback" id="feedback">
+            @if($showPrices)
             <div class="info-card"><div class="card-head"><h2>Spesifikasi & HPP Produksi</h2></div>
                 <div class="feedback-grid">
                     <div class="spec-card"><div class="spec-head"><strong>Estimasi Costing Awal — Sales</strong></div><div class="cost-list"><label>Material <input name="cost_material" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_material', (float) $designRequest->cost_material) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><label>Produksi <input name="cost_production" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_production', (float) $designRequest->cost_production) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><label>Instalasi <input name="cost_installation" type="text" inputmode="numeric" data-rupiah value="{{ old('cost_installation', (float) $designRequest->cost_installation) }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></label><div class="total">Total Estimasi <strong id="costEstimateTotal" aria-live="polite">{{ \App\Support\Format::rupiah($costTotal) }}</strong></div></div></div>
                 </div>
             </div>
 
+            @endif
             <div class="info-card mt-3" id="documents"><div class="card-head"><h2>Drawing & Dokumen</h2></div><div class="doc-chip-row">@forelse($currentDocs as $doc)<div class="doc-chip"><i class="bi bi-file-earmark-pdf"></i><span>{{ $doc->name }}<small>{{ $doc->revisionLabel() }} · {{ str($doc->category)->headline() }} · {{ $doc->humanSize() }}</small></span><a href="{{ route('documents.download', $doc) }}" class="btn btn-sm btn-link document-download-link" aria-label="Download {{ $doc->name }}" download><i class="bi bi-download"></i></a></div>@empty<div class="small text-muted-2">Belum ada drawing atau dokumen.</div>@endforelse</div></div>
 
             <div class="info-card mt-3">
                 <div class="card-head">
-                    <div><h2>Item Hasil untuk Penawaran</h2><small class="text-muted-2">Gunakan <code>[Nama Bagian]</code>, <code>Label: Nilai</code>, dan <code>@ Qty | UoM | Harga</code> untuk baris breakdown export Excel.</small></div>
-                    <button type="button" class="btn btn-soft btn-sm" id="addRow"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button>
+                    <div><h2>Item Hasil untuk Penawaran</h2>@if($showPrices)<small class="text-muted-2">Gunakan <code>[Nama Bagian]</code>, <code>Label: Nilai</code>, dan <code>@ Qty | UoM | Harga</code> untuk baris breakdown export Excel.</small>@endif</div>
+                    @if($isSpecEditor)<button type="button" class="btn btn-soft btn-sm" id="addRow"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button>@endif
                 </div>
                 <div id="itemEditors" class="d-grid gap-3">
                     @forelse($designRequest->items->sortBy('sort_order') as $i => $it)
@@ -71,7 +74,7 @@
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Nama Item *</label><input name="items[{{ $i }}][name]" value="{{ $it->name }}" class="form-control form-control-sm" required></div>
                                 <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[{{ $i }}][variant]" value="{{ $it->variant }}" class="form-control form-control-sm"></div>
                                 <div class="col-md-1 d-flex align-items-end justify-content-end"><button type="button" class="btn btn-sm btn-soft text-danger row-del"><i class="bi bi-trash"></i></button></div>
-                                <div class="col-12"><x-specification-editor :name="'items['.$i.'][specification]'" :value="$it->specification" label="Spesifikasi untuk Penawaran" /></div>
+                                <div class="col-12">@if($showPrices)<x-specification-editor :name="'items['.$i.'][specification]'" :value="$it->specification" label="Spesifikasi untuk Penawaran" />@else<x-specification-view :specification="$it->specification" :show-prices="false" />@endif</div>
                                 <div class="col-md-5">
                                     <label class="form-label small fw-semibold">Gambar Utama Penawaran</label>
                                     @if($it->quotation_image_path)
@@ -81,7 +84,7 @@
                                 </div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[{{ $i }}][qty]" type="text" inputmode="decimal" data-qty value="{{ $it->qty }}" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[{{ $i }}][unit]" value="{{ $it->unit }}" class="form-control form-control-sm"></div>
-                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[{{ $i }}][unit_price]" type="text" inputmode="numeric" data-rupiah value="{{ $it->unit_price }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>
+                                @if($showPrices)<div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[{{ $i }}][unit_price]" type="text" inputmode="numeric" data-rupiah value="{{ $it->unit_price }}" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>@endif
                                 <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[{{ $i }}][is_optional]" value="1" class="form-check-input" @checked($it->is_optional)><span class="form-check-label">Item opsional</span></label></div>
                             </div>
                         </div>
@@ -92,11 +95,11 @@
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Nama Item *</label><input name="items[0][name]" class="form-control form-control-sm" required></div>
                                 <div class="col-md-3"><label class="form-label small fw-semibold">Varian / Model</label><input name="items[0][variant]" class="form-control form-control-sm"></div>
                                 <div class="col-md-1"></div>
-                                <div class="col-12"><x-specification-editor name="items[0][specification]" label="Spesifikasi untuk Penawaran" /></div>
+                                @if($showPrices)<div class="col-12"><x-specification-editor name="items[0][specification]" label="Spesifikasi untuk Penawaran" /></div>@endif
                                 <div class="col-md-5"><label class="form-label small fw-semibold">Gambar Utama Penawaran</label>@if($isSpecEditor)<input type="file" name="items[0][quotation_image]" accept=".jpg,.jpeg,.png,.webp" class="form-control form-control-sm">@else<small class="text-muted-2 d-block">Gambar item dikelola oleh Sales.</small>@endif</div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Qty</label><input name="items[0][qty]" type="text" inputmode="decimal" data-qty value="1" class="form-control form-control-sm"></div>
                                 <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="items[0][unit]" value="Unit" class="form-control form-control-sm"></div>
-                                <div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[0][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>
+                                @if($showPrices)<div class="col-md-3"><label class="form-label small fw-semibold">HPP per Item — Sales</label><input name="items[0][unit_price]" type="text" inputmode="numeric" data-rupiah value="0" class="form-control form-control-sm" @disabled(!$isSpecEditor)></div>@endif
                                 <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="items[0][is_optional]" value="1" class="form-check-input"><span class="form-check-label">Item opsional</span></label></div>
                             </div>
                         </div>
@@ -106,7 +109,7 @@
         </main>
 
         <aside class="right-status">
-            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dokumen: {{ $designRequest->documents->count() }} file</li><li>Costing: <span id="feedbackCostTotal">{{ \App\Support\Format::rupiah($costTotal) }}</span></li></ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi spesifikasi per item, dokumen, dan HPP sebelum menyelesaikan Design Request.</small></div></div>
+            <div class="info-card status-ready"><h6>Kelengkapan Feedback</h6><ul class="check-list"><li>Dokumen: {{ $designRequest->documents->count() }} file</li>@if($showPrices)<li>Costing: <span id="feedbackCostTotal">{{ \App\Support\Format::rupiah($costTotal) }}</span></li>@endif</ul><div class="ready-box"><i class="bi bi-info-circle"></i><strong>Status {{ \App\Models\DesignRequest::statuses()[$designRequest->status] ?? \Illuminate\Support\Str::headline($designRequest->status) }}</strong><small>Lengkapi spesifikasi per item dan dokumen sebelum menyelesaikan Design Request.</small></div></div>
             <div class="info-card"><h6>Catatan Teknis</h6><textarea name="technical_note" class="form-control" rows="7" placeholder="Catatan teknis untuk sales...">{{ $designRequest->technical_note }}</textarea></div>
             <div class="info-card" id="history"><h6>Log Aktivitas</h6><div class="d-timeline small">@foreach([$designRequest->updated_at,$designRequest->created_at] as $date)<div><time>{{ $date->format('d M H:i') }}</time><span></span><p><strong>{{ $designRequest->productionPic?->name ?? auth()->user()->name }}</strong><small>Update {{ $designRequest->status }}</small></p></div>@endforeach</div></div>
         </aside>
@@ -138,6 +141,7 @@
     </div>
 </div>
 
+@if($showPrices)
 @push('scripts')
 <script>
 let rowIdx = {{ max(1, $designRequest->items->count()) }};
@@ -194,4 +198,5 @@ document.getElementById('addRow')?.addEventListener('click', function(){
 document.querySelectorAll('.row-del').forEach(b=>b.onclick=()=>b.closest('.quote-item-editor').remove());
 </script>
 @endpush
+@endif
 @endsection

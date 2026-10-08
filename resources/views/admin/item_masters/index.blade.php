@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title','Master Item')
 @section('content')
+@php($showPrices = auth()->user()->canViewPrices())
 <x-page-header title="Master Item Penawaran" subtitle="Kelola identitas, harga dasar, dan spesifikasi produk per bagian">
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#masterItemCreate"><i class="bi bi-plus-lg me-1"></i>Tambah Master Item</button>
 </x-page-header>
@@ -20,8 +21,10 @@
                         <div class="col-md-3"><label class="form-label small fw-semibold">Nama Item *</label><input name="name" value="{{ old('name') }}" class="form-control" required placeholder="Wall Bench"></div>
                         <div class="col-md-4"><label class="form-label small fw-semibold">Detail / Varian</label><input name="variant" value="{{ old('variant') }}" class="form-control" placeholder="WBF-200-S-SRF"></div>
                         <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="unit" value="{{ old('unit', 'Unit') }}" class="form-control" required></div>
+                        @if($showPrices)
                         <div class="col-md-2"><label class="form-label small fw-semibold">HPP</label><input name="default_cost_price" type="number" min="0" class="form-control" value="{{ old('default_cost_price', 0) }}"></div>
                         <div class="col-md-2"><label class="form-label small fw-semibold">Margin %</label><input name="default_margin" type="number" min="0" max="99.99" step="0.01" class="form-control" value="{{ old('default_margin', 0) }}"></div>
+                        @endif
                         <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="is_active" value="1" class="form-check-input" @checked(old('is_active', true))><span class="form-check-label">Master item aktif</span></label></div>
                         <div class="col-12"><x-specification-editor name="specification" :value="old('specification', '')" label="Spesifikasi Default" /></div>
                     </div>
@@ -47,8 +50,9 @@
                 </div>
                 <div class="master-item-row-meta">
                     <span class="badge {{ $item->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $item->is_active ? 'Aktif' : 'Nonaktif' }}</span>
-                    <span class="badge text-bg-light">HPP {{ \App\Support\Format::rupiah($item->default_cost_price) }}</span>
+                    @if($showPrices)<span class="badge text-bg-light">HPP {{ \App\Support\Format::rupiah($item->default_cost_price) }}</span>
                     <span class="badge text-bg-light">Margin {{ rtrim(rtrim(number_format($item->default_margin, 2), '0'), '.') }}%</span>
+                    @endif
                 </div>
                 <button type="button" class="btn btn-sm btn-soft" data-bs-toggle="modal" data-bs-target="#masterItemEdit{{ $item->id }}"><i class="bi bi-pencil-square me-1"></i>Edit</button>
             </div>
@@ -67,10 +71,11 @@
                         <div class="col-md-3"><label class="form-label small fw-semibold">Nama Item</label><input name="name" value="{{ $item->name }}" class="form-control" required></div>
                         <div class="col-md-4"><label class="form-label small fw-semibold">Detail / Varian</label><input name="variant" value="{{ $item->variant }}" class="form-control"></div>
                         <div class="col-md-2"><label class="form-label small fw-semibold">Unit</label><input name="unit" value="{{ $item->unit }}" class="form-control" required></div>
-                        <div class="col-md-2"><label class="form-label small fw-semibold">HPP</label><input name="default_cost_price" value="{{ $item->default_cost_price }}" type="number" min="0" class="form-control"></div>
+                        @if($showPrices)<div class="col-md-2"><label class="form-label small fw-semibold">HPP</label><input name="default_cost_price" value="{{ $item->default_cost_price }}" type="number" min="0" class="form-control"></div>
                         <div class="col-md-2"><label class="form-label small fw-semibold">Margin %</label><input name="default_margin" value="{{ $item->default_margin }}" type="number" min="0" max="99.99" step="0.01" class="form-control"></div>
+                        @endif
                         <div class="col-md-3 d-flex align-items-end"><label class="form-check mb-2"><input type="checkbox" name="is_active" value="1" class="form-check-input" @checked($item->is_active)><span class="form-check-label">Aktif</span></label></div>
-                        <div class="col-12"><x-specification-editor name="specification" :value="$item->specification" label="Spesifikasi Default" /></div>
+                        <div class="col-12">@if($showPrices)<x-specification-editor name="specification" :value="$item->specification" label="Spesifikasi Default" />@else<x-specification-view :specification="$item->specification" :show-prices="false" />@endif</div>
                     </div>
                     <div class="modal-form-actions">
                         <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Batal</button>

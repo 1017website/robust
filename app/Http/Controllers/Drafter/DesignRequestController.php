@@ -173,12 +173,12 @@ class DesignRequestController extends Controller
         return redirect()->to($redirect)->with('success', $message);
     }
 
-    /** Spesifikasi, HPP, dan item penawaran diisi Sales (Administrator tetap bisa membantu). */
+    /** Spesifikasi, HPP, dan item penawaran diisi Sales. */
     protected function canEditSpecs(): bool
     {
         $user = Auth::user();
 
-        return (bool) $user && ($user->isSales() || $user->isAdministrator());
+        return $user?->canViewPrices() ?? false;
     }
 
     protected function syncQuotationItems(Request $request, DesignRequest $designRequest, array $items, bool $isCostEditor, bool $isImageEditor): void

@@ -5,6 +5,7 @@
     'showMasterCode' => true,
     'priceLabel' => 'Harga Jual',
 ])
+@php($showPrice = $showPrice && (auth()->user()?->canViewPrices() ?? false))
 
 <article {{ $attributes->class(['quotation-item-card', 'without-cost' => ! $showCost || ! $showPrice]) }}>
     <div class="quotation-item-card-head">

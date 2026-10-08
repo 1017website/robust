@@ -1,4 +1,5 @@
 @props(['specification', 'compact' => false, 'showPrices' => true])
+@php($showPrices = $showPrices && (auth()->user()?->canViewPrices() ?? false))
 @php($sections = \App\Support\StructuredSpecification::parse($specification))
 
 @if($sections)

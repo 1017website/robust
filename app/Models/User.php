@@ -38,10 +38,10 @@ class User extends Authenticatable
     public function isAdministration(): bool { return $this->role === 'administration'; }
     public function isSalesSpv(): bool { return $this->role === 'sales_spv'; }
 
-    /** Harga komersial untuk administrasi dan sales pemilik. */
+    /** Harga dan HPP hanya dapat dilihat oleh Sales. */
     public function canViewPrices(): bool
     {
-        return in_array($this->role, ['administrator', 'sales_admin', 'sales'], true);
+        return $this->isSales();
     }
 
     /**
