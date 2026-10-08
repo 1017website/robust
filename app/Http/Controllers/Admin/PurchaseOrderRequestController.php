@@ -397,7 +397,7 @@ class PurchaseOrderRequestController extends Controller
                 ->whereDoesntHave('purchaseOrderRequest')
                 ->when($requestPo?->quotation_id, fn ($scope, $id) => $scope->orWhere('id', $id)))
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
-            ->latest('approved_at')
+            ->latest()->latest('id')
             ->get();
     }
 

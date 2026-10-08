@@ -188,7 +188,7 @@ function bindNumberInputs(scope) {
 }
 
 function numberInputKind(el) {
-    if (!el || el.disabled || el.readOnly) return null;
+    if (!el) return null;
     var type = (el.getAttribute('type') || 'text').toLowerCase();
     if (['hidden', 'date', 'time', 'datetime-local', 'month', 'week', 'email', 'password', 'file', 'checkbox', 'radio', 'tel', 'url', 'search'].includes(type)) return null;
 
@@ -234,7 +234,6 @@ function normalizeNumberValue(value, kind) {
         } else {
             var currencyParts = v.split('.');
             var isDatabaseDecimal = currencyParts.length === 2
-                && currencyParts[0].length > 3
                 && currencyParts[1].length <= 2;
             v = isDatabaseDecimal ? currencyParts[0] : currencyParts.join('');
         }

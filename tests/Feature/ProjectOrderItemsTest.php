@@ -34,6 +34,20 @@ class ProjectOrderItemsTest extends TestCase
         return $quotation;
     }
 
+    public function test_quotation_lists_put_newest_first_even_with_equal_creation_times(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $older = $this->quotation($sales, 'builder');
+        $newer = $this->quotation($sales, 'upload');
+        $older->forceFill(['created_at' => now()->startOfDay(), 'approved_at' => now()])->save();
+        $newer->forceFill(['created_at' => now()->startOfDay(), 'approved_at' => null])->save();
+
+        $this->actingAs($sales)->get(route('sales.quotations.index'))
+            ->assertOk()->assertSeeInOrder([$newer->code, $older->code]);
+        $this->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()->assertSeeInOrder([$newer->code, $older->code]);
+    }
+
     public function test_direct_po_requires_items_specifications_and_matching_total_without_creating_partial_projects(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'sales']));

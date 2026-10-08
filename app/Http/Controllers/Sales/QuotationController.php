@@ -27,7 +27,7 @@ class QuotationController extends Controller
     {
         $query = Quotation::with('customer.primaryPic', 'sales')
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($q) => $q->where('sales_id', Auth::id()))
-            ->latest();
+            ->latest()->latest('id');
 
         if ($s = $request->get('q')) {
             $query->where(fn ($w) => $w->where('customer_name', 'like', "%$s%")

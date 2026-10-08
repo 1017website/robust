@@ -34,9 +34,17 @@ function calculateOrderTotal() {
     const deduction = document.querySelector('[name="order_discount_type"]').value === 'percent' ? subtotal * discount / 100 : discount;
     const net = subtotal - Math.min(deduction, subtotal);
     const total = !orderDirect() && quote ? Number(quote.total) : Math.round((net * (1 + number(document.querySelector('[name="order_tax_percent"]')) / 100) + number(document.querySelector('[name="order_additional_cost"]'))) * 100) / 100;
-    document.getElementById('orderCalculatedTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
+    document.getElementById('orderCalculatedTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(total);
     const entered = number(document.getElementById('poTotal'));
     document.getElementById('orderValueMatch').textContent = Math.abs(entered - total) < 0.01 ? 'Nilai PO sesuai rincian.' : 'Nilai PO belum sesuai rincian.';
+}
+function formatOrderCharges() {
+    const discount = document.querySelector('[name="order_discount_value"]');
+    const nominal = document.querySelector('[name="order_discount_type"]').value === 'nominal';
+    discount.toggleAttribute('data-rupiah', nominal);
+    discount.toggleAttribute('data-qty', !nominal);
+    discount.dataset.numberKind = nominal ? 'currency' : 'decimal';
+    formatNumberEl(discount, discount.dataset.numberKind);
 }
 function renderOrderItems() {
     const direct = orderDirect();
@@ -51,18 +59,20 @@ function renderOrderItems() {
     if (direct && !Object.keys(rows).length) addOrderItem();
     if (!direct && quote) {
         document.querySelector('[name="order_discount_type"]').value = quote.discount_type || 'percent';
-        for (const field of ['discount_value','tax_percent','additional_cost']) document.querySelector(`[name="order_${field}"]`).value = quote[field] || 0;
-        if (!document.getElementById('poTotal').value) document.getElementById('poTotal').value = quote.total;
+        for (const field of ['discount_value','tax_percent','additional_cost']) setNumberInputValue(document.querySelector(`[name="order_${field}"]`), quote[field] || 0);
+        if (!document.getElementById('poTotal').value) setNumberInputValue(document.getElementById('poTotal'), quote.total);
     }
+    formatOrderCharges();
     if (window.bindNumberInputs) bindNumberInputs(document.querySelector('.order-charge').closest('.row'));
     calculateOrderTotal();
 }
 document.getElementById('addOrderItem').addEventListener('click', () => addOrderItem());
 document.querySelectorAll('.order-charge,#poTotal').forEach(input => input.addEventListener('input', calculateOrderTotal));
+document.querySelector('[name="order_discount_type"]').addEventListener('change', () => { formatOrderCharges(); calculateOrderTotal(); });
 orderRows.addEventListener('input', calculateOrderTotal);
 quotationSelect.addEventListener('change', () => {
     initialOrderItems = null;
-    document.getElementById('poTotal').value = orderQuotations[quotationSelect.value]?.total ?? '';
+    setNumberInputValue(document.getElementById('poTotal'), orderQuotations[quotationSelect.value]?.total ?? '');
     renderOrderItems();
 });
 syncPurchaseSource();
