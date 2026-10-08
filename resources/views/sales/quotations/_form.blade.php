@@ -171,7 +171,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th class="quotation-builder-column" style="width:160px">Spesifikasi</th><th class="quotation-builder-column" style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th class="quotation-item-name-heading" style="width:180px">Nama Item</th><th class="quotation-builder-column" style="width:160px">Spesifikasi</th><th class="quotation-builder-column" style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -306,6 +306,7 @@ function currentQuotationMode(){ return document.querySelector('[name="quotation
 function syncQuotationMode(){
     const upload=currentQuotationMode()==='upload';
     document.getElementById('itemTable').classList.toggle('quotation-upload-items',upload);
+    document.querySelector('.quotation-item-name-heading').textContent=upload ? 'Nama Item' : 'Item / Detail';
     document.getElementById('quotationFileBox').classList.toggle('d-none',!upload);
     const file=document.getElementById('quotationFile');
     file.required=upload && !hasStoredQuotationFile;
