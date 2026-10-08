@@ -135,6 +135,32 @@ class ProjectOrderItemsTest extends TestCase
         $this->assertDatabaseCount('projects', 3);
     }
 
+    public function test_used_quotations_are_hidden_in_create_even_when_requested_by_url(): void
+    {
+        $sales = User::factory()->create(['role' => 'sales']);
+        $this->actingAs($sales);
+        $reserved = $this->quotation($sales, 'builder');
+        $this->post(route('admin.purchase-order-requests.store'), [
+            'action' => 'draft', 'quotation_id' => $reserved->id,
+        ])->assertSessionHasNoErrors();
+        $draft = PurchaseOrderRequest::sole();
+        $used = $this->quotation($sales, 'upload');
+        $project = Project::create(['code' => 'PRJ-USED', 'name' => 'Existing project', 'quotation_id' => $used->id]);
+
+        foreach ([$reserved, $used] as $quotation) {
+            $this->get(route('admin.purchase-order-requests.create', ['quotation' => $quotation->id]))
+                ->assertOk()->assertViewHas('quotation', null)
+                ->assertViewHas('quotations', fn ($rows) => ! $rows->contains('id', $quotation->id))
+                ->assertDontSee($quotation->code);
+            $this->assertFalse($quotation->canCreatePurchaseOrderRequest());
+        }
+        $project->delete();
+        $this->get(route('admin.purchase-order-requests.create'))
+            ->assertOk()->assertDontSee($used->code);
+        $this->get(route('admin.purchase-order-requests.edit', $draft))
+            ->assertOk()->assertSee($reserved->code);
+    }
+
     public function test_direct_po_draft_preserves_items_and_can_be_completed_before_submission(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'sales']));

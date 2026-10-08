@@ -55,6 +55,10 @@ class PurchaseOrderRequestController extends Controller
                 ->findOrFail($request->get('quotation'))
             : null;
 
+        if ($quotation && ! $quotation->canCreatePurchaseOrderRequest()) {
+            $quotation = null;
+        }
+
         return view('admin.purchase_order_requests.create', [
             'requestPo' => null,
             'quotation' => $quotation,
@@ -394,7 +398,9 @@ class PurchaseOrderRequestController extends Controller
             // sudah tidak dipakai sejak approval SPV dihapus.
             ->whereIn('status', ['ready', 'sent_to_customer', 'customer_accepted'])
             ->where(fn ($query) => $query
-                ->whereDoesntHave('purchaseOrderRequest')
+                ->where(fn ($available) => $available
+                    ->whereDoesntHave('purchaseOrderRequest')
+                    ->whereDoesntHave('project', fn ($projects) => $projects->withTrashed()))
                 ->when($requestPo?->quotation_id, fn ($scope, $id) => $scope->orWhere('id', $id)))
             ->when((Auth::user()->isSales() && ! Auth::user()->isAdminLevel()), fn ($query) => $query->where('sales_id', Auth::id()))
             ->latest()->latest('id')

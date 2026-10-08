@@ -115,7 +115,8 @@ class Quotation extends Model
     public function canCreatePurchaseOrderRequest(): bool
     {
         return in_array($this->status, ['ready', 'sent_to_customer', 'customer_accepted'], true)
-            && ! $this->purchaseOrderRequest()->exists();
+            && ! $this->purchaseOrderRequest()->exists()
+            && ! $this->project()->withTrashed()->exists();
     }
 
     /**

@@ -85,7 +85,7 @@
                                     {{ $q->code }} — {{ $q->customer_name }} — {{ $q->project_name }} — {{ \App\Support\Format::rupiah($q->grand_total) }}
                                 </option>
                             @endforeach
-                            @if($quotation && ! $quotations->contains('id', $quotation->id) && ! $quotation->isExternal())
+                            @if($requestPo && $quotation && $requestPo->quotation_id === $quotation->id && ! $quotations->contains('id', $quotation->id) && ! $quotation->isExternal())
                                 <option value="{{ $quotation->id }}" selected>{{ $quotation->code }} — {{ $quotation->customer_name }} — {{ $quotation->project_name }}</option>
                             @endif
                         </select>
