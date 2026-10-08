@@ -1007,6 +1007,8 @@ canvas{display:block;max-width:100%}
 
 /* Quotation auto-pricing columns stay legible and scroll as one table on narrower screens. */
 .table-wrap>.quotation-item-table{min-width:1120px!important}
+.table-wrap>.quotation-item-table.quotation-upload-items{min-width:850px!important}
+.quotation-upload-items .quotation-builder-column{display:none}
 .quotation-item-table .it-cost{min-width:120px}
 .quotation-item-table .it-price-display{display:inline-block;white-space:nowrap}
 .quotation-item-table td.it-total{display:table-cell;vertical-align:middle;white-space:nowrap}

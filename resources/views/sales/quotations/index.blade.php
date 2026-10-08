@@ -3,7 +3,6 @@
 @section('content')
 <x-page-header title="Penawaran" subtitle="Kelola quotation untuk customer">
     <a href="{{ route('sales.quotations.create', ['mode' => 'builder']) }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Buat Penawaran</a>
-    <a href="{{ route('sales.quotations.create', ['mode' => 'upload']) }}" class="btn btn-soft btn-sm"><i class="bi bi-cloud-arrow-up me-1"></i>Upload Penawaran</a>
 </x-page-header>
 
 <div class="card-r">

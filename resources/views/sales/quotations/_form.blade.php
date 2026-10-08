@@ -171,7 +171,7 @@
             <div class="card-head"><h2>Item Penawaran</h2><button type="button" class="btn btn-soft btn-sm" id="addItem"><i class="bi bi-plus-lg me-1"></i>Tambah Item</button></div>
             <div class="table-wrap">
                 <table class="table-r quotation-item-table" id="itemTable">
-                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th style="width:160px">Spesifikasi</th><th style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
+                    <thead><tr><th style="width:190px">Master Item</th><th style="width:180px">Item / Detail</th><th class="quotation-builder-column" style="width:160px">Spesifikasi</th><th class="quotation-builder-column" style="width:165px">Gambar / Status</th><th style="width:75px">Qty</th><th style="width:75px">Unit</th><th style="width:145px">Harga Jual</th><th style="width:130px">Total</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -305,6 +305,7 @@ function showStep(s){
 function currentQuotationMode(){ return document.querySelector('[name="quotation_mode"]:checked')?.value || 'builder'; }
 function syncQuotationMode(){
     const upload=currentQuotationMode()==='upload';
+    document.getElementById('itemTable').classList.toggle('quotation-upload-items',upload);
     document.getElementById('quotationFileBox').classList.toggle('d-none',!upload);
     const file=document.getElementById('quotationFile');
     file.required=upload && !hasStoredQuotationFile;
@@ -338,8 +339,8 @@ function addItem(data={}){
         <td><input type="hidden" name="items[${i}][id]" value="${esc(data.id)}"><input type="hidden" name="items[${i}][source_design_request_item_id]" value="${esc(data.source_design_request_item_id)}"><select name="items[${i}][item_master_id]" class="form-select form-select-sm it-master"><option value="">Custom</option>${masterOptions}</select>
             <input type="hidden" name="items[${i}][category]" value="${esc(data.category)}"></td>
         <td><input name="items[${i}][name]" class="form-control form-control-sm mb-1 it-name" value="${esc(data.name)}" required placeholder="Nama item"><input name="items[${i}][variant]" class="form-control form-control-sm it-variant" value="${esc(data.variant)}" placeholder="Detail: Laci 3 / Layout L / Layout U"></td>
-        <td class="it-spec-cell"><textarea name="items[${i}][specification]" class="d-none it-specification">${esc(data.specification)}</textarea><button type="button" class="btn btn-soft btn-sm w-100 it-spec-edit" aria-label="Atur spesifikasi item"><i class="bi bi-sliders me-1"></i>Atur</button><div class="quotation-spec-summary"></div></td>
-        <td class="it-image-cell">
+        <td class="it-spec-cell quotation-builder-column"><textarea name="items[${i}][specification]" class="d-none it-specification">${esc(data.specification)}</textarea><button type="button" class="btn btn-soft btn-sm w-100 it-spec-edit" aria-label="Atur spesifikasi item"><i class="bi bi-sliders me-1"></i>Atur</button><div class="quotation-spec-summary"></div></td>
+        <td class="it-image-cell quotation-builder-column">
             <div class="quotation-image-preview">
                 <img src="${hasImage ? `${storageBase}/${esc(data.quotation_image_path)}` : ''}" alt="Preview gambar item" class="it-image-preview ${hasImage ? '' : 'd-none'}">
                 <div class="it-image-empty ${hasImage ? 'd-none' : ''}"><i class="bi bi-image"></i><span>Belum ada gambar</span></div>
