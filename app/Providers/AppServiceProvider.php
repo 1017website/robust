@@ -8,6 +8,8 @@ use App\Models\PraLead;
 use App\Models\Project;
 use App\Models\PurchaseOrderRequest;
 use App\Models\Quotation;
+use App\Support\ProjectAccess;
+use App\Support\ProjectDeadline;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +38,35 @@ class AppServiceProvider extends ServiceProvider
                 && Schema::hasColumn('project_workflows', 'delivery_status');
 
             if ($user) {
+                if (in_array($user->role, ['administrator', 'sales_admin', 'sales', 'sales_spv', 'administration', 'drafter', 'production', 'qc', 'delivery'], true)) {
+                    $deadlineProjects = ProjectDeadline::apply(ProjectAccess::scopeRequestProcesses(Project::query(), $user))
+                        ->when($user->isSales(), fn ($projects) => $projects->where(fn ($scope) => $scope
+                            ->where('project_manager_id', $user->id)
+                            ->orWhereHas('quotation', fn ($quotations) => $quotations->where('sales_id', $user->id))));
+                    $deadlineCount = (clone $deadlineProjects)->count();
+                    $deadlineMenu = in_array($user->role, ['administrator', 'sales_admin', 'sales', 'sales_spv'], true)
+                        ? 'sales.projects.*' : 'drafter.projects.*';
+                    if ($deadlineCount > 0) {
+                        $sidebarNotificationCounts[$deadlineMenu] = $deadlineCount;
+                        foreach ((clone $deadlineProjects)->orderBy('target_date')->orderBy('id')->limit(4)->get() as $deadlineProject) {
+                            $indicator = ProjectDeadline::indicator($deadlineProject);
+                            $notifications[] = [
+                                'count' => 1, 'title' => $deadlineProject->code.' · '.$indicator['label'],
+                                'detail' => $deadlineProject->name.' · Target '.$deadlineProject->target_date->format('d/m/Y'),
+                                'href' => route('project-workspace.show', $deadlineProject),
+                                'icon' => 'bi-calendar-event', 'tone' => 'text-'.$indicator['tone'],
+                            ];
+                        }
+                        if ($deadlineCount > 4) {
+                            $notifications[] = [
+                                'count' => $deadlineCount - 4, 'title' => ($deadlineCount - 4).' project lain mendekati / melewati deadline',
+                                'detail' => 'Lihat penanda deadline di Request Process.',
+                                'href' => route(str_replace('*', 'index', $deadlineMenu), ['deadline' => 1]),
+                                'icon' => 'bi-calendar-event', 'tone' => 'text-warning',
+                            ];
+                        }
+                    }
+                }
                 if ($user->isSales()) {
                     $waitingPraLeads = PraLead::where('assigned_sales_id', $user->id)
                         ->where('status', 'waiting_acceptance')
@@ -143,7 +174,7 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
-            $view->with('topbarNotifications', array_slice($notifications, 0, 5));
+            $view->with('topbarNotifications', $notifications);
             $view->with('topbarNotificationCount', array_sum(array_column($notifications, 'count')));
             $view->with('sidebarNotificationCounts', $sidebarNotificationCounts);
         });

@@ -30,6 +30,11 @@ class Project extends Model
     public function activities(): HasMany { return $this->hasMany(Activity::class); }
     public function documents(): MorphMany { return $this->morphMany(Document::class, 'documentable'); }
     public function workflow(): HasOne { return $this->hasOne(ProjectWorkflow::class); }
+    public function workflowHistory(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'loggable')
+            ->whereIn('action', ['production_updated', 'qc_updated', 'qc_installation_updated']);
+    }
     public function deliveryOrder(): HasOne { return $this->hasOne(DeliveryOrder::class); }
     public function designRevisions(): HasMany { return $this->hasMany(DesignRevision::class)->orderByDesc('revision_number'); }
 

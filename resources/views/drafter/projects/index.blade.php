@@ -17,7 +17,7 @@
                 <div class="drafter-stat"><div class="ico red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="label">Overdue</div><div class="value">{{ $stats['overdue'] }}</div></div></div>
             </div>
             <div class="card-r">
-                <form class="drafter-filter" method="GET"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Cari project, customer, kode..."><select class="form-select" name="status"><option value="">Semua Status</option>@foreach(\App\Models\Project::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach</select><button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button></form>
+                <form class="drafter-filter flex-wrap" method="GET"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Cari project, customer, kode..."><select class="form-select" name="status"><option value="">Semua Status</option>@foreach(\App\Models\Project::statuses() as $k=>$v)<option value="{{ $k }}" @selected(request('status')===$k)>{{ $v }}</option>@endforeach</select><label class="d-flex align-items-center gap-2 small"><input type="checkbox" name="deadline" value="1" @checked(request()->boolean('deadline'))> Deadline H-3 / terlambat</label><button class="btn btn-soft"><i class="bi bi-funnel me-1"></i>Filter</button></form>
                 <div class="table-wrap">
                     <table class="drafter-table">
                         <thead><tr><th>Kode</th><th>Project</th><th>Customer</th><th>Status</th><th>Deadline</th><th>Progress</th></tr></thead>
@@ -28,7 +28,7 @@
                                 <td>{{ $project->name }}</td>
                                 <td>{{ $project->customer?->name ?? '—' }}</td>
                                 <td><x-status-badge :status="$project->status" :label="\App\Models\Project::statuses()[$project->status] ?? $project->status" /></td>
-                                <td>{{ $project->target_date?->translatedFormat('d M Y') ?? '—' }}</td>
+                                <td>{{ $project->target_date?->translatedFormat('d M Y') ?? '—' }}<x-project-deadline :project="$project" /></td>
                                 <td style="min-width:150px"><div class="sales-progress"><span style="width:{{ $project->progress }}%"></span></div><small>{{ $project->progress }}%</small></td>
                             </tr>
                         @empty

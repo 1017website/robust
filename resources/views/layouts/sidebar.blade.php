@@ -80,7 +80,7 @@
     } elseif ($role === 'production') {
         $pushLabel($menuGroups, 'PEKERJAAN');
         $pushItem($menuGroups, 'Design Request', 'drafter.design-requests.index', 'drafter.design-requests.*', 'bi-pencil-square');
-        $pushItem($menuGroups, 'Laporan Produksi', 'drafter.projects.index', 'drafter.projects.*', 'bi-clipboard2-check');
+        $pushItem($menuGroups, 'Request Process', 'drafter.projects.index', 'drafter.projects.*', 'bi-clipboard2-check');
         $pushLabel($menuGroups, 'DATA & LAPORAN');
         $pushItem($menuGroups, 'Master Item', 'admin.item-masters.index', 'admin.item-masters.*', 'bi-boxes');
         $pushItem($menuGroups, 'Dokumen Project', 'documents.index', 'documents.*', 'bi-file-earmark-text');

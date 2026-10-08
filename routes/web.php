@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/project-workspace/{project}', [ProjectWorkspaceController::class, 'show'])->name('project-workspace.show');
     Route::get('/project-workspace/{project}/delivery-order/pdf', [DeliveryOrderController::class, 'pdf'])->name('delivery-orders.pdf');
     Route::get('/project-workspace/{project}/workflow/{type}', [ProjectWorkflowController::class, 'attachment'])->name('project-workflow.attachment');
+    Route::get('/project-workspace/{project}/history/{history}/attachments/{index}', [ProjectWorkflowController::class, 'historyAttachment'])->whereNumber('index')->name('project-workflow.history-attachment');
     Route::get('/project-workspace/{project}/design-revisions/{designRevision}', [DesignRevisionController::class, 'attachment'])->name('design-revisions.attachment');
 
     Route::middleware('role:administrator,sales_admin,administration')->prefix('administration')->name('administration.')->group(function () {

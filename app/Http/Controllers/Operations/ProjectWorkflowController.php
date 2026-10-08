@@ -4,17 +4,25 @@ namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\ProjectWorkflow;
 use App\Support\ProjectAccess;
+use App\Services\Logger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProjectWorkflowController extends Controller
 {
     public function updateProduction(Request $request, Project $project)
+    {
+        return DB::transaction(fn () => $this->saveProduction($request, $project));
+    }
+
+    private function saveProduction(Request $request, Project $project)
     {
         $project->loadMissing('quotation.designRequest');
         $hasProductionReference = $project->documents()->where('category', 'fabrication_drawing')->where('is_current', true)->exists()
@@ -36,6 +44,8 @@ class ProjectWorkflowController extends Controller
         ]);
 
         $workflow = $project->workflow()->firstOrCreate();
+        $before = $this->snapshot($workflow, 'production');
+        $attachments = [];
         $completed = $request->boolean('production_report_completed');
         if ($completed && ! $request->hasFile('production_report') && ! $workflow->production_report_path) {
             throw ValidationException::withMessages(['production_report' => 'Upload Checklist Produksi PDF sebelum menandai laporan lengkap.']);
@@ -61,11 +71,13 @@ class ProjectWorkflowController extends Controller
             'production_updated_at' => now(),
         ];
         if ($file = $request->file('production_report')) {
-            $update += $this->replaceFile($workflow->production_report_path, $file, "project-workflows/{$project->id}/production", 'production_report');
+            $update += $this->replaceFile($workflow->production_report_path, $file, "project-workflows/{$project->id}/production", 'production_report', true);
+            $attachments[] = ['path' => $update['production_report_path'], 'name' => $update['production_report_name']];
         }
         $workflow->update($update);
         foreach ($request->file('progress_files', []) as $file) {
             $path = $file->store("projects/{$project->id}/production-progress", 'public');
+            $attachments[] = ['path' => $path, 'name' => $file->getClientOriginalName()];
             Document::create([
                 'documentable_type' => Project::class,
                 'documentable_id' => $project->id,
@@ -86,23 +98,30 @@ class ProjectWorkflowController extends Controller
             'progress' => max(10, min(60, 10 + (int) round($progress * .5))),
         ]);
 
+        Logger::record('production_updated', 'Produksi diperbarui', $project, [
+            'stage' => 'Produksi', 'before' => $before,
+            'after' => $this->snapshot($workflow, 'production'), 'attachments' => $attachments,
+        ]);
+
         return back()->with('success', 'Laporan produksi berhasil diperbarui.')->withFragment('operations');
     }
 
     public function updateQc(Request $request, Project $project)
     {
-        return $this->saveQc($request, $project, false);
+        return DB::transaction(fn () => $this->saveQc($request, $project, false));
     }
 
     public function updateInstallationQc(Request $request, Project $project)
     {
-        return $this->saveQc($request, $project, true);
+        return DB::transaction(fn () => $this->saveQc($request, $project, true));
     }
 
     private function saveQc(Request $request, Project $project, bool $installation)
     {
         $workflow = $project->workflow()->firstOrCreate();
         $prefix = $installation ? 'qc_installation' : 'qc';
+        $before = $this->snapshot($workflow, $prefix);
+        $attachments = [];
         $label = $installation ? 'QC Pemasangan' : 'QC Produksi';
         abort_unless(
             $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished',
@@ -138,12 +157,18 @@ class ProjectWorkflowController extends Controller
             "{$prefix}_updated_at" => now(),
         ];
         if ($file = $request->file("{$prefix}_document")) {
-            $update += $this->replaceFile($workflow->{"{$prefix}_document_path"}, $file, "project-workflows/{$project->id}/{$prefix}", "{$prefix}_document");
+            $update += $this->replaceFile($workflow->{"{$prefix}_document_path"}, $file, "project-workflows/{$project->id}/{$prefix}", "{$prefix}_document", true);
+            $attachments[] = ['path' => $update["{$prefix}_document_path"], 'name' => $update["{$prefix}_document_name"]];
         }
         $workflow->update($update);
         if ($completed && ! $installation) {
             $project->update(['status' => 'finishing', 'progress' => max(80, (int) $project->progress)]);
         }
+
+        Logger::record("{$prefix}_updated", "{$label} diperbarui", $project, [
+            'stage' => $label, 'before' => $before,
+            'after' => $this->snapshot($workflow, $prefix), 'attachments' => $attachments,
+        ]);
 
         return back()->with('success', "{$label} berhasil diperbarui.")->withFragment('operations');
     }
@@ -248,10 +273,36 @@ class ProjectWorkflowController extends Controller
         return response()->file($absolutePath, ['Content-Type' => Storage::disk('public')->mimeType($path)]);
     }
 
-    private function replaceFile(?string $oldPath, $file, string $directory, string $prefix): array
+    public function historyAttachment(Request $request, Project $project, ActivityLog $history, int $index)
+    {
+        abort_unless(ProjectAccess::canView($request->user(), $project), 403);
+        abort_unless($project->workflowHistory()->whereKey($history->id)->exists(), 404);
+        $attachment = $history->meta['attachments'][$index] ?? null;
+        abort_unless($attachment && Storage::disk('public')->exists($attachment['path']), 404);
+
+        return Storage::disk('public')->download($attachment['path'], $attachment['name']);
+    }
+
+    private function snapshot(ProjectWorkflow $workflow, string $prefix): array
+    {
+        $fields = $prefix === 'production'
+            ? ['status', 'progress', 'note', 'report_completed', 'report_path', 'report_name']
+            : ['completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
+
+        $snapshot = collect($fields)->mapWithKeys(fn ($field) => [$field => $workflow->{"{$prefix}_{$field}"}])->all();
+        if ($prefix !== 'production') {
+            $snapshot['checklist_labels'] = collect(ProjectWorkflow::qcChecklistDefinition($workflow->project, false, $prefix === 'qc_installation'))
+                ->flatMap(fn ($item) => collect($item['checks'])->mapWithKeys(fn ($check) => [$check['key'] => $item['item_name'].' · '.$check['label']]))
+                ->all();
+        }
+
+        return $snapshot;
+    }
+
+    private function replaceFile(?string $oldPath, $file, string $directory, string $prefix, bool $retainOld = false): array
     {
         $newPath = $file->store($directory, 'public');
-        if ($oldPath && $oldPath !== $newPath) {
+        if (! $retainOld && $oldPath && $oldPath !== $newPath) {
             Storage::disk('public')->delete($oldPath);
         }
 

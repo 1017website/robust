@@ -45,6 +45,7 @@
 <x-page-header :title="$project->name" :subtitle="$project->code.' · '.($project->customer?->name ?? 'Tanpa customer')">
     <x-status-badge :status="$project->status" :label="\App\Models\Project::statuses()[$project->status] ?? $project->status" />
 </x-page-header>
+<x-project-deadline :project="$project" />
 
 <div class="card-r p-0 overflow-hidden">
     <ul class="nav workspace-tabs px-3" role="tablist">
@@ -294,6 +295,7 @@
         </div>
     </div>
 </div>
+@include('projects._workflow-history')
 @endsection
 
 @push('scripts')

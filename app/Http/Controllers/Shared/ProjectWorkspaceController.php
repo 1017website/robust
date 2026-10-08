@@ -34,7 +34,8 @@ class ProjectWorkspaceController extends Controller
             ->sortByDesc('created_at')
             ->values();
         $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
+        $workflowHistory = $project->workflowHistory()->with('user')->orderByDesc('id')->paginate(15, ['*'], 'history_page')->withQueryString()->fragment('workflow-history');
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices', 'workflowHistory'));
     }
 }

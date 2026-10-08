@@ -10,6 +10,7 @@ use App\Models\Quotation;
 use App\Models\User;
 use App\Services\CodeGenerator;
 use App\Services\Logger;
+use App\Support\ProjectDeadline;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,9 @@ class ProjectController extends Controller
         }
         if ($status = $request->get('status')) {
             $query->where('status', $status);
+        }
+        if ($request->boolean('deadline')) {
+            ProjectDeadline::apply($query);
         }
         $projects = $query->paginate(10)->withQueryString();
 
@@ -137,8 +141,9 @@ class ProjectController extends Controller
             ->sortByDesc('created_at')
             ->values();
         $qcChecklistDefinition = ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
+        $workflowHistory = $project->workflowHistory()->with('user')->orderByDesc('id')->paginate(15, ['*'], 'history_page')->withQueryString()->fragment('workflow-history');
 
-        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices'));
+        return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices', 'workflowHistory'));
     }
 
     /**

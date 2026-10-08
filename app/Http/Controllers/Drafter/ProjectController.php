@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Drafter;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Support\ProjectAccess;
+use App\Support\ProjectDeadline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,36 +14,16 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $applyRoleScope = function ($query) use ($user) {
-            if ($user->isDrafter()) {
-                $query->where(function ($scope) use ($user) {
-                    $scope->where('project_manager_id', $user->id)
-                        ->orWhereJsonContains('internal_team', (string) $user->id)
-                        ->orWhereJsonContains('internal_team', $user->id);
-                });
-            } elseif ($user->isProduction()) {
-                $query->where(function ($projects) {
-                    $projects->whereHas('documents', fn ($documents) => $documents
-                        ->where('category', 'fabrication_drawing')
-                        ->where('is_current', true))
-                        ->orWhereHas('quotation', fn ($quotations) => $quotations
-                            ->whereNull('design_request_id'));
-                });
-            } elseif ($user->isQc()) {
-                $query->whereHas('workflow', fn ($workflow) => $workflow
-                    ->where('production_status', 'production_finished'));
-            } elseif ($user->isDelivery()) {
-                $query->whereHas('workflow', fn ($workflow) => $workflow
-                    ->where('qc_completed', true));
-            }
-
-            return $query;
-        };
+        $applyRoleScope = fn ($query) => ProjectAccess::scopeRequestProcesses($query, $user);
 
         $query = Project::with('customer', 'projectManager', 'quotation')
             ->with('workflow');
         $applyRoleScope($query);
         $query->latest();
+
+        if ($request->boolean('deadline')) {
+            ProjectDeadline::apply($query);
+        }
 
         if ($status = $request->get('status')) {
             $query->where('status', $status);
