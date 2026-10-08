@@ -105,6 +105,11 @@
 
             sync();
         });
+
+        input.form?.addEventListener('reset', function () {
+            files.length = 0;
+            render();
+        });
     }
 
     function init(root) {

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             NormalizeCurrencyInput::class,
+            \App\Http\Middleware\ResolveTemporaryUploads::class,
         ]);
         $middleware->alias([
             'role' => EnsureUserRole::class,

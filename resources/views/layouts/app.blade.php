@@ -110,6 +110,8 @@
 <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}"></script>
 <script src="{{ asset('js/form-controls.js') }}?v={{ filemtime(public_path('js/form-controls.js')) }}"></script>
 <script src="{{ asset('js/multi-file-input.js') }}?v={{ filemtime(public_path('js/multi-file-input.js')) }}"></script>
+<script type="application/json" id="staged-upload-input">@json(old('_uploaded_files', []))</script>
+<script src="{{ asset('js/immediate-upload.js') }}?v={{ filemtime(public_path('js/immediate-upload.js')) }}" data-upload-url="{{ route('temporary-uploads.store') }}"></script>
 <script src="{{ asset('js/upload-progress.js') }}?v={{ filemtime(public_path('js/upload-progress.js')) }}"></script>
 @stack('scripts')
 </body>

@@ -40,6 +40,9 @@ Route::post('/login', [LoginController::class, 'login']);
 
 // ---------- Authenticated ----------
 Route::middleware('auth')->group(function () {
+    Route::post('/temporary-uploads', [\App\Http\Controllers\Shared\TemporaryUploadController::class, 'store'])->name('temporary-uploads.store');
+    Route::delete('/temporary-uploads/{token}', [\App\Http\Controllers\Shared\TemporaryUploadController::class, 'destroy'])->name('temporary-uploads.destroy');
+
     Route::get('/session/keep-alive', function () {
         request()->session()->put('last_activity_at', now()->timestamp);
 

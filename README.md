@@ -60,6 +60,8 @@ php artisan serve
 6. Untuk lampiran Design Request hingga 80 MB/file, pastikan konfigurasi PHP membaca `.user.ini` dan web server mengizinkan request minimal 410 MB (misalnya `client_max_body_size 410M` pada Nginx).
 
 ## Struktur Modul
+Upload file di seluruh modul berjalan saat file dipilih. Saat simpan, browser mengirim token upload, dan server tetap menjalankan validasi file serta hak akses modul. Upload sementara disimpan privat selama maksimal 24 jam; file yang berhasil disimpan atau dihapus dari pilihan langsung dibersihkan. Aktifkan Laravel scheduler (`php artisan schedule:run` setiap menit) agar `uploads:prune` membersihkan file yang ditinggalkan setiap jam. Pembersihan juga dapat dijalankan manual dengan `php artisan uploads:prune`.
+
 - `app/Http/Controllers/{Auth,Admin,Sales,Drafter,Shared}` — controller per peran
 - `app/Services/QuotationCalculator.php` — kalkulasi subtotal, diskon, PPN, biaya tambahan
 - `app/Services/CodeGenerator.php` — generator kode dokumen (PL-, LD-, DR-, Q-, PRJ-)

@@ -1,9 +1,9 @@
 /**
- * Indikator progres unggahan berkas besar.
+ * Indikator progres penyimpanan form.
  *
  * Dipasang pada form yang diberi atribut data-upload-progress. Form dikirim lewat
- * XHR agar kemajuan unggahan dapat ditampilkan, lalu halaman dialihkan mengikuti
- * URL yang dikembalikan server.
+ * XHR, lalu halaman dialihkan mengikuti URL yang dikembalikan server. File sudah
+ * diunggah saat dipilih oleh immediate-upload.js; kiriman ini hanya berisi token.
  *
  * Atribut yang dibaca dari form:
  *   data-upload-progress            penanda wajib
@@ -123,8 +123,8 @@
             bar.classList.remove('bg-danger');
             setProgress(
                 0,
-                files.length ? 'Menyiapkan upload...' : 'Menyimpan data...',
-                files.length ? `${files.length} file dipilih` : 'Tanpa lampiran'
+                'Menyimpan data...',
+                files.length ? `${files.length} file sudah diunggah` : 'Tanpa lampiran'
             );
 
             xhr.upload.addEventListener('progress', function (progressEvent) {
@@ -135,13 +135,13 @@
 
                 setProgress(
                     (progressEvent.loaded / progressEvent.total) * 100,
-                    'Mengunggah ke server...',
+                    'Menyimpan data...',
                     `${formatBytes(progressEvent.loaded)} dari ${formatBytes(progressEvent.total)} terkirim`
                 );
             });
 
             xhr.upload.addEventListener('load', function () {
-                setProgress(100, 'Upload selesai, memproses data...', 'Menunggu konfirmasi dari server.');
+                setProgress(100, 'Memproses data...', 'Menunggu konfirmasi dari server.');
             });
 
             xhr.addEventListener('load', function () {
@@ -153,7 +153,7 @@
                 }
 
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    setProgress(100, 'Upload selesai. Mengalihkan...', payload.message || 'Data berhasil disimpan.');
+                    setProgress(100, 'Data tersimpan. Mengalihkan...', payload.message || 'Data berhasil disimpan.');
                     bar.classList.remove('progress-bar-animated');
 
                     const target = new URL(
