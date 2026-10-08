@@ -114,7 +114,13 @@ class AppServiceProvider extends ServiceProvider
                         ->where('production_status', 'production_finished')
                         ->where('qc_completed', false))
                         ->count();
-                    $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingQc, 'Project menunggu QC', 'Produksi selesai. Periksa checklist spesifikasi penawaran.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
+                    $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingQc, 'Project menunggu QC Produksi', 'Produksi selesai. Periksa checklist spesifikasi penawaran.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
+                    if (Schema::hasColumn('project_workflows', 'qc_installation_completed')) {
+                        $pendingInstallationQc = Project::whereHas('workflow', fn ($workflow) => $workflow
+                            ->where('qc_completed', true)
+                            ->where('qc_installation_completed', false))->count();
+                        $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingInstallationQc, 'Project menunggu QC Pemasangan', 'Periksa hasil pemasangan dan perbarui progress QC Pemasangan.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
+                    }
                 }
 
                 if ($user->isDelivery()) {

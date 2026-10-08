@@ -36,6 +36,7 @@ class ProjectMonitoringController extends Controller
             'active' => Project::whereIn('status', ['planning', 'ongoing', 'finishing'])->count(),
             'production_finished' => Project::whereHas('workflow', fn ($q) => $q->where('production_status', 'production_finished'))->count(),
             'qc_complete' => Project::whereHas('workflow', fn ($q) => $q->where('qc_completed', true))->count(),
+            'qc_installation_complete' => Project::whereHas('workflow', fn ($q) => $q->where('qc_installation_completed', true))->count(),
             'delivery_complete' => Project::whereHas('workflow', fn ($q) => $q->where('delivery_returned_completed', true))->count(),
             'receivable' => max(0, (float) Invoice::sum('grand_total') - (float) Invoice::sum('paid_total')),
         ];

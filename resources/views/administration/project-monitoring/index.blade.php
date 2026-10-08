@@ -27,7 +27,7 @@
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Total Project</small><strong>{{ $stats['projects'] }}</strong></div></div>
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Project Aktif</small><strong>{{ $stats['active'] }}</strong></div></div>
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Produksi Selesai</small><strong>{{ $stats['production_finished'] }}</strong></div></div>
-    <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>QC Selesai</small><strong>{{ $stats['qc_complete'] }}</strong></div></div>
+    <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>QC Produksi Selesai</small><strong>{{ $stats['qc_complete'] }}</strong><small>QC Pemasangan Selesai: {{ $stats['qc_installation_complete'] }}</small></div></div>
     <div class="col-6 col-lg-2"><div class="monitor-kpi"><small>DO/BA Kembali</small><strong>{{ $stats['delivery_complete'] }}</strong></div></div>
     @if($showPrices)<div class="col-6 col-lg-2"><div class="monitor-kpi"><small>Belum Tertagih</small><strong>{{ \App\Support\Format::rupiahShort($stats['receivable']) }}</strong></div></div>@endif
 </div>
@@ -45,7 +45,7 @@
             <thead><tr>
                 <th class="sticky-project">Project</th><th>Customer</th><th>Lokasi</th><th>Target / Kontrak</th>@if($showPrices)<th>Nilai Subtotal</th><th>PPN</th><th>Install</th>@endif
                 @for($i = 1; $i <= 3; $i++)@if($showPrices)<th>INV {{ $i }}</th>@endif<th>Jatuh Tempo {{ $i }}</th>@endfor
-                @if($showPrices)<th>Total Bayar</th><th>Saldo</th>@endif<th>Production</th><th>QC</th><th>Comment</th><th>Kirim</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>KP</th><th>Bukti Potong PPh</th><th>Comment / Follow-up</th><th>PIC</th><th>Aksi</th>
+                @if($showPrices)<th>Total Bayar</th><th>Saldo</th>@endif<th>Production</th><th>QC Produksi</th><th>QC Pemasangan</th><th>Comment</th><th>Kirim</th><th>DO/BA Keluar</th><th>DO/BA Kembali</th><th>KP</th><th>Bukti Potong PPh</th><th>Comment / Follow-up</th><th>PIC</th><th>Aksi</th>
             </tr></thead>
             <tbody>
             @forelse($projects as $project)
@@ -64,7 +64,10 @@
                     @endfor
                     @if($showPrices)<td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->paid_total ?? 0, false) }}</td><td class="fw-num">{{ \App\Support\Format::rupiah($invoice?->balance() ?? $project->total_value, false) }}</td>@endif
                     <td><x-status-badge :status="$workflow?->production_status ?? 'stock'" :label="\App\Models\ProjectWorkflow::productionStatuses()[$workflow?->production_status ?? 'stock']" /></td>
-                    <td class="text-center monitor-check"><i class="bi {{ $workflow?->qc_completed ? 'bi-check-square-fill text-success' : 'bi-square text-muted' }}"></i></td>
+                    @foreach([false, true] as $installation)
+                        @php($qcPercent = $workflow?->qcProgress($installation) ?? 0)
+                        <td class="text-center"><div class="small mb-1">{{ $qcPercent }}% · {{ ($installation ? $workflow?->qc_installation_completed : $workflow?->qc_completed) ? 'Selesai' : 'Belum selesai' }}</div><div class="progress" style="height:6px"><div class="progress-bar" role="progressbar" aria-label="{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }} {{ $project->code }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $qcPercent }}" style="width:{{ $qcPercent }}%"></div></div></td>
+                    @endforeach
                     <td>
                         @if($canEditAdministration)
                             <textarea name="administration_comment" form="project-monitoring-{{ $project->id }}" class="form-control form-control-sm monitor-comment" rows="2" placeholder="Comment sebelum kirim...">{{ $workflow?->administration_comment }}</textarea>
@@ -100,7 +103,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="26"><x-empty text="Belum ada project untuk dimonitor." /></td></tr>
+                <tr><td colspan="{{ $showPrices ? 27 : 19 }}"><x-empty text="Belum ada project untuk dimonitor." /></td></tr>
             @endforelse
             </tbody>
         </table>

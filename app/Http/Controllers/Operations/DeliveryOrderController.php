@@ -15,7 +15,7 @@ class DeliveryOrderController extends Controller
     public function store(Request $request, Project $project)
     {
         abort_unless(ProjectAccess::canView($request->user(), $project), 403);
-        abort_unless($project->workflow?->qc_completed, 422, 'Delivery Order baru dapat dibuat setelah QC selesai.');
+        abort_unless($project->workflow?->qc_completed, 422, 'Delivery Order baru dapat dibuat setelah QC Produksi selesai.');
 
         $data = $request->validate([
             'delivery_date' => ['required', 'date'],

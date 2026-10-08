@@ -149,7 +149,11 @@
             @if($workflow)
                 <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Produksi</span><span class="fw-semibold">{{ \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? '—' }}</span></div>
                 <div class="progress mb-3" style="height:8px"><div class="progress-bar" style="width: {{ (int) $workflow->production_progress }}%"></div></div>
-                <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">QC</span><span class="fw-semibold">{{ $workflow->qc_completed ? 'Selesai' : 'Belum selesai' }}</span></div>
+                @foreach([false, true] as $installation)
+                    @php($qcPercent = $workflow->qcProgress($installation))
+                    <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }}</span><span class="fw-semibold">{{ $qcPercent }}% · {{ ($installation ? $workflow->qc_installation_completed : $workflow->qc_completed) ? 'Selesai' : 'Belum selesai' }}</span></div>
+                    <div class="progress mb-3" style="height:8px"><div class="progress-bar" role="progressbar" aria-label="{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $qcPercent }}" style="width:{{ $qcPercent }}%"></div></div>
+                @endforeach
                 <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Pengiriman</span><span class="fw-semibold">{{ \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? '—' }}</span></div>
                 <div class="form-text mt-2">Hanya tampilan. Fase produksi sampai pengiriman diperbarui oleh tim terkait di <a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}">Request Process</a>.</div>
             @else

@@ -25,6 +25,11 @@ class ProjectWorkflow extends Model
         'production_progress' => 'integer',
         'production_updated_at' => 'datetime',
         'qc_completed' => 'boolean',
+        'qc_progress' => 'integer',
+        'qc_installation_completed' => 'boolean',
+        'qc_installation_progress' => 'integer',
+        'qc_installation_checklist' => 'array',
+        'qc_installation_updated_at' => 'datetime',
         'qc_checklist' => 'array',
         'qc_updated_at' => 'datetime',
         'payment_confirmation_completed' => 'boolean',
@@ -40,6 +45,7 @@ class ProjectWorkflow extends Model
     public function project(): BelongsTo { return $this->belongsTo(Project::class); }
     public function productionUpdater(): BelongsTo { return $this->belongsTo(User::class, 'production_updated_by'); }
     public function qcUpdater(): BelongsTo { return $this->belongsTo(User::class, 'qc_updated_by'); }
+    public function qcInstallationUpdater(): BelongsTo { return $this->belongsTo(User::class, 'qc_installation_updated_by'); }
     public function administrationUpdater(): BelongsTo { return $this->belongsTo(User::class, 'administration_updated_by'); }
     public function deliveryUpdater(): BelongsTo { return $this->belongsTo(User::class, 'delivery_updated_by'); }
 
@@ -64,13 +70,13 @@ class ProjectWorkflow extends Model
         ];
     }
 
-    public static function qcChecklistDefinition(Project $project, bool $includePrices = true): array
+    public static function qcChecklistDefinition(Project $project, bool $includePrices = true, bool $installation = false): array
     {
         $project->loadMissing('quotation.items');
 
         return $project->quotation?->items
             ->values()
-            ->map(function (QuotationItem $item) use ($includePrices): array {
+            ->map(function (QuotationItem $item) use ($includePrices, $installation): array {
                 $checks = [[
                     'key' => "item_{$item->id}_quantity",
                     'label' => 'Jumlah: '.rtrim(rtrim(number_format((float) $item->qty, 2, '.', ''), '0'), '.').' '.($item->unit ?: 'Unit'),
@@ -104,6 +110,10 @@ class ProjectWorkflow extends Model
 
                 $checks[] = ['key' => "item_{$item->id}_visual", 'label' => 'Kondisi fisik, warna, dan finishing sesuai'];
                 $checks[] = ['key' => "item_{$item->id}_function", 'label' => 'Fungsi dan kelengkapan item telah diuji'];
+                if ($installation) {
+                    $checks[] = ['key' => "item_{$item->id}_installation_position", 'label' => 'Posisi dan ukuran pemasangan sesuai lokasi yang disepakati'];
+                    $checks[] = ['key' => "item_{$item->id}_installation_fixing", 'label' => 'Sambungan, pengikat, dan kestabilan pemasangan telah diperiksa'];
+                }
 
                 return [
                     'item_id' => $item->id,
@@ -126,10 +136,17 @@ class ProjectWorkflow extends Model
     public function completionPercent(): int
     {
         $production = (int) round(min(100, max(0, (int) $this->production_progress)) * .25);
-        $qc = $this->qc_completed ? 25 : 0;
+        $qc = (int) round($this->qcProgress() * .15 + $this->qcProgress(true) * .10);
         $delivery = in_array($this->delivery_status, ['delivered', 'customer_received', 'completed'], true) ? 25 : 0;
         $completed = $this->delivery_status === 'completed' ? 25 : 0;
 
         return min(100, $production + $qc + $delivery + $completed);
+    }
+
+    public function qcProgress(bool $installation = false): int
+    {
+        $prefix = $installation ? 'qc_installation' : 'qc';
+
+        return $this->{"{$prefix}_completed"} ? 100 : min(100, max(0, (int) $this->{"{$prefix}_progress"}));
     }
 }

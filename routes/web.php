@@ -101,6 +101,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('role:administrator,qc')->group(function () {
         Route::put('/project-workspace/{project}/qc', [ProjectWorkflowController::class, 'updateQc'])->name('project-workflow.qc');
+        Route::put('/project-workspace/{project}/qc-installation', [ProjectWorkflowController::class, 'updateInstallationQc'])->name('project-workflow.qc-installation');
     });
     Route::middleware('role:administrator,delivery')->group(function () {
         Route::put('/project-workspace/{project}/delivery', [ProjectWorkflowController::class, 'updateDelivery'])->name('project-workflow.delivery');

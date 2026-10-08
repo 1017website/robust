@@ -164,7 +164,7 @@ class CrmFlowTest extends TestCase
         $this->actingAs($sales)->get(route('project-workspace.show', $project))
             ->assertSuccessful()
             ->assertSee('Revision 1')
-            ->assertSee('QC Selesai');
+            ->assertSee('QC Produksi');
     }
 
     public function test_administrator_can_submit_every_workspace_form_exposed_by_the_ui(): void

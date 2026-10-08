@@ -91,52 +91,67 @@ class ProjectWorkflowController extends Controller
 
     public function updateQc(Request $request, Project $project)
     {
+        return $this->saveQc($request, $project, false);
+    }
+
+    public function updateInstallationQc(Request $request, Project $project)
+    {
+        return $this->saveQc($request, $project, true);
+    }
+
+    private function saveQc(Request $request, Project $project, bool $installation)
+    {
         $workflow = $project->workflow()->firstOrCreate();
+        $prefix = $installation ? 'qc_installation' : 'qc';
+        $label = $installation ? 'QC Pemasangan' : 'QC Produksi';
         abort_unless(
-            $workflow->production_status === 'production_finished',
+            $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished',
             422,
-            'QC baru dapat dimulai setelah Produksi menandai pekerjaan selesai.'
+            $installation ? 'QC Pemasangan baru dapat dimulai setelah QC Produksi selesai.' : 'QC Produksi baru dapat dimulai setelah Produksi menandai pekerjaan selesai.'
         );
 
         $data = $request->validate([
-            'qc_completed' => ['nullable', 'boolean'],
-            'qc_document' => ['nullable', 'file', 'mimes:pdf'],
-            'qc_checklist' => ['nullable', 'array'],
-            'qc_note' => ['nullable', 'string', 'max:2000'],
+            "{$prefix}_completed" => ['nullable', 'boolean'],
+            "{$prefix}_progress" => ['nullable', 'integer', 'min:0', 'max:100'],
+            "{$prefix}_document" => ['nullable', 'file', 'mimes:pdf'],
+            "{$prefix}_checklist" => ['nullable', 'array'],
+            "{$prefix}_checklist.*" => ['boolean'],
+            "{$prefix}_note" => ['nullable', 'string', 'max:2000'],
         ]);
-        $completed = $request->boolean('qc_completed');
-        $definition = ProjectWorkflow::qcChecklistDefinition($project, false);
-        $inputChecklist = $data['qc_checklist'] ?? [];
+        $completed = $request->boolean("{$prefix}_completed");
+        $definition = ProjectWorkflow::qcChecklistDefinition($project, false, $installation);
+        $inputChecklist = $data["{$prefix}_checklist"] ?? [];
         $checklist = collect($definition)
             ->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'))
             ->mapWithKeys(fn (string $key) => [$key => ! empty($inputChecklist[$key])])
             ->all();
         if ($completed && collect($checklist)->contains(false)) {
-            throw ValidationException::withMessages(['qc_checklist' => 'Semua spesifikasi penawaran wajib dicek sebelum QC diselesaikan.']);
+            throw ValidationException::withMessages(["{$prefix}_checklist" => "Semua pemeriksaan wajib dicek sebelum {$label} diselesaikan."]);
         }
 
         $update = [
-            'qc_completed' => $completed,
-            'qc_checklist' => $checklist,
-            'qc_note' => $data['qc_note'] ?? null,
-            'qc_updated_by' => $request->user()->id,
-            'qc_updated_at' => now(),
+            "{$prefix}_completed" => $completed,
+            "{$prefix}_progress" => $completed ? 100 : ($data["{$prefix}_progress"] ?? $workflow->qcProgress($installation)),
+            "{$prefix}_checklist" => $checklist,
+            "{$prefix}_note" => $data["{$prefix}_note"] ?? null,
+            "{$prefix}_updated_by" => $request->user()->id,
+            "{$prefix}_updated_at" => now(),
         ];
-        if ($file = $request->file('qc_document')) {
-            $update += $this->replaceFile($workflow->qc_document_path, $file, "project-workflows/{$project->id}/qc", 'qc_document');
+        if ($file = $request->file("{$prefix}_document")) {
+            $update += $this->replaceFile($workflow->{"{$prefix}_document_path"}, $file, "project-workflows/{$project->id}/{$prefix}", "{$prefix}_document");
         }
         $workflow->update($update);
-        if ($completed) {
+        if ($completed && ! $installation) {
             $project->update(['status' => 'finishing', 'progress' => max(80, (int) $project->progress)]);
         }
 
-        return back()->with('success', 'Checklist QC berhasil diperbarui.')->withFragment('operations');
+        return back()->with('success', "{$label} berhasil diperbarui.")->withFragment('operations');
     }
 
     public function updateDelivery(Request $request, Project $project)
     {
         $workflow = $project->workflow()->firstOrCreate();
-        abort_unless($workflow->qc_completed, 422, 'Delivery baru dapat diproses setelah QC selesai.');
+        abort_unless($workflow->qc_completed, 422, 'Delivery baru dapat diproses setelah QC Produksi selesai.');
 
         $data = $request->validate([
             'delivery_status' => ['nullable', Rule::in(array_keys(ProjectWorkflow::deliveryStatuses()))],
@@ -217,6 +232,7 @@ class ProjectWorkflowController extends Controller
         [$path, $name] = match ($type) {
             'production' => [$workflow->production_report_path, $workflow->production_report_name],
             'qc' => [$workflow->qc_document_path, $workflow->qc_document_name],
+            'qc-installation' => [$workflow->qc_installation_document_path, $workflow->qc_installation_document_name],
             'delivery-out' => [$workflow->delivery_out_photo_path, $workflow->delivery_out_photo_name],
             'delivery-returned' => [$workflow->delivery_returned_photo_path, $workflow->delivery_returned_photo_name],
             'delivery-pod' => [$workflow->pod_path, $workflow->pod_name],

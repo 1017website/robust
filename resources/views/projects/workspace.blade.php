@@ -93,7 +93,7 @@
                     <div class="workflow-card">
                         <div class="d-flex justify-content-between align-items-center mb-2"><h3>Progress Operasional</h3><strong>{{ $workflow->completionPercent() }}%</strong></div>
                         <div class="prog"><span style="width:{{ $workflow->completionPercent() }}%"></span></div>
-                        <div class="small text-muted-2 mt-2">Produksi, QC, DO/BA keluar, dan DO/BA kembali.</div>
+                        <div class="small text-muted-2 mt-2">Produksi, QC Produksi, QC Pemasangan, DO/BA keluar, dan DO/BA kembali.</div>
                     </div>
                 </div>
             </div>
@@ -170,32 +170,9 @@
                 </section>
 
                 <section class="workflow-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Quality Control</h3><small class="text-muted-2">Checklist otomatis dari spesifikasi penawaran</small></div><x-status-badge :status="$workflow->qc_completed ? 'approved' : 'pending'" :label="$workflow->qc_completed ? 'QC Selesai' : 'QC Pending'" /></div>
-                    @if($canQc)
-                    <form method="POST" action="{{ route('project-workflow.qc', $project) }}" enctype="multipart/form-data">@csrf @method('PUT')
-                        <div class="qc-checklist mb-3">
-                            @forelse($qcChecklistDefinition as $qcItem)
-                                <div class="qc-item">
-                                    <div class="fw-bold mb-1">{{ $qcItem['item_name'] }} @if($qcItem['variant'])<small class="text-muted-2">- {{ $qcItem['variant'] }}</small>@endif</div>
-                                    @foreach($qcItem['checks'] as $check)
-                                        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="qc_checklist[{{ $check['key'] }}]" value="1" id="qc_{{ $check['key'] }}" @checked(old('qc_checklist.'.$check['key'], $workflow->qc_checklist[$check['key']] ?? false))><label class="form-check-label small" for="qc_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
-                                    @endforeach
-                                </div>
-                            @empty
-                                <div class="small text-muted-2">Belum ada item penawaran untuk diperiksa.</div>
-                            @endforelse
-                        </div>
-                        <label class="form-label">Catatan QC</label><textarea name="qc_note" class="form-control mb-3" rows="2">{{ old('qc_note', $workflow->qc_note) }}</textarea>
-                        <label class="form-label">Lampiran QC (opsional, PDF)</label><input class="form-control mb-3" type="file" name="qc_document" accept="application/pdf,.pdf">
-                        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="qc_completed" value="1" id="qcComplete" @checked($workflow->qc_completed)><label class="form-check-label fw-semibold" for="qcComplete">Semua pemeriksaan selesai dan lolos QC</label></div>
-                        <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan QC</button>
-                    </form>
-                    @else
-                        <div class="d-flex align-items-center gap-2 mb-3"><i class="bi {{ $workflow->qc_completed ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }}"></i><span>{{ $workflow->qc_completed ? 'QC selesai' : 'QC belum selesai' }}</span></div>
-                    @endif
-                    @if($workflow->qc_document_path)
-                        <div class="attachment-box mt-3"><div class="small fw-semibold text-truncate">{{ $workflow->qc_document_name }}</div><div class="mt-2"><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'qc']) }}" class="btn btn-sm btn-soft">Lihat</a> <a href="{{ route('project-workflow.attachment', [$project, 'qc', 'download' => 1]) }}" class="btn btn-sm btn-soft">Unduh</a></div></div>
-                    @endif
+                    @include('projects._qc-stage', ['installation' => false])
+                    <hr class="my-4">
+                    @include('projects._qc-stage', ['installation' => true])
                 </section>
 
                 <section class="workflow-card">
@@ -227,7 +204,7 @@
                         @if($deliveryOrder)<span class="status-soft st-green">{{ $deliveryOrder->code }}</span>@endif
                     </div>
                     @if(!$workflow->qc_completed)
-                        <div class="alert alert-warning py-2 small">DO dapat dibuat setelah QC selesai.</div>
+                        <div class="alert alert-warning py-2 small">DO dapat dibuat setelah QC Produksi selesai.</div>
                     @elseif($canDelivery)
                         <form method="POST" action="{{ route('delivery-orders.store', $project) }}">
                             @csrf
@@ -325,6 +302,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const progress = document.getElementById('productionProgress');
     const output = document.getElementById('productionProgressValue');
     if (progress && output) progress.addEventListener('input', () => output.value = progress.value + '%');
+    document.querySelectorAll('[data-qc-stage]').forEach(function (form) {
+        const range = form.querySelector('[data-qc-range]');
+        const value = form.querySelector('[data-qc-value]');
+        const bar = form.querySelector('[data-qc-bar]');
+        const completed = form.querySelector('[data-qc-completed]');
+        function syncProgress() {
+            value.value = range.value + '%';
+            bar.style.width = range.value + '%';
+            bar.setAttribute('aria-valuenow', range.value);
+        }
+        range.addEventListener('input', function () {
+            if (Number(range.value) < 100) completed.checked = false;
+            syncProgress();
+        });
+        completed.addEventListener('change', function () {
+            if (completed.checked) range.value = 100;
+            syncProgress();
+        });
+    });
     if (!location.hash) return;
     const trigger = document.querySelector('[data-bs-target="' + location.hash + '"]');
     if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
