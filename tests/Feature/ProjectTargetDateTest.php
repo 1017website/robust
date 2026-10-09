@@ -89,6 +89,27 @@ class ProjectTargetDateTest extends TestCase
         $this->assertFalse($project->workflow->fresh()->qc_installation_completed);
     }
 
+    public function test_saved_qc_target_date_is_shown_after_redirect_even_with_stale_empty_form_input(): void
+    {
+        $project = $this->project();
+        $project->workflow->update(['production_status' => 'stock', 'delivery_status' => 'scheduling']);
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        foreach (['qc', 'qc-installation'] as $stage) {
+            $prefix = str_replace('-', '_', $stage);
+            $this->withSession(['_old_input' => [$prefix.'_target_date' => '']]);
+            $this->from(route('sales.projects.show', $project))->put(route('project-workflow.target-date', [$project, $stage]), [
+                $prefix.'_target_date' => '2026-11-05',
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $response = $this->get(route('sales.projects.show', $project))->assertOk();
+            $dom = new \DOMDocument;
+            @$dom->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($dom);
+            $input = $xpath->query("//input[@name='{$prefix}_target_date']")->item(0);
+            $this->assertSame('2026-11-05', $input->getAttribute('value'));
+            $this->assertSame('2026-11-05', $project->workflow->fresh()->{$prefix.'_target_date'}->format('Y-m-d'));
+        }
+    }
+
     public function test_completed_qc_target_dates_are_locked_for_every_editor(): void
     {
         $project = $this->project();

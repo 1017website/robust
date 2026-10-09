@@ -236,6 +236,7 @@
             if (activeDateInput === input && calendar && !calendar.hidden) closeCalendar();
             else openCalendar(input);
         });
+        input.addEventListener('input', function () { syncDateButton(input); });
         input.addEventListener('change', function () { syncDateButton(input); });
         input.addEventListener('invalid', function (event) {
             event.preventDefault();
@@ -334,6 +335,9 @@
                 }
             });
         }
+    });
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('input[data-modern-date-bound="true"]').forEach(syncDateButton);
     });
     document.addEventListener('click', function (event) {
         if (!calendar || calendar.hidden || calendar.contains(event.target) || event.target.closest('.modern-date-trigger')) return;

@@ -51,7 +51,10 @@ class ProjectWorkflowController extends Controller
                 ]);
             }
 
-            return back()->with('success', 'Tanggal target selesai tersimpan. Setiap perubahan tanggal dicatat dalam riwayat.')
+            session()->forget('_old_input.'.$prefix.'_target_date');
+            $savedDate = $workflow->{"{$prefix}_target_date"}->format('d/m/Y');
+
+            return back()->with('success', "Tanggal target selesai {$savedDate} tersimpan. Setiap perubahan tanggal dicatat dalam riwayat.")
                 ->withFragment(match ($prefix) { 'production' => 'production', 'qc' => 'qc-production', default => 'qc-installation' });
         });
     }
