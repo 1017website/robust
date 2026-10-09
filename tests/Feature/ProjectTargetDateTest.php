@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Project;
+use App\Models\ProjectWorkflow;
+use Illuminate\Support\Facades\Event;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -107,6 +109,29 @@ class ProjectTargetDateTest extends TestCase
             $input = $xpath->query("//input[@name='{$prefix}_target_date']")->item(0);
             $this->assertSame('2026-11-05', $input->getAttribute('value'));
             $this->assertSame('2026-11-05', $project->workflow->fresh()->{$prefix.'_target_date'}->format('Y-m-d'));
+        }
+    }
+
+    public function test_date_only_save_persists_initial_dates_even_when_mass_assignment_is_restricted(): void
+    {
+        $project = $this->project();
+        $project->workflow->update(['production_target_date' => null, 'qc_target_date' => null, 'qc_installation_target_date' => null]);
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        $event = 'eloquent.retrieved: '.ProjectWorkflow::class;
+        Event::listen($event, fn (ProjectWorkflow $workflow) => $workflow->fillable(['production_status']));
+        try {
+            foreach (['production', 'qc', 'qc-installation'] as $stage) {
+                $prefix = str_replace('-', '_', $stage);
+                $this->from(route('sales.projects.show', $project))->put(route('project-workflow.target-date', [$project, $stage]), [
+                    $prefix.'_target_date' => '2026-11-05',
+                ])->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('success', fn ($message) => str_contains($message, '05/11/2026'));
+                $this->assertSame('2026-11-05', $project->workflow->fresh()->{$prefix.'_target_date'}->format('Y-m-d'));
+                $entry = $project->workflowHistory()->where('action', $prefix.'_target_date_updated')->sole();
+                $this->assertNull($entry->meta['before']['target_date']);
+                $this->assertSame('2026-11-05', $entry->meta['after']['target_date']);
+            }
+        } finally {
+            Event::forget($event);
         }
     }
 
