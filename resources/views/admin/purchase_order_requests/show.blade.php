@@ -165,7 +165,7 @@
                 <div class="progress mb-3" style="height:8px"><div class="progress-bar" style="width: {{ (int) $workflow->production_progress }}%"></div></div>
                 @foreach([false, true] as $installation)
                     @php($qcPercent = $workflow->qcProgress($installation))
-                    <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }}</span><span class="fw-semibold">{{ $qcPercent }}% · {{ ($installation ? $workflow->qc_installation_completed : $workflow->qc_completed) ? 'Selesai' : 'Belum selesai' }}</span></div>
+                    <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }}</span><span class="fw-semibold">{{ $qcPercent }}% · {{ $workflow->qcStatusLabel($installation) }}</span></div>
                 @endforeach
                 <div class="mb-2 d-flex justify-content-between"><span class="text-muted-2">Pengiriman</span><span class="fw-semibold">{{ \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? '—' }}</span></div>
                 <div class="form-text mt-2">Hanya tampilan. Fase produksi sampai pengiriman diperbarui oleh tim terkait di <a href="{{ route('project-workspace.show', $requestPo->quotation->project) }}">Request Process</a>.</div>

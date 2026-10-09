@@ -84,7 +84,7 @@ class ProjectHistoryDeadlineTest extends TestCase
                 ->flatMap(fn ($item) => collect($item['checks'])->pluck('key'))->mapWithKeys(fn ($key) => [$key => 1])->all();
             foreach ([25, 100] as $progress) {
                 $this->actingAs($qc)->put(route($route, $project), [
-                    $prefix.'_progress' => $progress, $prefix.'_completed' => $progress === 100,
+                    $prefix.'_result' => $progress === 100 ? 'passed' : 'in_progress', $prefix.'_progress' => $progress, $prefix.'_completed' => $progress === 100,
                     $prefix.'_note' => $prefix.' catatan '.$progress,
                     $prefix.'_checklist' => $progress === 100 ? $checklist : [],
                     $prefix.'_document' => UploadedFile::fake()->create($prefix.'-'.$progress.'.pdf', 10, 'application/pdf'),
@@ -99,7 +99,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         }
         $this->actingAs($qc)->get(route('project-workspace.show', $project))->assertOk()
             ->assertSee('qc catatan 25')->assertSee('qc_installation catatan 100')->assertSee('Cabinet Uji');
-        $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => []])
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => []])
             ->assertSessionHasErrors('qc_checklist');
         $this->assertSame(4, $project->workflowHistory()->count());
     }

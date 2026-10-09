@@ -147,6 +147,23 @@ class ProjectWorkflow extends Model
         return min(100, $production + $qc + $delivery + $completed);
     }
 
+    public function qcResult(bool $installation = false): ?string
+    {
+        $prefix = $installation ? 'qc_installation' : 'qc';
+
+        return $this->{"{$prefix}_completed"} ? 'passed' : $this->{"{$prefix}_result"};
+    }
+
+    public function qcStatusLabel(bool $installation = false): string
+    {
+        return match ($this->qcResult($installation)) {
+            'passed' => 'Selesai dan lolos QC',
+            'failed' => 'Belum lolos / perlu perbaikan',
+            'in_progress' => 'Masih diperiksa',
+            default => $this->qcProgress($installation) > 0 ? 'Masih diperiksa' : 'Belum dimulai',
+        };
+    }
+
     public static function qcChecklistPercent(array $definition, array $values): int
     {
         $keys = collect($definition)->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'));

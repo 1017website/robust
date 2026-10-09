@@ -12,7 +12,7 @@
                 $production => \App\Models\ProjectWorkflow::productionStatuses()[$state['status'] ?? ''] ?? '-',
                 $delivery => \App\Models\ProjectWorkflow::deliveryStatuses()[$state['status'] ?? ''] ?? '-',
                 $deliveryOrderEntry => $state['code'] ?? 'Belum dibuat',
-                default => !empty($state['completed']) ? 'Selesai' : 'Belum selesai',
+                default => !empty($state['completed']) ? 'Selesai dan lolos QC' : (($state['result'] ?? null) === 'failed' ? 'Belum lolos / perlu perbaikan' : (($state['result'] ?? null) === 'in_progress' ? 'Masih diperiksa' : 'Belum selesai')),
             };
             $note = $after['note'] ?? $after['notes'] ?? null;
             $previousNote = $before['note'] ?? $before['notes'] ?? null;

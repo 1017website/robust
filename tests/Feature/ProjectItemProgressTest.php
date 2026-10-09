@@ -36,12 +36,12 @@ class ProjectItemProgressTest extends TestCase
         $payload['production_status'] = 'production_finished';
         $payload['production_item_progress'] = [$first->id => 100, $second->id => 100];
         $this->put(route('project-workflow.production', $project), $payload)->assertSessionHasNoErrors();
-        $this->put(route('project-workflow.qc', $project), ['qc_item_progress' => [$first->id => 40, $second->id => 80]])->assertSessionHasNoErrors();
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'in_progress', 'qc_item_progress' => [$first->id => 40, $second->id => 80]])->assertSessionHasNoErrors();
         $this->assertSame(0, $workflow->fresh()->qc_progress);
         $checks = collect(ProjectWorkflow::qcChecklistDefinition($project, false))->flatMap(fn ($item) => collect($item['checks'])->pluck('key'))->mapWithKeys(fn ($key) => [$key => 1])->all();
-        $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => $checks])->assertSessionHasNoErrors();
-        $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => $checks, 'qc_item_progress' => [$first->id => 100, $second->id => 100]])->assertSessionHasNoErrors();
-        $this->put(route('project-workflow.qc-installation', $project), ['qc_installation_item_progress' => [$first->id => 10, $second->id => 30]])->assertSessionHasNoErrors();
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => $checks])->assertSessionHasNoErrors();
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => $checks, 'qc_item_progress' => [$first->id => 100, $second->id => 100]])->assertSessionHasNoErrors();
+        $this->put(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', 'qc_installation_item_progress' => [$first->id => 10, $second->id => 30]])->assertSessionHasNoErrors();
         $this->assertSame(0, $workflow->fresh()->qc_installation_progress);
         $this->assertSame(100, $workflow->fresh()->qc_progress);
         $this->assertSame(100, $workflow->fresh()->production_progress);

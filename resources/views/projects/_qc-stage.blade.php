@@ -7,13 +7,14 @@
     $qcProgress = $workflow->qcProgress($installation);
     $qcValues = $workflow->{"{$qcPrefix}_checklist"} ?? [];
     $qcDefinition = $installation ? \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices, true) : $qcChecklistDefinition;
-    $qcFormValues = old($qcPrefix.'_checklist', session()->hasOldInput($qcPrefix.'_completed') ? [] : $qcValues);
+    $qcFormValues = old($qcPrefix.'_checklist', session()->hasOldInput($qcPrefix.'_result') ? [] : $qcValues);
     $qcFormProgress = \App\Models\ProjectWorkflow::qcChecklistPercent($qcDefinition, $qcFormValues);
+    $qcResult = old($qcPrefix.'_result', $workflow->qcResult($installation));
     $qcReady = $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished';
 @endphp
 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
     <div><h3>{{ $qcTitle }}</h3><small class="text-muted-2">{{ $installation ? 'Pemeriksaan hasil pemasangan di lokasi customer' : 'Pemeriksaan hasil produksi sesuai spesifikasi penawaran' }}</small></div>
-    <x-status-badge :status="$qcComplete ? 'approved' : 'pending'" :label="$qcComplete ? 'Selesai' : ($qcProgress > 0 ? 'Dalam Pemeriksaan' : 'Belum Dimulai')" />
+    <x-status-badge :status="$qcComplete ? 'approved' : ($workflow->qcResult($installation) === 'failed' ? 'rejected' : 'pending')" :label="$workflow->qcStatusLabel($installation)" />
 </div>
 @if($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction())
     @if(!$qcReady)
@@ -23,23 +24,37 @@
         @csrf @method('PUT')
         <fieldset @disabled(!$qcReady)>
             <div class="d-flex justify-content-between mb-3"><span>Checklist {{ $qcTitle }}</span><output aria-live="polite" data-qc-value>{{ $qcFormProgress }}%</output></div>
+            <p class="qc-instruction">Centang hanya pemeriksaan yang sudah sesuai. Yang belum diperiksa atau perlu diperbaiki, biarkan kosong.</p>
             <div class="qc-checklist mb-3">
                 @forelse($qcDefinition as $qcItem)
                     <div class="qc-item">
                         <div class="fw-bold mb-1">{{ $qcItem['item_name'] }} @if($qcItem['variant'])<small class="text-muted-2">- {{ $qcItem['variant'] }}</small>@endif</div>
                         @foreach($qcItem['checks'] as $check)
-                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" data-qc-check name="{{ $qcPrefix }}_checklist[{{ $check['key'] }}]" value="1" id="{{ $qcPrefix }}_{{ $check['key'] }}" @checked($qcFormValues[$check['key']] ?? false)><label class="form-check-label small" for="{{ $qcPrefix }}_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
+                            <div class="form-check qc-check-row"><input class="form-check-input" type="checkbox" data-qc-check name="{{ $qcPrefix }}_checklist[{{ $check['key'] }}]" value="1" id="{{ $qcPrefix }}_{{ $check['key'] }}" @checked($qcFormValues[$check['key']] ?? false)><label class="form-check-label" for="{{ $qcPrefix }}_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
                         @endforeach
                     </div>
                 @empty
                     <div class="small text-muted-2">Belum ada item penawaran untuk diperiksa.</div>
                 @endforelse
             </div>
-            <label class="form-label" for="{{ $qcPrefix }}_note">Catatan {{ $qcTitle }}</label><textarea id="{{ $qcPrefix }}_note" name="{{ $qcPrefix }}_note" class="form-control mb-3" rows="2">{{ old($qcPrefix.'_note', $workflow->{$qcPrefix.'_note'}) }}</textarea>
+            <fieldset class="qc-result-group mb-3">
+                <legend>Hasil {{ $qcTitle }} <span class="qc-required">(wajib dipilih)</span></legend>
+                @foreach(['in_progress' => ['Masih diperiksa', 'Simpan dulu, lalu lanjutkan pemeriksaan nanti.'], 'failed' => ['Belum lolos / perlu perbaikan', 'Tulis bagian yang harus diperbaiki, lalu periksa kembali setelah perbaikan.'], 'passed' => ['Semua pemeriksaan selesai dan lolos '.$qcTitle, 'Semua checklist harus dicentang sebelum memilih ini.']] as $result => [$resultLabel, $resultHelp])
+                    <label class="qc-result-option" for="{{ $qcPrefix }}_result_{{ $result }}">
+                        <input type="radio" name="{{ $qcPrefix }}_result" id="{{ $qcPrefix }}_result_{{ $result }}" value="{{ $result }}" required data-qc-result @checked($qcResult === $result) @if($result === 'passed') data-qc-completed @endif>
+                        <span><strong>{{ $resultLabel }}</strong><span class="qc-result-help">{{ $resultHelp }}</span></span>
+                    </label>
+                @endforeach
+                <p class="qc-instruction mb-0" data-qc-result-hint aria-live="polite">Pilih hasil pemeriksaan sebelum menyimpan.</p>
+                @error($qcPrefix.'_result')<div class="text-danger fw-semibold mt-2" role="alert">{{ $message }}</div>@enderror
+                @error($qcPrefix.'_checklist')<div class="text-danger fw-semibold mt-2" role="alert">{{ $message }}</div>@enderror
+            </fieldset>
+            <label class="form-label fw-semibold" for="{{ $qcPrefix }}_note">Catatan {{ $qcTitle }} <span data-qc-note-label>(opsional)</span></label>
+            <textarea id="{{ $qcPrefix }}_note" name="{{ $qcPrefix }}_note" class="form-control qc-note mb-2" rows="3" data-qc-note @required($qcResult === 'failed') aria-describedby="{{ $qcPrefix }}_note_help">{{ old($qcPrefix.'_note', $workflow->{$qcPrefix.'_note'}) }}</textarea>
+            <p id="{{ $qcPrefix }}_note_help" class="qc-instruction">Jika belum lolos, tulis bagian yang bermasalah dan perbaikan yang diperlukan.</p>
+            @error($qcPrefix.'_note')<div class="text-danger fw-semibold mb-3" role="alert">{{ $message }}</div>@enderror
             <label class="form-label" for="{{ $qcPrefix }}_document">Lampiran {{ $qcTitle }} (opsional, PDF)</label><input id="{{ $qcPrefix }}_document" class="form-control mb-3" type="file" name="{{ $qcPrefix }}_document" accept="application/pdf,.pdf">
-            <input type="hidden" name="{{ $qcPrefix }}_completed" value="0">
-            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="{{ $qcPrefix }}_completed" value="1" id="{{ $qcPrefix }}_complete" @checked(old($qcPrefix.'_completed', $qcComplete)) data-qc-completed><label class="form-check-label fw-semibold" for="{{ $qcPrefix }}_complete">Semua pemeriksaan selesai dan lolos {{ $qcTitle }}</label></div>
-            <button class="btn btn-primary w-100"><i class="bi bi-save me-1" aria-hidden="true"></i>Simpan {{ $qcTitle }}</button>
+            <button class="btn btn-primary btn-lg qc-save w-100"><i class="bi bi-save me-1" aria-hidden="true"></i>Simpan {{ $qcTitle }}</button>
         </fieldset>
     </form>
 @else

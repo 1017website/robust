@@ -119,7 +119,7 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
-            'qc_completed' => 1,
+            'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
@@ -198,7 +198,7 @@ class CrmFlowTest extends TestCase
         ])->assertRedirect();
 
         $this->actingAs($administrator)->put(route('project-workflow.qc', $project), [
-            'qc_completed' => 1,
+            'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_document' => UploadedFile::fake()->create('checklist-qc-admin.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
@@ -1145,7 +1145,7 @@ class CrmFlowTest extends TestCase
             ->mapWithKeys(fn (string $key) => [$key => 1])
             ->all();
         $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
-            'qc_completed' => 1,
+            'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_checklist' => $qcChecklist,
             'qc_note' => 'Seluruh spesifikasi sesuai penawaran.',
             'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),

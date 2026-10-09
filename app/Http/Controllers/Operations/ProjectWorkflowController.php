@@ -138,16 +138,16 @@ class ProjectWorkflowController extends Controller
         );
 
         $data = $request->validate([
-            "{$prefix}_completed" => ['nullable', 'boolean'],
+            "{$prefix}_result" => ['required', Rule::in(['in_progress', 'failed', 'passed'])],
             "{$prefix}_progress" => ['nullable', 'integer', 'min:0', 'max:100'],
             "{$prefix}_item_progress" => ['nullable', 'array'],
             "{$prefix}_item_progress.*" => ['required', 'integer', 'min:0', 'max:100'],
             "{$prefix}_document" => ['nullable', 'file', 'mimes:pdf'],
             "{$prefix}_checklist" => ['nullable', 'array'],
             "{$prefix}_checklist.*" => ['boolean'],
-            "{$prefix}_note" => ['nullable', 'string', 'max:2000'],
+            "{$prefix}_note" => [Rule::requiredIf($request->input("{$prefix}_result") === 'failed'), 'nullable', 'string', 'max:2000'],
         ]);
-        $completed = $request->boolean("{$prefix}_completed");
+        $completed = $data["{$prefix}_result"] === 'passed';
         $definition = ProjectWorkflow::qcChecklistDefinition($project, false, $installation);
         $inputChecklist = $data["{$prefix}_checklist"] ?? [];
         $checklist = collect($definition)
@@ -159,6 +159,7 @@ class ProjectWorkflowController extends Controller
         }
 
         $update = [
+            "{$prefix}_result" => $data["{$prefix}_result"],
             "{$prefix}_completed" => $completed,
             "{$prefix}_progress" => ProjectWorkflow::qcChecklistPercent($definition, $checklist),
             "{$prefix}_checklist" => $checklist,
@@ -180,7 +181,13 @@ class ProjectWorkflowController extends Controller
             'after' => $this->snapshot($workflow, $prefix), 'attachments' => $attachments,
         ]);
 
-        return back()->with('success', "{$label} berhasil diperbarui.")->withFragment('qc');
+        $message = match ($data["{$prefix}_result"]) {
+            'passed' => "{$label} selesai dan lolos. Hasil berhasil disimpan.",
+            'failed' => "{$label} belum lolos. Catatan perbaikan berhasil disimpan; periksa kembali setelah perbaikan.",
+            default => "Progres {$label} berhasil disimpan. Pemeriksaan dapat dilanjutkan nanti.",
+        };
+
+        return back()->with('success', $message)->withFragment('qc');
     }
 
     public function updateDelivery(Request $request, Project $project)
@@ -342,7 +349,7 @@ class ProjectWorkflowController extends Controller
         }
         $fields = $prefix === 'production'
             ? ['status', 'progress', 'item_progress', 'note', 'report_completed', 'report_path', 'report_name']
-            : ['completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
+            : ['result', 'completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
 
         $snapshot = collect($fields)->mapWithKeys(fn ($field) => [$field => $workflow->{"{$prefix}_{$field}"}])->all();
         $snapshot['item_names'] = $workflow->project->quotation?->items?->pluck('name', 'id')->all() ?? [];

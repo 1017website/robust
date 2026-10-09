@@ -44,6 +44,22 @@
     .workflow-card h3 { font-size: 1rem; font-weight: 800; margin: 0; }
     .attachment-box { border: 1px dashed #cfd7e3; border-radius: 10px; padding: .8rem; background: #f8fafc; }
     .qc-checklist { max-height: 420px; overflow: auto; border: 1px solid #e7ebf1; border-radius: 10px; padding: .75rem; background: #fbfcfe; }
+    .qc-instruction, .qc-result-help { color: #344054; font-size: 1rem; line-height: 1.5; }
+    .qc-check-row { display: flex; align-items: flex-start; gap: .75rem; margin: 0; padding: .5rem 0; }
+    .qc-check-row .form-check-input { float: none; flex: 0 0 24px; width: 24px; height: 24px; margin: .2rem 0 0; border-color: #667085; }
+    .qc-check-row .form-check-label { flex: 1; font-size: 1rem; line-height: 1.5; min-height: 32px; cursor: pointer; }
+    .qc-result-group { padding: 1rem; border: 2px solid #667085; border-radius: 10px; min-width: 0; }
+    .qc-result-group legend { float: none; width: auto; padding: 0 .25rem; font-size: 1.25rem; font-weight: 700; }
+    .qc-required { font-size: 1rem; font-weight: 600; }
+    .qc-result-option { display: flex; align-items: flex-start; gap: .85rem; padding: 1rem; margin-bottom: .75rem; border: 1px solid #667085; border-radius: 8px; cursor: pointer; background: #fff; }
+    .qc-result-option input { flex: 0 0 28px; width: 28px; height: 28px; margin-top: .2rem; accent-color: #0b63ce; }
+    .qc-result-option strong { display: block; color: #101828; font-size: 1.125rem; line-height: 1.5; }
+    .qc-result-help { display: block; margin-top: .25rem; }
+    .qc-result-option:has(input:checked) { border: 2px solid #0b63ce; background: #eff6ff; padding: calc(1rem - 1px); }
+    .qc-result-option:has(input:focus-visible) { outline: 3px solid #0b63ce; outline-offset: 3px; }
+    .qc-result-option:has(input:disabled) { background: #f2f4f7; cursor: default; }
+    .qc-note { font-size: 1rem; border-color: #667085; }
+    .qc-save { min-height: 52px; font-size: 1.125rem; font-weight: 700; }
     .qc-item + .qc-item { border-top: 1px solid #e7ebf1; margin-top: .75rem; padding-top: .75rem; }
     .revision-note { max-width: 430px; white-space: normal; }
     .progress-range-value { min-width: 64px; text-align: center; font-size: 1.35rem; font-weight: 800; color: #0b63ce; }
@@ -344,13 +360,28 @@ document.addEventListener('DOMContentLoaded', function () {
         const checks = [...form.querySelectorAll('[data-qc-check]')];
         const value = form.querySelector('[data-qc-value]');
         const completed = form.querySelector('[data-qc-completed]');
+        const results = [...form.querySelectorAll('[data-qc-result]')];
+        const note = form.querySelector('[data-qc-note]');
+        const noteLabel = form.querySelector('[data-qc-note-label]');
+        const hint = form.querySelector('[data-qc-result-hint]');
+        function syncResult() {
+            const result = results.find(input => input.checked)?.value;
+            note.required = result === 'failed';
+            noteLabel.textContent = note.required ? '(wajib diisi)' : '(opsional)';
+            hint.textContent = result === 'failed' ? 'Isi catatan perbaikan di bawah, lalu simpan. Setelah diperbaiki, buka QC ini untuk pemeriksaan ulang.'
+                : result === 'passed' ? 'QC akan ditandai selesai dan lolos setelah disimpan.'
+                : result === 'in_progress' ? 'Progres disimpan. Anda dapat melanjutkan pemeriksaan nanti.'
+                : 'Pilih hasil pemeriksaan sebelum menyimpan.';
+        }
         function syncChecklist() {
             const checked = checks.filter(check => check.checked).length;
             value.value = (checks.length ? Math.round(checked / checks.length * 100) : 0) + '%';
             if (!checks.length || checked < checks.length) completed.checked = false;
             completed.disabled = !checks.length || checked < checks.length;
+            syncResult();
         }
         checks.forEach(check => check.addEventListener('change', syncChecklist));
+        results.forEach(input => input.addEventListener('change', syncResult));
         syncChecklist();
     });
     document.querySelectorAll('[data-item-progress-form]').forEach(form => {

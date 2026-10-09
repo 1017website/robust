@@ -68,3 +68,5 @@ Upload file di seluruh modul berjalan saat file dipilih. Saat simpan, browser me
 - `app/Services/QuotationCalculator.php` — kalkulasi subtotal, diskon, PPN, biaya tambahan
 - `app/Services/CodeGenerator.php` — generator kode dokumen (PL-, LD-, DR-, Q-, PRJ-)
 - `resources/views/{admin,sales,drafter,shared}` — Blade per modul
+
+Hasil QC wajib dipilih: Masih diperiksa, Belum lolos / perlu perbaikan, atau Selesai dan lolos QC. Catatan wajib untuk QC yang belum lolos. QC hanya dapat ditandai lolos setelah seluruh checklist dicentang. Setelah perbaikan, buka kembali form QC dan simpan hasil pemeriksaan ulang. Jalankan `php artisan migrate --force` untuk menambahkan kolom hasil QC.

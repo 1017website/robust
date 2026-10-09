@@ -39,12 +39,12 @@ class ProjectQcStagesTest extends TestCase
         $installation = User::factory()->create(['role' => 'qc_installation']);
         $project = $this->project();
 
-        $this->actingAs($production)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_progress' => 20])->assertForbidden();
-        $this->put(route('project-workflow.qc', $project), [
-            'qc_completed' => 1, 'qc_checklist' => $this->checks($project), 'qc_note' => 'Lolos oleh QC produksi',
+        $this->actingAs($production)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', 'qc_installation_progress' => 20])->assertForbidden();
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => $this->checks($project), 'qc_note' => 'Lolos oleh QC produksi',
         ])->assertSessionHasNoErrors()->assertRedirect();
-        $this->actingAs($installation)->putJson(route('project-workflow.qc', $project), ['qc_progress' => 20])->assertForbidden();
+        $this->actingAs($installation)->putJson(route('project-workflow.qc', $project), ['qc_result' => 'in_progress', 'qc_progress' => 20])->assertForbidden();
         $this->put(route('project-workflow.qc-installation', $project), [
+            'qc_installation_result' => 'in_progress',
             'qc_installation_progress' => 35, 'qc_installation_note' => 'Diperiksa oleh QC pemasangan',
         ])->assertSessionHasNoErrors()->assertRedirect();
 
@@ -105,6 +105,7 @@ class ProjectQcStagesTest extends TestCase
         $qc = User::factory()->create(['role' => 'qc']);
         $project = $this->project();
         $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
+            'qc_result' => 'in_progress',
             'qc_progress' => 45, 'qc_note' => 'Finishing diperiksa',
             'qc_checklist' => [], 'qc_document' => UploadedFile::fake()->createWithContent('produksi.pdf', "%PDF-1.4\n%%EOF"),
         ])->assertSessionHasNoErrors()->assertRedirect();
@@ -114,10 +115,10 @@ class ProjectQcStagesTest extends TestCase
         $this->assertFalse($workflow->qc_installation_completed);
         $productionFile = $workflow->qc_document_path;
 
-        $this->put(route('project-workflow.qc', $project), [
-            'qc_completed' => 1, 'qc_progress' => 45, 'qc_note' => 'Produksi lolos', 'qc_checklist' => $this->checks($project),
+        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_progress' => 45, 'qc_note' => 'Produksi lolos', 'qc_checklist' => $this->checks($project),
         ])->assertSessionHasNoErrors();
         $this->put(route('project-workflow.qc-installation', $project), [
+            'qc_installation_result' => 'in_progress',
             'qc_installation_progress' => 35, 'qc_installation_note' => 'Sambungan sedang diperiksa',
             'qc_installation_document' => UploadedFile::fake()->createWithContent('pemasangan.pdf', "%PDF-1.4\n%%EOF"),
         ])->assertSessionHasNoErrors();
@@ -131,8 +132,7 @@ class ProjectQcStagesTest extends TestCase
         Storage::disk('public')->assertExists([$productionFile, $workflow->qc_installation_document_path]);
         $this->get(route('project-workflow.attachment', [$project, 'qc']))->assertOk();
         $this->get(route('project-workflow.attachment', [$project, 'qc-installation']))->assertOk();
-        $this->put(route('project-workflow.qc-installation', $project), [
-            'qc_installation_completed' => 1, 'qc_installation_progress' => 35, 'qc_installation_checklist' => $this->checks($project, true),
+        $this->put(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'passed', 'qc_installation_completed' => 1, 'qc_installation_progress' => 35, 'qc_installation_checklist' => $this->checks($project, true),
         ])->assertSessionHasNoErrors();
         $this->assertSame(100, $workflow->fresh()->qc_installation_progress);
         $this->assertTrue($workflow->fresh()->qc_installation_completed);
@@ -142,13 +142,13 @@ class ProjectQcStagesTest extends TestCase
     {
         $project = $this->project();
         $this->actingAs(User::factory()->create(['role' => 'qc']));
-        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_progress' => 10])->assertUnprocessable();
-        $this->putJson(route('project-workflow.qc', $project), ['qc_progress' => 101])->assertJsonValidationErrors('qc_progress');
-        $this->putJson(route('project-workflow.qc', $project), ['qc_completed' => 1])->assertJsonValidationErrors('qc_checklist');
+        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', 'qc_installation_progress' => 10])->assertUnprocessable();
+        $this->putJson(route('project-workflow.qc', $project), ['qc_result' => 'in_progress', 'qc_progress' => 101])->assertJsonValidationErrors('qc_progress');
+        $this->putJson(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1])->assertJsonValidationErrors('qc_checklist');
         $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100]);
-        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_completed' => 1, 'qc_installation_checklist' => $this->checks($project)])
+        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'passed', 'qc_installation_completed' => 1, 'qc_installation_checklist' => $this->checks($project)])
             ->assertJsonValidationErrors('qc_installation_checklist');
-        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_progress' => -5])->assertJsonValidationErrors('qc_installation_progress');
+        $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', 'qc_installation_progress' => -5])->assertJsonValidationErrors('qc_installation_progress');
         $this->assertFalse($project->workflow->fresh()->qc_installation_completed);
     }
 
@@ -156,7 +156,7 @@ class ProjectQcStagesTest extends TestCase
     {
         $project = $this->project();
         $delivery = User::factory()->create(['role' => 'delivery']);
-        $this->actingAs($delivery)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_progress' => 25])->assertForbidden();
+        $this->actingAs($delivery)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', 'qc_installation_progress' => 25])->assertForbidden();
         $this->putJson(route('project-workflow.delivery', $project), ['delivery_status' => 'scheduling'])->assertUnprocessable();
         $this->postJson(route('delivery-orders.store', $project), [])->assertUnprocessable();
         $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100]);
@@ -205,20 +205,55 @@ class ProjectQcStagesTest extends TestCase
             $checks = $this->checks($project, $installation);
             $partial = array_slice($checks, 0, 1, true) + ['unknown_check' => 1];
             $this->put(route($route, $project), [
-                $prefix.'_checklist' => $partial, $prefix.'_progress' => 100,
+                $prefix.'_result' => 'in_progress', $prefix.'_checklist' => $partial, $prefix.'_progress' => 100,
             ])->assertSessionHasNoErrors();
             $workflow = $project->workflow->fresh();
             $expected = (int) round(100 / count($checks));
             $this->assertSame($expected, $workflow->{$prefix.'_progress'});
             $this->assertSame($expected, $workflow->qcProgress($installation));
-            $this->put(route($route, $project), [$prefix.'_completed' => 1, $prefix.'_checklist' => $checks])->assertSessionHasNoErrors();
+            $this->put(route($route, $project), [$prefix.'_result' => 'passed', $prefix.'_completed' => 1, $prefix.'_checklist' => $checks])->assertSessionHasNoErrors();
             $this->assertSame(100, $project->workflow->fresh()->qcProgress($installation));
         }
-        $this->put(route('project-workflow.qc-installation', $project), [])->assertSessionHasNoErrors();
+        $this->put(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress', ])->assertSessionHasNoErrors();
         $workflow = $project->workflow->fresh();
         $this->assertSame(0, $workflow->qcProgress(true));
         $this->assertFalse($workflow->qc_installation_completed);
         $this->assertSame(100, $workflow->qcProgress());
+    }
+
+    public function test_qc_result_is_required_and_failed_qc_requires_notes_before_reinspection(): void
+    {
+        $project = $this->project();
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        foreach ([false, true] as $installation) {
+            $prefix = $installation ? 'qc_installation' : 'qc';
+            $route = $installation ? 'project-workflow.qc-installation' : 'project-workflow.qc';
+            $this->putJson(route($route, $project), [])->assertJsonValidationErrors($prefix.'_result');
+            $this->putJson(route($route, $project), [$prefix.'_result' => 'invalid'])->assertJsonValidationErrors($prefix.'_result');
+            $this->putJson(route($route, $project), [$prefix.'_result' => 'failed', $prefix.'_note' => '   '])->assertJsonValidationErrors($prefix.'_note');
+            $this->put(route($route, $project), [$prefix.'_result' => 'in_progress'])->assertSessionHasNoErrors();
+            $this->assertSame('Masih diperiksa', $project->workflow->fresh()->qcStatusLabel($installation));
+            $this->put(route($route, $project), [
+                $prefix.'_result' => 'failed', $prefix.'_note' => 'Perbaiki sambungan yang longgar.',
+            ])->assertSessionHasNoErrors();
+            $workflow = $project->workflow->fresh();
+            $this->assertFalse($workflow->{$prefix.'_completed'});
+            $this->assertSame('failed', $workflow->qcResult($installation));
+            $this->assertSame('Belum lolos / perlu perbaikan', $workflow->qcStatusLabel($installation));
+            $this->get(route('project-workspace.show', $project))->assertOk()->assertSee('Belum lolos / perlu perbaikan')->assertSee('Perbaiki sambungan yang longgar.');
+            if (! $installation) {
+                $this->putJson(route('project-workflow.delivery', $project), ['delivery_status' => 'scheduling'])->assertUnprocessable();
+                $this->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_result' => 'in_progress'])->assertUnprocessable();
+            }
+            $this->putJson(route($route, $project), [$prefix.'_result' => 'passed'])->assertJsonValidationErrors($prefix.'_checklist');
+            $this->put(route($route, $project), [
+                $prefix.'_result' => 'passed', $prefix.'_checklist' => $this->checks($project, $installation),
+                $prefix.'_note' => 'Sudah diperbaiki dan diperiksa ulang.',
+            ])->assertSessionHasNoErrors();
+            $this->assertTrue($project->workflow->fresh()->{$prefix.'_completed'});
+            $this->assertSame('passed', $project->workflow->fresh()->qcResult($installation));
+            $this->assertSame('failed', $project->workflowHistory()->where('action', $prefix.'_updated')->orderBy('id')->skip(1)->first()->meta['after']['result']);
+        }
     }
 
     public function test_migration_preserves_existing_qc_as_production_qc(): void
