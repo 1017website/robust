@@ -16,19 +16,20 @@
     <div><h3>{{ $qcTitle }}</h3><small class="text-muted-2">{{ $installation ? 'Pemeriksaan hasil pemasangan di lokasi customer' : 'Pemeriksaan hasil produksi sesuai spesifikasi penawaran' }}</small></div>
     <x-status-badge :status="$qcComplete ? 'approved' : ($workflow->qcResult($installation) === 'failed' ? 'rejected' : 'pending')" :label="$workflow->qcStatusLabel($installation)" />
 </div>
-@if($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction())
-    @include('projects._target-date', ['targetPrefix' => $qcPrefix, 'targetStage' => $installation ? 'qc-installation' : 'qc', 'targetLabel' => $qcTitle])
-@endif
 @if(!$qcComplete && ($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction()))
     @if(!$qcReady)
         <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dilakukan di customer setelah QC Produksi lolos dan Delivery berstatus Terkirim atau Diterima Customer.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
     @endif
     <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage>
         @csrf @method('PUT')
-        <fieldset @disabled(!$qcReady)>
+        <div class="border rounded p-3 mb-3">
             <label class="form-label fw-semibold" for="{{ $qcPrefix }}_target_date">Tanggal target selesai {{ $qcTitle }} (wajib diisi)</label>
             <input type="date" id="{{ $qcPrefix }}_target_date" name="{{ $qcPrefix }}_target_date" class="form-control qc-note mb-3" value="{{ old($qcPrefix.'_target_date', $workflow->{$qcPrefix.'_target_date'}?->format('Y-m-d')) }}" required>
             @error($qcPrefix.'_target_date')<div class="text-danger fw-semibold mb-3" role="alert">Isi tanggal target selesai yang valid.</div>@enderror
+            <p class="qc-instruction">Tanggal dapat diubah selama QC belum selesai. Setiap perubahan dicatat dalam riwayat.</p>
+            <button type="submit" class="btn btn-soft btn-lg" formaction="{{ route('project-workflow.target-date', [$project, $installation ? 'qc-installation' : 'qc']) }}" formnovalidate data-save-qc-date>Simpan tanggal saja</button>
+        </div>
+        <fieldset @disabled(!$qcReady)>
             <div class="d-flex justify-content-between mb-3"><span>Checklist {{ $qcTitle }}</span><output aria-live="polite" data-qc-value>{{ $qcFormProgress }}%</output></div>
             <p class="qc-instruction">Centang hanya pemeriksaan yang sudah sesuai. Yang belum diperiksa atau perlu diperbaiki, biarkan kosong.</p>
             <div class="qc-checklist mb-3">

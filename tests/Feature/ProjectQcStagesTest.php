@@ -314,7 +314,7 @@ class ProjectQcStagesTest extends TestCase
             $dom = new \DOMDocument;
             @$dom->loadHTML($response->getContent());
             $xpath = new \DOMXPath($dom);
-            $this->assertSame(1, $xpath->query("//input[@name='qc_installation_target_date']/ancestor::fieldset[@disabled]")->length);
+            $this->assertSame(1, $xpath->query("//*[@id='qc-installation']//fieldset[@disabled]")->length);
         }
         foreach (ProjectWorkflow::deliveryArrivedStatuses() as $status) {
             $project->workflow->update(['delivery_status' => $status]);

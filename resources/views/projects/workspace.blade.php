@@ -366,6 +366,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const output = document.getElementById('productionProgressValue');
     if (progress && output) progress.addEventListener('input', () => output.value = progress.value + '%');
     document.querySelectorAll('[data-qc-stage]').forEach(function (form) {
+        const date = form.querySelector('input[type="date"]');
+        form.querySelector('[data-save-qc-date]').addEventListener('click', event => {
+            if (!date.reportValidity()) event.preventDefault();
+        });
         const checks = [...form.querySelectorAll('[data-qc-check]')];
         const value = form.querySelector('[data-qc-value]');
         const completed = form.querySelector('[data-qc-completed]');

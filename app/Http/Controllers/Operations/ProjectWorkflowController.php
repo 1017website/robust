@@ -38,6 +38,7 @@ class ProjectWorkflowController extends Controller
 
         return DB::transaction(function () use ($project, $prefix, $data) {
             $workflow = $project->workflow()->lockForUpdate()->firstOrFail();
+            abort_if($prefix !== 'production' && $workflow->{"{$prefix}_completed"}, 423, 'QC sudah selesai dan lolos. Tanggal target selesai dikunci dan tidak dapat diubah.');
             $before = $this->snapshot($workflow, $prefix);
             if ($before['target_date'] !== $data["{$prefix}_target_date"]) {
                 $workflow->update(["{$prefix}_target_date" => $data["{$prefix}_target_date"]]);
