@@ -13,7 +13,6 @@
             $qcCompleted = $installation ? $progressWorkflow?->qc_installation_completed : $progressWorkflow?->qc_completed;
         @endphp
         <div class="small @if($installation) mt-2 @endif"><strong>{{ $qcLabel }}</strong>: {{ $qcCompleted ? 'Selesai' : ($qcProgress > 0 ? 'Dalam Pemeriksaan' : 'Belum Dimulai') }} · {{ $qcProgress }}%</div>
-        <div class="prog mt-1"><span style="width:{{ $qcProgress }}%"></span></div>
     @endforeach
 @elseif($workRole === 'delivery')
     <div class="small fw-semibold">{{ \App\Models\ProjectWorkflow::deliveryStatuses()[$progressWorkflow?->delivery_status ?? 'scheduling'] }}</div>

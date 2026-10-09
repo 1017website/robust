@@ -147,10 +147,22 @@ class ProjectWorkflow extends Model
         return min(100, $production + $qc + $delivery + $completed);
     }
 
+    public static function qcChecklistPercent(array $definition, array $values): int
+    {
+        $keys = collect($definition)->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'));
+
+        return $keys->isEmpty() ? 0 : (int) round($keys->filter(fn (string $key) => ! empty($values[$key]))->count() / $keys->count() * 100);
+    }
+
     public function qcProgress(bool $installation = false): int
     {
         $prefix = $installation ? 'qc_installation' : 'qc';
 
-        return $this->{"{$prefix}_completed"} ? 100 : min(100, max(0, (int) $this->{"{$prefix}_progress"}));
+        $project = $this->project;
+
+        return $project ? self::qcChecklistPercent(
+            self::qcChecklistDefinition($project, false, $installation),
+            $this->{"{$prefix}_checklist"} ?? [],
+        ) : 0;
     }
 }

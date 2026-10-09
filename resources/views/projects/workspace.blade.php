@@ -341,23 +341,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const output = document.getElementById('productionProgressValue');
     if (progress && output) progress.addEventListener('input', () => output.value = progress.value + '%');
     document.querySelectorAll('[data-qc-stage]').forEach(function (form) {
-        const range = form.querySelector('[data-qc-range]');
+        const checks = [...form.querySelectorAll('[data-qc-check]')];
         const value = form.querySelector('[data-qc-value]');
-        const bar = form.querySelector('[data-qc-bar]');
         const completed = form.querySelector('[data-qc-completed]');
-        function syncProgress() {
-            value.value = range.value + '%';
-            bar.style.width = range.value + '%';
-            bar.setAttribute('aria-valuenow', range.value);
+        function syncChecklist() {
+            const checked = checks.filter(check => check.checked).length;
+            value.value = (checks.length ? Math.round(checked / checks.length * 100) : 0) + '%';
+            if (!checks.length || checked < checks.length) completed.checked = false;
+            completed.disabled = !checks.length || checked < checks.length;
         }
-        range.addEventListener('input', function () {
-            if (Number(range.value) < 100) completed.checked = false;
-            syncProgress();
-        });
-        completed.addEventListener('change', function () {
-            if (completed.checked && !form.querySelector('[data-item-progress]')) range.value = 100;
-            syncProgress();
-        });
+        checks.forEach(check => check.addEventListener('change', syncChecklist));
+        syncChecklist();
     });
     document.querySelectorAll('[data-item-progress-form]').forEach(form => {
         const items = [...form.querySelectorAll('[data-item-progress]')];

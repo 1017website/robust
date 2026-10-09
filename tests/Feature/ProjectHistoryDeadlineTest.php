@@ -92,7 +92,7 @@ class ProjectHistoryDeadlineTest extends TestCase
             }
             $entries = $project->workflowHistory()->where('action', $prefix.'_updated')->orderBy('id')->get();
             $this->assertCount(2, $entries);
-            $this->assertSame(25, $entries[1]->meta['before']['progress']);
+            $this->assertSame(0, $entries[1]->meta['before']['progress']);
             $this->assertTrue($entries[1]->meta['after']['completed']);
             $this->assertNotEmpty($entries[1]->meta['after']['checklist_labels']);
             Storage::disk('public')->assertExists($entries[0]->meta['attachments'][0]['path']);
@@ -268,7 +268,7 @@ class ProjectHistoryDeadlineTest extends TestCase
                 ->assertDontSee('61%')->assertDontSee('QC Attachment')->assertDontSee('Delivery Monitoring');
             match ($role) {
                 'production' => $response->assertSee('Produksi 100%'),
-                'qc' => $response->assertSee('QC Pemasangan')->assertSee('25%'),
+                'qc' => $response->assertSee('QC Pemasangan')->assertSee('0%'),
                 'delivery' => $response->assertSee('Dalam Pengiriman')->assertSee('DO/BA kembali'),
             };
         }

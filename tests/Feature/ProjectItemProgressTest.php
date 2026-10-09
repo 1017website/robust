@@ -37,17 +37,17 @@ class ProjectItemProgressTest extends TestCase
         $payload['production_item_progress'] = [$first->id => 100, $second->id => 100];
         $this->put(route('project-workflow.production', $project), $payload)->assertSessionHasNoErrors();
         $this->put(route('project-workflow.qc', $project), ['qc_item_progress' => [$first->id => 40, $second->id => 80]])->assertSessionHasNoErrors();
-        $this->assertSame(60, $workflow->fresh()->qc_progress);
+        $this->assertSame(0, $workflow->fresh()->qc_progress);
         $checks = collect(ProjectWorkflow::qcChecklistDefinition($project, false))->flatMap(fn ($item) => collect($item['checks'])->pluck('key'))->mapWithKeys(fn ($key) => [$key => 1])->all();
-        $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => $checks])->assertSessionHasErrors('qc_item_progress');
+        $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => $checks])->assertSessionHasNoErrors();
         $this->put(route('project-workflow.qc', $project), ['qc_completed' => 1, 'qc_checklist' => $checks, 'qc_item_progress' => [$first->id => 100, $second->id => 100]])->assertSessionHasNoErrors();
         $this->put(route('project-workflow.qc-installation', $project), ['qc_installation_item_progress' => [$first->id => 10, $second->id => 30]])->assertSessionHasNoErrors();
-        $this->assertSame(20, $workflow->fresh()->qc_installation_progress);
+        $this->assertSame(0, $workflow->fresh()->qc_installation_progress);
         $this->assertSame(100, $workflow->fresh()->qc_progress);
         $this->assertSame(100, $workflow->fresh()->production_progress);
         foreach (['administrator', 'production', 'qc_production', 'qc_installation'] as $role) {
             $user = $role === 'administrator' ? $admin : User::factory()->create(['role' => $role]);
-            $this->actingAs($user)->get(route('project-workspace.show', $project))->assertOk()->assertSee('Meja')->assertSee('Rak')->assertSee('Progress per Item');
+            $this->actingAs($user)->get(route('project-workspace.show', $project))->assertOk()->assertSee('Meja')->assertSee('Rak');
         }
     }
 }

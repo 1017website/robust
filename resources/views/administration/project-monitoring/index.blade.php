@@ -66,7 +66,7 @@
                     <td><x-status-badge :status="$workflow?->production_status ?? 'stock'" :label="\App\Models\ProjectWorkflow::productionStatuses()[$workflow?->production_status ?? 'stock']" /></td>
                     @foreach([false, true] as $installation)
                         @php($qcPercent = $workflow?->qcProgress($installation) ?? 0)
-                        <td class="text-center"><div class="small mb-1">{{ $qcPercent }}% · {{ ($installation ? $workflow?->qc_installation_completed : $workflow?->qc_completed) ? 'Selesai' : 'Belum selesai' }}</div><div class="progress" style="height:6px"><div class="progress-bar" role="progressbar" aria-label="{{ $installation ? 'QC Pemasangan' : 'QC Produksi' }} {{ $project->code }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $qcPercent }}" style="width:{{ $qcPercent }}%"></div></div></td>
+                        <td class="text-center"><div class="small mb-1">{{ $qcPercent }}% · {{ ($installation ? $workflow?->qc_installation_completed : $workflow?->qc_completed) ? 'Selesai' : 'Belum selesai' }}</div></td>
                     @endforeach
                     <td>
                         @if($canEditAdministration)

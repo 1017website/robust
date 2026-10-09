@@ -154,23 +154,18 @@ class ProjectWorkflowController extends Controller
             ->flatMap(fn (array $item) => collect($item['checks'])->pluck('key'))
             ->mapWithKeys(fn (string $key) => [$key => ! empty($inputChecklist[$key])])
             ->all();
-        if ($completed && collect($checklist)->contains(false)) {
+        if ($completed && (empty($checklist) || collect($checklist)->contains(false))) {
             throw ValidationException::withMessages(["{$prefix}_checklist" => "Semua pemeriksaan wajib dicek sebelum {$label} diselesaikan."]);
         }
 
-        $itemProgress = $this->itemProgress($request, $project, $workflow, $prefix, $completed);
-
         $update = [
             "{$prefix}_completed" => $completed,
-            "{$prefix}_progress" => $itemProgress !== null
-                ? (int) round(array_sum($itemProgress) / count($itemProgress))
-                : ($completed ? 100 : ($data["{$prefix}_progress"] ?? $workflow->qcProgress($installation))),
+            "{$prefix}_progress" => ProjectWorkflow::qcChecklistPercent($definition, $checklist),
             "{$prefix}_checklist" => $checklist,
             "{$prefix}_note" => $data["{$prefix}_note"] ?? null,
             "{$prefix}_updated_by" => $request->user()->id,
             "{$prefix}_updated_at" => now(),
         ];
-        if ($itemProgress !== null) $update["{$prefix}_item_progress"] = $itemProgress;
         if ($file = $request->file("{$prefix}_document")) {
             $update += $this->replaceFile($workflow->{"{$prefix}_document_path"}, $file, "project-workflows/{$project->id}/{$prefix}", "{$prefix}_document", true);
             $attachments[] = ['path' => $update["{$prefix}_document_path"], 'name' => $update["{$prefix}_document_name"]];
@@ -347,11 +342,12 @@ class ProjectWorkflowController extends Controller
         }
         $fields = $prefix === 'production'
             ? ['status', 'progress', 'item_progress', 'note', 'report_completed', 'report_path', 'report_name']
-            : ['completed', 'progress', 'item_progress', 'note', 'checklist', 'document_path', 'document_name'];
+            : ['completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
 
         $snapshot = collect($fields)->mapWithKeys(fn ($field) => [$field => $workflow->{"{$prefix}_{$field}"}])->all();
         $snapshot['item_names'] = $workflow->project->quotation?->items?->pluck('name', 'id')->all() ?? [];
         if ($prefix !== 'production') {
+            $snapshot['progress'] = $workflow->qcProgress($prefix === 'qc_installation');
             $snapshot['checklist_labels'] = collect(ProjectWorkflow::qcChecklistDefinition($workflow->project, false, $prefix === 'qc_installation'))
                 ->flatMap(fn ($item) => collect($item['checks'])->mapWithKeys(fn ($check) => [$check['key'] => $item['item_name'].' · '.$check['label']]))
                 ->all();

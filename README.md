@@ -60,7 +60,7 @@ php artisan serve
 6. Untuk lampiran Design Request hingga 80 MB/file, pastikan konfigurasi PHP membaca `.user.ini` dan web server mengizinkan request minimal 410 MB (misalnya `client_max_body_size 410M` pada Nginx).
 
 ## Struktur Modul
-Quality Control dipisah menjadi QC Produksi dan QC Pemasangan, masing-masing dengan progress, checklist, catatan, dan lampiran PDF. Jalankan `php artisan migrate --force` saat deploy agar kolom QC Pemasangan tersedia. Data QC lama dipertahankan sebagai QC Produksi; QC yang sudah selesai mendapat progress 100%. Pengiriman dan DO tetap menggunakan kelulusan QC Produksi sebagai syarat.
+Quality Control dipisah menjadi QC Produksi dan QC Pemasangan, masing-masing dengan persentase otomatis dari checklist yang dicentang, catatan, dan lampiran PDF. Persentase QC dihitung dari jumlah pemeriksaan yang dicentang dibagi total pemeriksaan; progress manual per item tidak digunakan untuk QC. Jalankan `php artisan migrate --force` saat deploy agar kolom QC Pemasangan tersedia. Data QC lama dipertahankan sebagai QC Produksi; QC yang sudah selesai mendapat progress 100%. Pengiriman dan DO tetap menggunakan kelulusan QC Produksi sebagai syarat.
 
 Upload file di seluruh modul berjalan saat file dipilih. Saat simpan, browser mengirim token upload, dan server tetap menjalankan validasi file serta hak akses modul. Upload sementara disimpan privat selama maksimal 24 jam; file yang berhasil disimpan atau dihapus dari pilihan langsung dibersihkan. Aktifkan Laravel scheduler (`php artisan schedule:run` setiap menit) agar `uploads:prune` membersihkan file yang ditinggalkan setiap jam. Pembersihan juga dapat dijalankan manual dengan `php artisan uploads:prune`.
 

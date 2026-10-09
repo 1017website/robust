@@ -7,6 +7,8 @@
     $qcProgress = $workflow->qcProgress($installation);
     $qcValues = $workflow->{"{$qcPrefix}_checklist"} ?? [];
     $qcDefinition = $installation ? \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices, true) : $qcChecklistDefinition;
+    $qcFormValues = old($qcPrefix.'_checklist', session()->hasOldInput($qcPrefix.'_completed') ? [] : $qcValues);
+    $qcFormProgress = \App\Models\ProjectWorkflow::qcChecklistPercent($qcDefinition, $qcFormValues);
     $qcReady = $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished';
 @endphp
 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
@@ -17,19 +19,16 @@
     @if(!$qcReady)
         <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dapat diisi setelah QC Produksi selesai.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
     @endif
-    <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage data-item-progress-form>
+    <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage>
         @csrf @method('PUT')
         <fieldset @disabled(!$qcReady)>
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ $qcPrefix }}_progress"><span>Progress {{ $qcTitle }}</span><output class="progress-range-value" for="{{ $qcPrefix }}_progress" data-qc-value>{{ old($qcPrefix.'_progress', $qcProgress) }}%</output></label>
-            <input class="form-range" id="{{ $qcPrefix }}_progress" type="{{ $workItems->isNotEmpty() ? 'hidden' : 'range' }}" name="{{ $qcPrefix }}_progress" min="0" max="100" step="5" value="{{ old($qcPrefix.'_progress', $qcProgress) }}" data-qc-range data-stage-progress>
-            <div class="progress mb-3" style="height:8px"><div class="progress-bar" role="progressbar" aria-label="Progress {{ $qcTitle }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ old($qcPrefix.'_progress', $qcProgress) }}" style="width:{{ old($qcPrefix.'_progress', $qcProgress) }}%" data-qc-bar></div></div>
-            @include('projects._item-progress', ['itemPrefix' => $qcPrefix, 'itemEditable' => true])
+            <div class="d-flex justify-content-between mb-3"><span>Checklist {{ $qcTitle }}</span><output aria-live="polite" data-qc-value>{{ $qcFormProgress }}%</output></div>
             <div class="qc-checklist mb-3">
                 @forelse($qcDefinition as $qcItem)
                     <div class="qc-item">
                         <div class="fw-bold mb-1">{{ $qcItem['item_name'] }} @if($qcItem['variant'])<small class="text-muted-2">- {{ $qcItem['variant'] }}</small>@endif</div>
                         @foreach($qcItem['checks'] as $check)
-                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="{{ $qcPrefix }}_checklist[{{ $check['key'] }}]" value="1" id="{{ $qcPrefix }}_{{ $check['key'] }}" @checked(old($qcPrefix.'_checklist.'.$check['key'], $qcValues[$check['key']] ?? false))><label class="form-check-label small" for="{{ $qcPrefix }}_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
+                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" data-qc-check name="{{ $qcPrefix }}_checklist[{{ $check['key'] }}]" value="1" id="{{ $qcPrefix }}_{{ $check['key'] }}" @checked($qcFormValues[$check['key']] ?? false)><label class="form-check-label small" for="{{ $qcPrefix }}_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
                         @endforeach
                     </div>
                 @empty
@@ -44,9 +43,7 @@
         </fieldset>
     </form>
 @else
-    @include('projects._item-progress', ['itemPrefix' => $qcPrefix, 'itemEditable' => false])
-    <div class="d-flex justify-content-between mb-2"><span>Progress {{ $qcTitle }}</span><strong>{{ $qcProgress }}%</strong></div>
-    <div class="progress mb-3" style="height:8px"><div class="progress-bar" role="progressbar" aria-label="Progress {{ $qcTitle }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $qcProgress }}" style="width:{{ $qcProgress }}%"></div></div>
+    <div class="d-flex justify-content-between mb-2"><span>Checklist {{ $qcTitle }}</span><strong>{{ $qcProgress }}%</strong></div>
     @if($workflow->{$qcPrefix.'_note'})<p class="small mb-3">{{ $workflow->{$qcPrefix.'_note'} }}</p>@endif
 @endif
 @if($workflow->{$qcPrefix.'_document_path'})

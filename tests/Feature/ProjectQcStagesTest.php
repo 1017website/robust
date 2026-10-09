@@ -54,7 +54,7 @@ class ProjectQcStagesTest extends TestCase
         $this->assertSame($production->id, $project->workflowHistory()->where('action', 'qc_updated')->sole()->user_id);
         $this->assertSame($installation->id, $project->workflowHistory()->where('action', 'qc_installation_updated')->sole()->user_id);
         $this->assertSame(100, $workflow->qc_progress);
-        $this->assertSame(35, $workflow->qc_installation_progress);
+        $this->assertSame(0, $workflow->qc_installation_progress);
     }
 
     public function test_qc_accounts_see_their_own_forms_work_queue_and_notifications(): void
@@ -66,7 +66,7 @@ class ProjectQcStagesTest extends TestCase
             $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('drafter.projects.index'));
             $this->get(route('drafter.calendar.index'))->assertOk();
             $response = $this->get(route('project-workspace.show', $project))->assertOk()
-                ->assertSee('name="'.$prefix.'_progress"', false)
+                ->assertSee('data-qc-check', false)->assertDontSee('name="'.$prefix.'_progress"', false)
                 ->assertDontSee('name="'.($prefix === 'qc' ? 'qc_installation' : 'qc').'_progress"', false)
                 ->assertDontSee('id="production-tab"', false)->assertDontSee('id="delivery-tab"', false);
             $this->get(route('drafter.projects.index'))->assertOk()->assertSee($user->roleLabel())
@@ -109,7 +109,7 @@ class ProjectQcStagesTest extends TestCase
             'qc_checklist' => [], 'qc_document' => UploadedFile::fake()->createWithContent('produksi.pdf', "%PDF-1.4\n%%EOF"),
         ])->assertSessionHasNoErrors()->assertRedirect();
         $workflow = $project->workflow->fresh();
-        $this->assertSame(45, $workflow->qc_progress);
+        $this->assertSame(0, $workflow->qc_progress);
         $this->assertSame(0, $workflow->qc_installation_progress);
         $this->assertFalse($workflow->qc_installation_completed);
         $productionFile = $workflow->qc_document_path;
@@ -124,7 +124,7 @@ class ProjectQcStagesTest extends TestCase
         $workflow->refresh();
         $this->assertSame(100, $workflow->qc_progress);
         $this->assertTrue($workflow->qc_completed);
-        $this->assertSame(35, $workflow->qc_installation_progress);
+        $this->assertSame(0, $workflow->qc_installation_progress);
         $this->assertSame('Produksi lolos', $workflow->qc_note);
         $this->assertSame($productionFile, $workflow->qc_document_path);
         $this->assertNotSame($productionFile, $workflow->qc_installation_document_path);
@@ -172,25 +172,53 @@ class ProjectQcStagesTest extends TestCase
     public function test_workspace_and_monitoring_render_both_stages_with_progress(): void
     {
         $project = $this->project();
-        $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100, 'qc_installation_progress' => 35]);
+        $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100, 'qc_checklist' => $this->checks($project), 'qc_installation_checklist' => array_slice($this->checks($project, true), 0, 2, true)]);
         $this->actingAs(User::factory()->create(['role' => 'administrator']));
         $response = $this->get(route('project-workspace.show', $project))->assertOk()
             ->assertSee('QC Produksi')->assertSee('QC Pemasangan')
-            ->assertSee('name="qc_progress"', false)->assertSee('name="qc_installation_progress"', false)
-            ->assertSee('aria-label="Progress QC Pemasangan"', false);
+            ->assertDontSee('name="qc_progress"', false)->assertDontSee('name="qc_installation_progress"', false)
+            ->assertDontSee('data-qc-bar', false)->assertSee('data-qc-check', false);
         File::ensureDirectoryExists(base_path('tmp'));
         file_put_contents(base_path('tmp/qc-workspace-test.html'), $response->getContent());
-        $this->get(route('administration.project-monitoring.index'))->assertOk()->assertSee('QC Produksi')->assertSee('QC Pemasangan')->assertSee('35%');
+        $this->get(route('administration.project-monitoring.index'))->assertOk()->assertSee('QC Produksi')->assertSee('QC Pemasangan')->assertSee('33%');
     }
 
     public function test_operational_progress_includes_both_qc_stages(): void
     {
-        $workflow = new ProjectWorkflow(['production_progress' => 100, 'qc_progress' => 50, 'qc_installation_progress' => 0]);
+        $project = $this->project();
+        $workflow = $project->workflow;
+        $workflow->qc_checklist = array_slice($this->checks($project), 0, 2, true);
         $before = $workflow->completionPercent();
-        $workflow->qc_installation_progress = 50;
+        $workflow->qc_installation_checklist = array_slice($this->checks($project, true), 0, 3, true);
         $this->assertGreaterThan($before, $workflow->completionPercent());
-        $workflow->fill(['production_progress' => 100, 'qc_completed' => true, 'qc_installation_completed' => true, 'delivery_status' => 'completed']);
+        $workflow->fill(['production_progress' => 100, 'qc_completed' => true, 'qc_installation_completed' => true, 'qc_checklist' => $this->checks($project), 'qc_installation_checklist' => $this->checks($project, true), 'delivery_status' => 'completed']);
         $this->assertSame(100, $workflow->completionPercent());
+    }
+
+    public function test_qc_percentage_uses_only_current_checklist_and_recalculates_when_unchecked(): void
+    {
+        $project = $this->project();
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        foreach ([false, true] as $installation) {
+            $prefix = $installation ? 'qc_installation' : 'qc';
+            $route = $installation ? 'project-workflow.qc-installation' : 'project-workflow.qc';
+            $checks = $this->checks($project, $installation);
+            $partial = array_slice($checks, 0, 1, true) + ['unknown_check' => 1];
+            $this->put(route($route, $project), [
+                $prefix.'_checklist' => $partial, $prefix.'_progress' => 100,
+            ])->assertSessionHasNoErrors();
+            $workflow = $project->workflow->fresh();
+            $expected = (int) round(100 / count($checks));
+            $this->assertSame($expected, $workflow->{$prefix.'_progress'});
+            $this->assertSame($expected, $workflow->qcProgress($installation));
+            $this->put(route($route, $project), [$prefix.'_completed' => 1, $prefix.'_checklist' => $checks])->assertSessionHasNoErrors();
+            $this->assertSame(100, $project->workflow->fresh()->qcProgress($installation));
+        }
+        $this->put(route('project-workflow.qc-installation', $project), [])->assertSessionHasNoErrors();
+        $workflow = $project->workflow->fresh();
+        $this->assertSame(0, $workflow->qcProgress(true));
+        $this->assertFalse($workflow->qc_installation_completed);
+        $this->assertSame(100, $workflow->qcProgress());
     }
 
     public function test_migration_preserves_existing_qc_as_production_qc(): void
