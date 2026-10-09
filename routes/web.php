@@ -97,6 +97,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/project-monitoring/{project}', [ProjectMonitoringController::class, 'update'])->name('project-monitoring.update');
     });
 
+    Route::put('/project-workspace/{project}/target-date/{stage}', [ProjectWorkflowController::class, 'updateTargetDate'])
+        ->whereIn('stage', ['production', 'qc', 'qc-installation'])
+        ->middleware('role:administrator,production,qc,qc_production,qc_installation')->name('project-workflow.target-date');
+
     Route::middleware('role:administrator,production')->group(function () {
         Route::put('/project-workspace/{project}/production', [ProjectWorkflowController::class, 'updateProduction'])->name('project-workflow.production');
     });

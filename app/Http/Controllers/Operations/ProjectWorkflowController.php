@@ -17,6 +17,44 @@ use Illuminate\Validation\ValidationException;
 
 class ProjectWorkflowController extends Controller
 {
+    public function updateTargetDate(Request $request, Project $project, string $stage)
+    {
+        $prefix = match ($stage) {
+            'production' => 'production',
+            'qc' => 'qc',
+            'qc-installation' => 'qc_installation',
+            default => abort(404),
+        };
+        $allowed = match ($prefix) {
+            'production' => in_array($request->user()->role, ['administrator', 'production'], true),
+            'qc' => $request->user()->canUpdateQcProduction(),
+            'qc_installation' => $request->user()->canUpdateQcInstallation(),
+        };
+        abort_unless($allowed && ProjectAccess::canView($request->user(), $project), 403);
+        $data = $request->validate([
+            "{$prefix}_target_date" => ['required', 'date_format:Y-m-d'],
+            'target_date_reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return DB::transaction(function () use ($project, $prefix, $data) {
+            $workflow = $project->workflow()->lockForUpdate()->firstOrFail();
+            $before = $this->snapshot($workflow, $prefix);
+            if ($before['target_date'] !== $data["{$prefix}_target_date"]) {
+                $workflow->update(["{$prefix}_target_date" => $data["{$prefix}_target_date"]]);
+                $label = match ($prefix) {
+                    'production' => 'Produksi', 'qc' => 'QC Produksi', default => 'QC Pemasangan',
+                };
+                Logger::record("{$prefix}_target_date_updated", "Target selesai {$label} diperbarui", $project, [
+                    'stage' => $label, 'before' => $before, 'after' => $this->snapshot($workflow, $prefix),
+                    'reason' => $data['target_date_reason'] ?? null,
+                ]);
+            }
+
+            return back()->with('success', 'Tanggal target selesai tersimpan. Setiap perubahan tanggal dicatat dalam riwayat.')
+                ->withFragment($prefix === 'production' ? 'production' : 'qc');
+        });
+    }
+
     public function updateProduction(Request $request, Project $project)
     {
         return DB::transaction(fn () => $this->saveProduction($request, $project));
@@ -34,6 +72,7 @@ class ProjectWorkflowController extends Controller
         );
 
         $data = $request->validate([
+            'production_target_date' => ['required', 'date_format:Y-m-d'],
             'production_status' => ['required', Rule::in(array_keys(ProjectWorkflow::productionStatuses()))],
             'production_progress' => ['nullable', 'integer', 'min:0', 'max:100'],
             'production_item_progress' => ['nullable', 'array'],
@@ -70,6 +109,7 @@ class ProjectWorkflowController extends Controller
         }
 
         $update = [
+            'production_target_date' => $data['production_target_date'],
             'production_status' => $data['production_status'],
             'production_progress' => $progress,
             'production_note' => $data['production_note'] ?? null,
@@ -126,18 +166,21 @@ class ProjectWorkflowController extends Controller
 
     private function saveQc(Request $request, Project $project, bool $installation)
     {
-        $workflow = $project->workflow()->firstOrCreate();
+        $project->workflow()->firstOrCreate();
+        $workflow = $project->workflow()->lockForUpdate()->firstOrFail();
         $prefix = $installation ? 'qc_installation' : 'qc';
-        $before = $this->snapshot($workflow, $prefix);
         $attachments = [];
         $label = $installation ? 'QC Pemasangan' : 'QC Produksi';
+        abort_if($workflow->{"{$prefix}_completed"}, 423, "{$label} sudah selesai dan lolos. Hasil QC dikunci dan tidak dapat diubah.");
+        $before = $this->snapshot($workflow, $prefix);
         abort_unless(
-            $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished',
+            $installation ? $workflow->installationQcReady() : $workflow->production_status === 'production_finished',
             422,
-            $installation ? 'QC Pemasangan baru dapat dimulai setelah QC Produksi selesai.' : 'QC Produksi baru dapat dimulai setelah Produksi menandai pekerjaan selesai.'
+            $installation ? 'QC Pemasangan dilakukan di customer setelah QC Produksi lolos dan Delivery berstatus Terkirim atau Diterima Customer.' : 'QC Produksi baru dapat dimulai setelah Produksi menandai pekerjaan selesai.'
         );
 
         $data = $request->validate([
+            "{$prefix}_target_date" => ['required', 'date_format:Y-m-d'],
             "{$prefix}_result" => ['required', Rule::in(['in_progress', 'failed', 'passed'])],
             "{$prefix}_progress" => ['nullable', 'integer', 'min:0', 'max:100'],
             "{$prefix}_item_progress" => ['nullable', 'array'],
@@ -159,6 +202,7 @@ class ProjectWorkflowController extends Controller
         }
 
         $update = [
+            "{$prefix}_target_date" => $data["{$prefix}_target_date"],
             "{$prefix}_result" => $data["{$prefix}_result"],
             "{$prefix}_completed" => $completed,
             "{$prefix}_progress" => ProjectWorkflow::qcChecklistPercent($definition, $checklist),
@@ -174,6 +218,8 @@ class ProjectWorkflowController extends Controller
         $workflow->update($update);
         if ($completed && ! $installation) {
             $project->update(['status' => 'finishing', 'progress' => max(80, (int) $project->progress)]);
+        } elseif ($completed && $installation && $workflow->delivery_status === 'completed') {
+            $project->update(['status' => 'done', 'progress' => 100]);
         }
 
         Logger::record("{$prefix}_updated", "{$label} diperbarui", $project, [
@@ -266,10 +312,10 @@ class ProjectWorkflowController extends Controller
         }
         $workflow->update($update);
         $project->update([
-            'status' => $deliveryStatus === 'completed' ? 'done' : 'finishing',
-            'progress' => $deliveryStatus === 'completed'
+            'status' => $deliveryStatus === 'completed' && $workflow->qc_installation_completed ? 'done' : 'finishing',
+            'progress' => $deliveryStatus === 'completed' && $workflow->qc_installation_completed
                 ? 100
-                : max(in_array($deliveryStatus, ['delivered', 'customer_received'], true) ? 90 : 85, (int) $project->progress),
+                : max(in_array($deliveryStatus, ProjectWorkflow::deliveryArrivedStatuses(), true) ? 90 : 85, (int) $project->progress),
         ]);
 
         Logger::record('delivery_updated', 'Delivery diperbarui', $project, [
@@ -348,10 +394,11 @@ class ProjectWorkflowController extends Controller
             ];
         }
         $fields = $prefix === 'production'
-            ? ['status', 'progress', 'item_progress', 'note', 'report_completed', 'report_path', 'report_name']
-            : ['result', 'completed', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
+            ? ['status', 'target_date', 'progress', 'item_progress', 'note', 'report_completed', 'report_path', 'report_name']
+            : ['result', 'completed', 'target_date', 'progress', 'note', 'checklist', 'document_path', 'document_name'];
 
         $snapshot = collect($fields)->mapWithKeys(fn ($field) => [$field => $workflow->{"{$prefix}_{$field}"}])->all();
+        $snapshot['target_date'] = $workflow->{"{$prefix}_target_date"}?->format('Y-m-d');
         $snapshot['item_names'] = $workflow->project->quotation?->items?->pluck('name', 'id')->all() ?? [];
         if ($prefix !== 'production') {
             $snapshot['progress'] = $workflow->qcProgress($prefix === 'qc_installation');

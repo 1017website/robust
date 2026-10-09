@@ -3,6 +3,7 @@
     <p class="small text-muted-2">Setiap pembaruan baru dicatat bersama pengguna, waktu, progres, catatan, dan lampirannya.</p>
     @forelse($workflowHistory as $entry)
         @php
+            $targetDateOnly = str_ends_with($entry->action, '_target_date_updated');
             $before = $entry->meta['before'] ?? [];
             $after = $entry->meta['after'] ?? [];
             $production = $entry->action === 'production_updated';
@@ -23,6 +24,10 @@
                 <strong>{{ $entry->meta['stage'] ?? $entry->description }}</strong>
                 <small>{{ $entry->created_at->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }} WIB · {{ $entry->user?->name ?? 'Pengguna dihapus' }}</small>
             </div>
+            @if($targetDateOnly)
+                <div>Target selesai: {{ !empty($before['target_date']) ? \Illuminate\Support\Carbon::parse($before['target_date'])->format('d/m/Y') : 'Belum diisi' }} → {{ \Illuminate\Support\Carbon::parse($after['target_date'])->format('d/m/Y') }}</div>
+                @if(!empty($entry->meta['reason']))<p class="mt-2 mb-0 text-break">Alasan: {{ $entry->meta['reason'] }}</p>@endif
+            @else
             <div class="small">Status: {{ $statusText($before) }} → {{ $statusText($after) }}</div>
             @if(!$delivery && !$deliveryOrderEntry)<div class="small">Progres: {{ $before['progress'] ?? 0 }}% → {{ $after['progress'] ?? 0 }}%</div>@endif
             @if(!empty($after['item_progress']))
@@ -35,6 +40,7 @@
                     </ul>
                 </details>
             @endif
+            @if(!empty($after['target_date']))<div class="small">Target selesai: {{ $formatDate($before['target_date'] ?? null) }} → {{ $formatDate($after['target_date']) }}</div>@endif
             @if($delivery)
                 <div class="small">Jadwal: {{ $formatDate($before['scheduled_at'] ?? null) }} → {{ $formatDate($after['scheduled_at'] ?? null) }}</div>
                 <div class="small">Penerima: {{ $before['receiver_name'] ?? '-' }} → {{ $after['receiver_name'] ?? '-' }}</div>
@@ -65,6 +71,7 @@
             @foreach(($entry->meta['attachments'] ?? []) as $index => $attachment)
                 <a class="btn btn-sm btn-soft mt-2 text-break" href="{{ route('project-workflow.history-attachment', [$project, $entry, $index]) }}">Unduh {{ $attachment['name'] }}</a>
             @endforeach
+            @endif
         </article>
     @empty
         <x-empty text="Belum ada riwayat pembaruan pekerjaan. Pembaruan Produksi, QC, dan Delivery berikutnya akan tercatat di sini." />

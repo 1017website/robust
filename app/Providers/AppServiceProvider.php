@@ -149,8 +149,9 @@ class AppServiceProvider extends ServiceProvider
                     if ($user->canUpdateQcInstallation() && Schema::hasColumn('project_workflows', 'qc_installation_completed')) {
                         $pendingInstallationQc = Project::whereHas('workflow', fn ($workflow) => $workflow
                             ->where('qc_completed', true)
+                            ->whereIn('delivery_status', \App\Models\ProjectWorkflow::deliveryArrivedStatuses())
                             ->where('qc_installation_completed', false))->count();
-                        $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingInstallationQc, 'Project menunggu QC Pemasangan', 'Periksa hasil pemasangan dan perbarui progress QC Pemasangan.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
+                        $this->addNotification($notifications, $sidebarNotificationCounts, 'drafter.projects.*', $pendingInstallationQc, 'Project menunggu QC Pemasangan', 'Barang sudah terkirim. Periksa hasil pemasangan di lokasi customer.', route('drafter.projects.index'), 'bi-patch-check', 'text-warning');
                     }
                 }
 

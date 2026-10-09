@@ -70,3 +70,9 @@ Upload file di seluruh modul berjalan saat file dipilih. Saat simpan, browser me
 - `resources/views/{admin,sales,drafter,shared}` — Blade per modul
 
 Hasil QC wajib dipilih: Masih diperiksa, Belum lolos / perlu perbaikan, atau Selesai dan lolos QC. Catatan wajib untuk QC yang belum lolos. QC hanya dapat ditandai lolos setelah seluruh checklist dicentang. Setelah perbaikan, buka kembali form QC dan simpan hasil pemeriksaan ulang. Jalankan `php artisan migrate --force` untuk menambahkan kolom hasil QC.
+
+QC Produksi dan QC Pemasangan otomatis dikunci setelah hasil Selesai dan lolos QC disimpan. Checklist, catatan, dan lampiran tetap dapat dilihat; perubahan selanjutnya ditolak untuk semua pengguna, termasuk administrator.
+
+Urutan operasional: Produksi → QC Produksi → Delivery → QC Pemasangan di customer. QC Pemasangan hanya terbuka setelah QC Produksi lolos dan Delivery berstatus Terkirim, Diterima Customer, atau Selesai. Setiap penyimpanan Produksi, QC Produksi, dan QC Pemasangan wajib mengisi tanggal target selesai tahap tersebut. Jalankan migrasi untuk kolom target tahap. Project selesai setelah Delivery selesai dan QC Pemasangan lolos.
+
+Tanggal target tiap tahap dapat digeser melalui menu Ubah tanggal target selesai, termasuk setelah QC lolos. Perubahan tanggal mencatat tanggal lama/baru, pengguna, waktu, dan alasan opsional di Riwayat Pekerjaan. Hasil QC yang sudah lolos tetap terkunci.

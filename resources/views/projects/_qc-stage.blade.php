@@ -10,19 +10,25 @@
     $qcFormValues = old($qcPrefix.'_checklist', session()->hasOldInput($qcPrefix.'_result') ? [] : $qcValues);
     $qcFormProgress = \App\Models\ProjectWorkflow::qcChecklistPercent($qcDefinition, $qcFormValues);
     $qcResult = old($qcPrefix.'_result', $workflow->qcResult($installation));
-    $qcReady = $installation ? $workflow->qc_completed : $workflow->production_status === 'production_finished';
+    $qcReady = $installation ? $workflow->installationQcReady() : $workflow->production_status === 'production_finished';
 @endphp
 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
     <div><h3>{{ $qcTitle }}</h3><small class="text-muted-2">{{ $installation ? 'Pemeriksaan hasil pemasangan di lokasi customer' : 'Pemeriksaan hasil produksi sesuai spesifikasi penawaran' }}</small></div>
     <x-status-badge :status="$qcComplete ? 'approved' : ($workflow->qcResult($installation) === 'failed' ? 'rejected' : 'pending')" :label="$workflow->qcStatusLabel($installation)" />
 </div>
 @if($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction())
+    @include('projects._target-date', ['targetPrefix' => $qcPrefix, 'targetStage' => $installation ? 'qc-installation' : 'qc', 'targetLabel' => $qcTitle])
+@endif
+@if(!$qcComplete && ($installation ? auth()->user()->canUpdateQcInstallation() : auth()->user()->canUpdateQcProduction()))
     @if(!$qcReady)
-        <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dapat diisi setelah QC Produksi selesai.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
+        <div class="alert alert-info py-2 small">{{ $installation ? 'QC Pemasangan dilakukan di customer setelah QC Produksi lolos dan Delivery berstatus Terkirim atau Diterima Customer.' : 'QC Produksi dapat diisi setelah produksi selesai.' }}</div>
     @endif
     <form method="POST" action="{{ route($qcRoute, $project) }}" enctype="multipart/form-data" data-qc-stage>
         @csrf @method('PUT')
         <fieldset @disabled(!$qcReady)>
+            <label class="form-label fw-semibold" for="{{ $qcPrefix }}_target_date">Tanggal target selesai {{ $qcTitle }} (wajib diisi)</label>
+            <input type="date" id="{{ $qcPrefix }}_target_date" name="{{ $qcPrefix }}_target_date" class="form-control qc-note mb-3" value="{{ old($qcPrefix.'_target_date', $workflow->{$qcPrefix.'_target_date'}?->format('Y-m-d')) }}" required>
+            @error($qcPrefix.'_target_date')<div class="text-danger fw-semibold mb-3" role="alert">Isi tanggal target selesai yang valid.</div>@enderror
             <div class="d-flex justify-content-between mb-3"><span>Checklist {{ $qcTitle }}</span><output aria-live="polite" data-qc-value>{{ $qcFormProgress }}%</output></div>
             <p class="qc-instruction">Centang hanya pemeriksaan yang sudah sesuai. Yang belum diperiksa atau perlu diperbaiki, biarkan kosong.</p>
             <div class="qc-checklist mb-3">
@@ -58,7 +64,23 @@
         </fieldset>
     </form>
 @else
+    @if($qcComplete)
+        <div class="alert alert-success qc-instruction" role="status"><strong>{{ $qcTitle }} sudah selesai dan lolos.</strong> Hasil QC dikunci dan tidak dapat diubah.</div>
+    @endif
+    <p class="qc-instruction">Tanggal target selesai: <strong>{{ $workflow->{$qcPrefix.'_target_date'}?->format('d/m/Y') ?? 'Belum diisi' }}</strong></p>
     <div class="d-flex justify-content-between mb-2"><span>Checklist {{ $qcTitle }}</span><strong>{{ $qcProgress }}%</strong></div>
+    <div class="qc-checklist mb-3">
+        @forelse($qcDefinition as $qcItem)
+            <div class="qc-item">
+                <div class="fw-bold mb-1">{{ $qcItem['item_name'] }} @if($qcItem['variant'])<small>- {{ $qcItem['variant'] }}</small>@endif</div>
+                @foreach($qcItem['checks'] as $check)
+                    <div class="form-check qc-check-row"><input class="form-check-input" type="checkbox" disabled id="{{ $qcPrefix }}_saved_{{ $check['key'] }}" @checked($qcValues[$check['key']] ?? false)><label class="form-check-label" for="{{ $qcPrefix }}_saved_{{ $check['key'] }}">{{ $check['label'] }}</label></div>
+                @endforeach
+            </div>
+        @empty
+            <p class="qc-instruction mb-0">Belum ada item penawaran untuk diperiksa.</p>
+        @endforelse
+    </div>
     @if($workflow->{$qcPrefix.'_note'})<p class="small mb-3">{{ $workflow->{$qcPrefix.'_note'} }}</p>@endif
 @endif
 @if($workflow->{$qcPrefix.'_document_path'})

@@ -39,7 +39,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $project = $this->project($sales);
         foreach ([35, 70] as $progress) {
             $this->actingAs($production)->put(route('project-workflow.production', $project), [
-                'production_status' => 'production', 'production_progress' => $progress,
+                'production_target_date' => '2026-10-20', 'production_status' => 'production', 'production_progress' => $progress,
                 'production_note' => 'Catatan '.$progress,
                 'production_report' => UploadedFile::fake()->create('checklist-'.$progress.'.pdf', 10, 'application/pdf'),
                 'progress_files' => [UploadedFile::fake()->create('bukti-'.$progress.'.pdf', 10, 'application/pdf')],
@@ -66,7 +66,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $outsider = User::factory()->create(['role' => 'drafter']);
         $this->actingAs($outsider)->get(route('project-workflow.history-attachment', [$project, $history[0], 0]))->assertForbidden();
         $this->actingAs($production)->put(route('project-workflow.production', $project), [
-            'production_status' => 'production', 'production_progress' => 101,
+            'production_target_date' => '2026-10-20', 'production_status' => 'production', 'production_progress' => 101,
         ])->assertSessionHasErrors('production_progress');
         $this->assertSame(2, $project->workflowHistory()->count());
     }
@@ -77,14 +77,14 @@ class ProjectHistoryDeadlineTest extends TestCase
         $sales = User::factory()->create(['role' => 'sales']);
         $qc = User::factory()->create(['role' => 'qc']);
         $project = $this->project($sales);
-        $project->workflow()->create(['production_status' => 'production_finished']);
+        $project->workflow()->create(['production_target_date' => '2026-10-20', 'production_status' => 'production_finished', 'delivery_status' => 'delivered']);
         foreach (['qc', 'qc_installation'] as $prefix) {
             $route = $prefix === 'qc' ? 'project-workflow.qc' : 'project-workflow.qc-installation';
             $checklist = collect(ProjectWorkflow::qcChecklistDefinition($project, false, $prefix === 'qc_installation'))
                 ->flatMap(fn ($item) => collect($item['checks'])->pluck('key'))->mapWithKeys(fn ($key) => [$key => 1])->all();
             foreach ([25, 100] as $progress) {
                 $this->actingAs($qc)->put(route($route, $project), [
-                    $prefix.'_result' => $progress === 100 ? 'passed' : 'in_progress', $prefix.'_progress' => $progress, $prefix.'_completed' => $progress === 100,
+                    $prefix.'_target_date' => '2026-10-21', $prefix.'_result' => $progress === 100 ? 'passed' : 'in_progress', $prefix.'_progress' => $progress, $prefix.'_completed' => $progress === 100,
                     $prefix.'_note' => $prefix.' catatan '.$progress,
                     $prefix.'_checklist' => $progress === 100 ? $checklist : [],
                     $prefix.'_document' => UploadedFile::fake()->create($prefix.'-'.$progress.'.pdf', 10, 'application/pdf'),
@@ -99,8 +99,8 @@ class ProjectHistoryDeadlineTest extends TestCase
         }
         $this->actingAs($qc)->get(route('project-workspace.show', $project))->assertOk()
             ->assertSee('qc catatan 25')->assertSee('qc_installation catatan 100')->assertSee('Cabinet Uji');
-        $this->put(route('project-workflow.qc', $project), ['qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => []])
-            ->assertSessionHasErrors('qc_checklist');
+        $this->putJson(route('project-workflow.qc', $project), ['qc_target_date' => '2026-10-21', 'qc_result' => 'passed', 'qc_completed' => 1, 'qc_checklist' => []])
+            ->assertStatus(423);
         $this->assertSame(4, $project->workflowHistory()->count());
     }
 
@@ -126,7 +126,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $production = User::factory()->create(['role' => 'production']);
         $qc = User::factory()->create(['role' => 'qc']);
         $due = $this->project($sales, ['code' => 'RP-DUE-3']);
-        $due->workflow()->create(['production_status' => 'production_finished']);
+        $due->workflow()->create(['production_target_date' => '2026-10-20', 'production_status' => 'production_finished']);
         $later = $this->project($sales, ['code' => 'RP-LATER-4', 'target_date' => today()->addDays(4)]);
 
         foreach ([$sales, $production, $qc] as $user) {
@@ -180,7 +180,7 @@ class ProjectHistoryDeadlineTest extends TestCase
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $project = $this->project($sales);
-        $project->workflow()->create(['production_status' => 'production_finished', 'qc_completed' => true]);
+        $project->workflow()->create(['production_target_date' => '2026-10-20', 'production_status' => 'production_finished', 'qc_completed' => true]);
         foreach (['administrator', 'sales', 'production', 'qc', 'delivery'] as $role) {
             $user = $role === 'sales' ? $sales : User::factory()->create(['role' => $role]);
             $response = $this->actingAs($user)->get(route('project-workspace.show', $project))->assertOk()
@@ -200,7 +200,7 @@ class ProjectHistoryDeadlineTest extends TestCase
             $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='workflow-history']")->length);
             $this->assertSame(0, $xpath->query("//*[@id='operations']")->length);
             if (in_array($role, ['production', 'qc', 'delivery'], true)) {
-                $this->assertSame($role === 'production' ? 1 : 2, $xpath->query("//*[@id='{$role}']//form[contains(@action,'/{$role}')]")->length);
+                $this->assertSame($role === 'delivery' ? 2 : 1, $xpath->query("//*[@id='{$role}']//form[not(@data-target-date-form) and contains(@action,'/{$role}')]")->length);
             }
         }
     }
@@ -212,7 +212,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $sales = User::factory()->create(['role' => 'sales']);
         $delivery = User::factory()->create(['role' => 'delivery', 'name' => 'Petugas Delivery Uji']);
         $project = $this->project($sales);
-        $project->workflow()->create(['production_status' => 'production_finished', 'qc_completed' => true]);
+        $project->workflow()->create(['production_target_date' => '2026-10-20', 'production_status' => 'production_finished', 'qc_completed' => true]);
         $workspace = route('project-workspace.show', $project);
         foreach (['scheduling', 'scheduled'] as $status) {
             $this->actingAs($delivery)->from($workspace)->put(route('project-workflow.delivery', $project), [
@@ -249,7 +249,7 @@ class ProjectHistoryDeadlineTest extends TestCase
         $sales = User::factory()->create(['role' => 'sales']);
         $project = $this->project($sales, ['progress' => 61]);
         $project->workflow()->create([
-            'production_status' => 'production_finished', 'production_progress' => 100,
+            'production_target_date' => '2026-10-20', 'production_status' => 'production_finished', 'production_progress' => 100,
             'qc_completed' => true, 'qc_progress' => 100, 'qc_installation_progress' => 25,
             'delivery_status' => 'in_transit', 'delivery_scheduled_at' => now()->addDay(),
         ]);

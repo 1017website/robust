@@ -21,6 +21,9 @@ class ProjectWorkflow extends Model
     ];
 
     protected $casts = [
+        'production_target_date' => 'date',
+        'qc_target_date' => 'date',
+        'qc_installation_target_date' => 'date',
         'production_item_progress' => 'array',
         'qc_item_progress' => 'array',
         'qc_installation_item_progress' => 'array',
@@ -145,6 +148,16 @@ class ProjectWorkflow extends Model
         $completed = $this->delivery_status === 'completed' ? 25 : 0;
 
         return min(100, $production + $qc + $delivery + $completed);
+    }
+
+    public static function deliveryArrivedStatuses(): array
+    {
+        return ['delivered', 'customer_received', 'completed'];
+    }
+
+    public function installationQcReady(): bool
+    {
+        return $this->qc_completed && in_array($this->delivery_status, self::deliveryArrivedStatuses(), true);
     }
 
     public function qcResult(bool $installation = false): ?string

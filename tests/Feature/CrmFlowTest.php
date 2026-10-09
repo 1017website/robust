@@ -113,13 +113,13 @@ class CrmFlowTest extends TestCase
         ]);
 
         $this->actingAs($production)->put(route('project-workflow.production', $project), [
-            'production_status' => 'production_finished',
+            'production_target_date' => '2026-10-20', 'production_status' => 'production_finished',
             'production_report_completed' => 1,
             'production_report' => UploadedFile::fake()->create('checklist-produksi.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
         $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
-            'qc_result' => 'passed', 'qc_completed' => 1,
+            'qc_target_date' => '2026-10-21', 'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
@@ -192,13 +192,13 @@ class CrmFlowTest extends TestCase
         ]);
 
         $this->actingAs($administrator)->put(route('project-workflow.production', $project), [
-            'production_status' => 'production_finished',
+            'production_target_date' => '2026-10-20', 'production_status' => 'production_finished',
             'production_report_completed' => 1,
             'production_report' => UploadedFile::fake()->create('checklist-produksi-admin.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
         $this->actingAs($administrator)->put(route('project-workflow.qc', $project), [
-            'qc_result' => 'passed', 'qc_completed' => 1,
+            'qc_target_date' => '2026-10-21', 'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_document' => UploadedFile::fake()->create('checklist-qc-admin.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
 
@@ -240,7 +240,7 @@ class CrmFlowTest extends TestCase
 
         $sales = User::factory()->create(['role' => 'sales']);
         $this->actingAs($sales)->put(route('project-workflow.production', $project), [
-            'production_status' => 'stock',
+            'production_target_date' => '2026-10-20', 'production_status' => 'stock',
         ])->assertForbidden();
         $this->actingAs($sales)->put(route('project-workflow.qc', $project))->assertForbidden();
         $this->actingAs($sales)->put(route('project-workflow.delivery', $project))->assertForbidden();
@@ -1131,7 +1131,7 @@ class CrmFlowTest extends TestCase
             ->assertSee('Gambar fabrikasi siap');
 
         $this->actingAs($production)->put(route('project-workflow.production', $project), [
-            'production_status' => 'production_finished',
+            'production_target_date' => '2026-10-20', 'production_status' => 'production_finished',
             'production_report_completed' => 1,
             'production_report' => UploadedFile::fake()->create('checklist-produksi.pdf', 30, 'application/pdf'),
         ])->assertRedirect();
@@ -1145,7 +1145,7 @@ class CrmFlowTest extends TestCase
             ->mapWithKeys(fn (string $key) => [$key => 1])
             ->all();
         $this->actingAs($qc)->put(route('project-workflow.qc', $project), [
-            'qc_result' => 'passed', 'qc_completed' => 1,
+            'qc_target_date' => '2026-10-21', 'qc_result' => 'passed', 'qc_completed' => 1,
             'qc_checklist' => $qcChecklist,
             'qc_note' => 'Seluruh spesifikasi sesuai penawaran.',
             'qc_document' => UploadedFile::fake()->create('checklist-qc.pdf', 30, 'application/pdf'),

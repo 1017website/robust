@@ -1,13 +1,13 @@
 @php
     $stages = collect([
         ['label' => 'Produksi', 'status' => $statusLabel, 'progress' => (int) $workflow->production_progress,
-            'note' => $workflow->production_note, 'time' => $workflow->production_updated_at, 'user' => $workflow->productionUpdater, 'tab' => 'production'],
+            'note' => $workflow->production_note, 'time' => $workflow->production_updated_at, 'user' => $workflow->productionUpdater, 'tab' => 'production', 'target' => $workflow->production_target_date],
         ['label' => 'QC Produksi', 'status' => $workflow->qcStatusLabel(),
-            'progress' => $workflow->qcProgress(), 'note' => $workflow->qc_note, 'time' => $workflow->qc_updated_at, 'user' => $workflow->qcUpdater, 'tab' => 'qc'],
-        ['label' => 'QC Pemasangan', 'status' => $workflow->qcStatusLabel(true),
-            'progress' => $workflow->qcProgress(true), 'note' => $workflow->qc_installation_note, 'time' => $workflow->qc_installation_updated_at, 'user' => $workflow->qcInstallationUpdater, 'tab' => 'qc'],
+            'progress' => $workflow->qcProgress(), 'note' => $workflow->qc_note, 'time' => $workflow->qc_updated_at, 'user' => $workflow->qcUpdater, 'tab' => 'qc', 'target' => $workflow->qc_target_date],
         ['label' => 'Delivery', 'status' => $deliveryStatusLabel, 'progress' => null,
             'note' => $workflow->delivery_note, 'time' => $workflow->delivery_updated_at, 'user' => $workflow->deliveryUpdater, 'tab' => 'delivery'],
+        ['label' => 'QC Pemasangan', 'status' => $workflow->qcStatusLabel(true),
+            'progress' => $workflow->qcProgress(true), 'note' => $workflow->qc_installation_note, 'time' => $workflow->qc_installation_updated_at, 'user' => $workflow->qcInstallationUpdater, 'tab' => 'qc', 'target' => $workflow->qc_installation_target_date],
     ]);
     $latestWork = $stages->filter(fn ($stage) => $stage['time'])->sortByDesc(fn ($stage) => $stage['time']->getTimestamp())->first();
     if ($deliveryOrder && (!$latestWork || $deliveryOrder->updated_at->gt($latestWork['time']))) {
@@ -19,13 +19,14 @@
         $state = $latestHistoryEntry->meta['after'] ?? [];
         $latestWork = [
             'label' => $latestHistoryEntry->meta['stage'] ?? $latestHistoryEntry->description,
-            'status' => match ($latestHistoryEntry->action) {
+            'status' => str_ends_with($latestHistoryEntry->action, '_target_date_updated') ? 'Target selesai: '.\Illuminate\Support\Carbon::parse($state['target_date'])->format('d/m/Y') : match ($latestHistoryEntry->action) {
                 'production_updated' => \App\Models\ProjectWorkflow::productionStatuses()[$state['status'] ?? ''] ?? '-',
                 'delivery_updated' => \App\Models\ProjectWorkflow::deliveryStatuses()[$state['status'] ?? ''] ?? '-',
                 'delivery_order_updated' => $state['code'] ?? 'DO disimpan',
                 default => !empty($state['completed']) ? 'Selesai dan lolos QC' : (($state['result'] ?? null) === 'failed' ? 'Belum lolos / perlu perbaikan' : (!empty($state['progress']) || ($state['result'] ?? null) === 'in_progress' ? 'Masih diperiksa' : 'Belum dimulai')),
             },
-            'progress' => $state['progress'] ?? null, 'note' => $state['note'] ?? $state['notes'] ?? null,
+            'progress' => str_ends_with($latestHistoryEntry->action, '_target_date_updated') ? null : ($state['progress'] ?? null),
+            'note' => str_ends_with($latestHistoryEntry->action, '_target_date_updated') ? ($latestHistoryEntry->meta['reason'] ?? null) : ($state['note'] ?? $state['notes'] ?? null),
             'time' => $latestHistoryEntry->created_at, 'user' => $latestHistoryEntry->user,
         ];
     }
@@ -51,6 +52,7 @@
                     <span class="fw-semibold">{{ $stage['label'] }}</span>
                 @endif
                 <div class="mt-1">{{ $stage['status'] }}@if($stage['progress'] !== null) · {{ $stage['progress'] }}%@endif</div>
+                @if(isset($stage['target']))<div class="mt-1">Target selesai: {{ $stage['target']->format('d/m/Y') }}</div>@endif
                 @if($stage['time'])
                     <div class="small mt-1">{{ $stage['time']->timezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB · {{ $stage['user']?->name ?? 'Pengguna tidak tersedia' }}</div>
                 @else

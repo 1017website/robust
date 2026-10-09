@@ -244,7 +244,7 @@ class QuotationWorkflowSimplificationTest extends TestCase
         ]);
 
         $this->actingAs($production)->put(route('project-workflow.production', $project), [
-            'production_status' => 'production',
+            'production_target_date' => '2026-10-20', 'production_status' => 'production',
             'production_progress' => 65,
             'production_note' => 'Rangka selesai, masuk finishing.',
             'progress_files' => [UploadedFile::fake()->image('progress-65.jpg')],

@@ -179,7 +179,11 @@
                 <section class="workflow-card">
                     <div class="d-flex justify-content-between align-items-start mb-3"><div><h3>Progress Produksi</h3><small class="text-muted-2">Progress setiap item serta foto/dokumen pekerjaan</small></div><x-status-badge :status="$workflow->production_status" :label="$statusLabel" /></div>
                     @if($canProduction)
+                    @include('projects._target-date', ['targetPrefix' => 'production', 'targetStage' => 'production', 'targetLabel' => 'Produksi'])
                     <form method="POST" action="{{ route('project-workflow.production', $project) }}" enctype="multipart/form-data" data-item-progress-form>@csrf @method('PUT')
+                        <label class="form-label fw-semibold" for="production_target_date">Tanggal target selesai Produksi (wajib diisi)</label>
+                        <input type="date" id="production_target_date" name="production_target_date" class="form-control mb-3" value="{{ old('production_target_date', $workflow->production_target_date?->format('Y-m-d')) }}" required>
+                        @error('production_target_date')<div class="text-danger fw-semibold mb-3" role="alert">Isi tanggal target selesai yang valid.</div>@enderror
                         <label class="form-label">Status Produksi</label>
                         <select class="form-select mb-3" name="production_status" required>@foreach(\App\Models\ProjectWorkflow::productionStatuses() as $value => $label)<option value="{{ $value }}" @selected($workflow->production_status === $value)>{{ $label }}</option>@endforeach</select>
                         <label class="form-label d-flex justify-content-between align-items-center"><span>Perkiraan Progress</span><output class="progress-range-value" id="productionProgressValue">{{ old('production_progress', $workflow->production_progress ?? 0) }}%</output></label>
@@ -193,6 +197,7 @@
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Produksi</button>
                     </form>
                     @else
+                        <p>Tanggal target selesai: <strong>{{ $workflow->production_target_date?->format('d/m/Y') ?? 'Belum diisi' }}</strong></p>
                         @include('projects._item-progress', ['itemPrefix' => 'production', 'itemEditable' => false])
                         <div class="d-flex justify-content-between align-items-center mb-2"><span>Progress terakhir</span><strong>{{ $workflow->production_progress ?? 0 }}%</strong></div><div class="prog mb-3"><span style="width:{{ $workflow->production_progress ?? 0 }}%"></span></div>
                         @if($workflow->production_note)<p class="small mb-3">{{ $workflow->production_note }}</p>@endif
