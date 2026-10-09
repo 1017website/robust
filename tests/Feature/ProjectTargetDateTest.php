@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Project;
 use App\Models\ProjectWorkflow;
-use Illuminate\Support\Facades\Event;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class ProjectTargetDateTest extends TestCase
@@ -130,6 +130,23 @@ class ProjectTargetDateTest extends TestCase
                 $this->assertNull($entry->meta['before']['target_date']);
                 $this->assertSame('2026-11-05', $entry->meta['after']['target_date']);
             }
+        } finally {
+            Event::forget($event);
+        }
+    }
+
+    public function test_unsaved_target_date_returns_validation_error_without_success_or_history(): void
+    {
+        $project = $this->project();
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        $event = 'eloquent.saving: '.ProjectWorkflow::class;
+        Event::listen($event, fn () => false);
+        try {
+            $this->from(route('sales.projects.show', $project))->put(route('project-workflow.target-date', [$project, 'qc-installation']), [
+                'qc_installation_target_date' => '2026-11-05',
+            ])->assertRedirect()->assertSessionHasErrors('qc_installation_target_date')->assertSessionMissing('success');
+            $this->assertSame('2026-10-22', $project->workflow->fresh()->qc_installation_target_date->format('Y-m-d'));
+            $this->assertSame(0, $project->workflowHistory()->count());
         } finally {
             Event::forget($event);
         }

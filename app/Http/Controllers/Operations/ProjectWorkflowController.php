@@ -41,7 +41,14 @@ class ProjectWorkflowController extends Controller
             abort_if($prefix !== 'production' && $workflow->{"{$prefix}_completed"}, 423, 'QC sudah selesai dan lolos. Tanggal target selesai dikunci dan tidak dapat diubah.');
             $before = $this->snapshot($workflow, $prefix);
             if ($before['target_date'] !== $data["{$prefix}_target_date"]) {
-                $workflow->update(["{$prefix}_target_date" => $data["{$prefix}_target_date"]]);
+                $workflow->{"{$prefix}_target_date"} = $data["{$prefix}_target_date"];
+                $workflow->saveOrFail();
+                $workflow->refresh();
+                if ($workflow->{"{$prefix}_target_date"}?->format('Y-m-d') !== $data["{$prefix}_target_date"]) {
+                    throw ValidationException::withMessages([
+                        "{$prefix}_target_date" => 'Tanggal target belum berhasil disimpan. Silakan coba lagi.',
+                    ]);
+                }
                 $label = match ($prefix) {
                     'production' => 'Produksi', 'qc' => 'QC Produksi', default => 'QC Pemasangan',
                 };
