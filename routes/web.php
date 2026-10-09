@@ -17,7 +17,6 @@ use App\Http\Controllers\Drafter\TaskController as DrafterTaskController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Operations\ProjectWorkflowController;
-use App\Http\Controllers\Operations\DeliveryOrderController;
 use App\Http\Controllers\Sales\CustomerController;
 use App\Http\Controllers\Sales\DesignRequestController as SalesDesignRequestController;
 use App\Http\Controllers\Sales\LeadController;
@@ -85,7 +84,6 @@ Route::middleware('auth')->group(function () {
 
     // Workspace project lintas divisi: seluruh informasi, workflow, dan histori design.
     Route::get('/project-workspace/{project}', [ProjectWorkspaceController::class, 'show'])->name('project-workspace.show');
-    Route::get('/project-workspace/{project}/delivery-order/pdf', [DeliveryOrderController::class, 'pdf'])->name('delivery-orders.pdf');
     Route::get('/project-workspace/{project}/workflow/{type}', [ProjectWorkflowController::class, 'attachment'])->name('project-workflow.attachment');
     Route::get('/project-workspace/{project}/history/{history}/attachments/{index}', [ProjectWorkflowController::class, 'historyAttachment'])->whereNumber('index')->name('project-workflow.history-attachment');
     Route::get('/project-workspace/{project}/design-revisions/{designRevision}', [DesignRevisionController::class, 'attachment'])->name('design-revisions.attachment');
@@ -112,7 +110,6 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('role:administrator,delivery')->group(function () {
         Route::put('/project-workspace/{project}/delivery', [ProjectWorkflowController::class, 'updateDelivery'])->name('project-workflow.delivery');
-        Route::post('/project-workspace/{project}/delivery-order', [DeliveryOrderController::class, 'store'])->name('delivery-orders.store');
     });
     Route::middleware('role:administrator,drafter,administration')->group(function () {
         Route::post('/project-workspace/{project}/design-revisions', [DesignRevisionController::class, 'store'])->name('design-revisions.store');

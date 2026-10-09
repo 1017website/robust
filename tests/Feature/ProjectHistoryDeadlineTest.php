@@ -157,23 +157,38 @@ class ProjectHistoryDeadlineTest extends TestCase
             ->assertSee('8 item');
     }
 
-    public function test_history_is_paginated_isolated_by_project_and_escapes_notes(): void
+    public function test_history_is_grouped_per_section_collapsible_isolated_by_project_and_escapes_notes(): void
     {
         $sales = User::factory()->create(['role' => 'sales']);
         $project = $this->project($sales);
-        for ($index = 1; $index <= 16; $index++) {
+        for ($index = 1; $index <= 12; $index++) {
             $project->workflowHistory()->create([
                 'user_id' => $sales->id, 'action' => 'production_updated', 'description' => 'Produksi diperbarui',
-                'meta' => ['stage' => 'Produksi', 'before' => [], 'after' => ['note' => $index === 16 ? '<script>alert("test")</script>' : 'Riwayat nomor '.$index]],
+                'meta' => ['stage' => 'Produksi', 'before' => [], 'after' => ['note' => $index === 12 ? '<script>alert("test")</script>' : 'Riwayat nomor '.$index]],
             ]);
         }
+        $project->workflowHistory()->create(['user_id' => $sales->id, 'action' => 'qc_installation_updated', 'description' => 'QC Pemasangan', 'meta' => ['stage' => 'QC Pemasangan', 'after' => ['note' => 'Cek pemasangan']]]);
+        $project->workflowHistory()->create(['user_id' => $sales->id, 'action' => 'delivery_order_updated', 'description' => 'DO lama', 'meta' => ['stage' => 'Delivery Order', 'after' => ['code' => 'DO-LAMA', 'notes' => 'DO arsip lama']]]);
         $other = $this->project($sales);
         $other->workflowHistory()->create(['action' => 'qc_updated', 'description' => 'QC project lain', 'meta' => ['after' => ['note' => 'Catatan rahasia project lain']]]);
-        $this->actingAs($sales)->get(route('project-workspace.show', $project))->assertOk()
+
+        $response = $this->actingAs($sales)->get(route('project-workspace.show', $project))->assertOk()
             ->assertSee('&lt;script&gt;', false)->assertDontSee('<script>alert("test")</script>', false)
-            ->assertDontSee('Catatan rahasia project lain')->assertDontSee('Riwayat nomor 1<', false);
-        $this->get(route('project-workspace.show', [$project, 'history_page' => 2]))->assertOk()
-            ->assertSee('Riwayat nomor 1')->assertDontSee('Riwayat nomor 16');
+            ->assertDontSee('Catatan rahasia project lain')->assertSee('Buka semua');
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $groups = $xpath->query("//*[@id='workflow-history']//details[@data-history-group]");
+        // Urutan bagian tetap; grup dengan pembaruan terbaru (Delivery) terbuka.
+        $this->assertSame(['history-production', 'history-delivery', 'history-qc-installation'], array_map(fn ($node) => $node->getAttribute('id'), iterator_to_array($groups)));
+        $this->assertSame(['history-delivery'], array_map(fn ($node) => $node->getAttribute('id'), iterator_to_array($xpath->query("//details[@data-history-group][@open]"))));
+        $this->assertStringContainsString('12 pembaruan', $xpath->query("//details[@id='history-production']/summary")->item(0)->textContent);
+        $this->assertStringContainsString('DO arsip lama', $xpath->query("//details[@id='history-delivery']")->item(0)->textContent);
+        // Sepuluh terbaru langsung tampil; sisanya di bagian riwayat lama yang bisa dibuka.
+        $older = $xpath->query("//details[@id='history-production']//details[contains(@class,'history-older')]")->item(0);
+        $this->assertStringContainsString('Tampilkan 2 riwayat Produksi lebih lama', $older->textContent);
+        $this->assertStringContainsString('Riwayat nomor 1', $older->textContent);
+        $this->assertStringNotContainsString('Riwayat nomor 11', $older->textContent);
     }
 
     public function test_work_sections_are_separate_and_overview_includes_history_for_every_role(): void
@@ -201,12 +216,12 @@ class ProjectHistoryDeadlineTest extends TestCase
             $this->assertSame(0, $xpath->query("//*[@id='operations']")->length);
             if (in_array($role, ['production', 'qc', 'delivery'], true)) {
                 $workPane = $role === 'qc' ? 'qc-installation' : $role;
-                $this->assertSame($role === 'delivery' ? 2 : 1, $xpath->query("//*[@id='{$workPane}']//form[not(@data-target-date-form) and contains(@action,'/{$role}')]")->length);
+                $this->assertSame(1, $xpath->query("//*[@id='{$workPane}']//form[not(@data-target-date-form) and contains(@action,'/{$role}')]")->length);
             }
         }
     }
 
-    public function test_delivery_and_do_updates_are_logged_and_latest_work_is_independent_of_history_page(): void
+    public function test_delivery_updates_with_item_list_are_logged_and_shown_as_latest_work(): void
     {
         Storage::fake('public');
         $this->freezeTime();
@@ -228,18 +243,24 @@ class ProjectHistoryDeadlineTest extends TestCase
         $this->assertSame('scheduled', $entries[1]->meta['after']['status']);
         Storage::disk('public')->assertExists($entries[0]->meta['attachments'][0]['path']);
         $this->get(route('project-workflow.history-attachment', [$project, $entries[0], 0]))->assertDownload('scheduling.pdf');
-        $this->post(route('delivery-orders.store', $project), [
-            'delivery_date' => today()->toDateString(), 'delivery_address' => 'Alamat DO Uji',
-            'notes' => 'DO siap dikirim', 'items' => [['name' => 'Cabinet Uji', 'qty' => 1, 'unit' => 'Unit']],
+        // Daftar barang (dulu di Delivery Order) kini disimpan lewat form Delivery.
+        $this->put(route('project-workflow.delivery', $project), [
+            'delivery_status' => 'scheduled', 'delivery_note' => 'Barang siap dikirim',
+            'delivery_items' => [['name' => 'Cabinet Uji', 'qty' => 1, 'unit' => 'Unit'], ['name' => 'Rak Reagen', 'qty' => 2.5, 'unit' => 'Set']],
         ])->assertRedirect($workspace.'#delivery')->assertSessionHasNoErrors();
+        $this->assertEquals([['name' => 'Cabinet Uji', 'qty' => 1, 'unit' => 'Unit'], ['name' => 'Rak Reagen', 'qty' => 2.5, 'unit' => 'Set']], $project->workflow->fresh()->delivery_items);
         $this->assertSame(3, $project->workflowHistory()->count());
-        $this->actingAs($sales)->get($workspace.'?history_page=2')->assertOk()->assertSee('DO siap dikirim');
+        $this->assertSame('Rak Reagen', $project->workflowHistory()->latest('id')->first()->meta['after']['items'][1]['name']);
+        $this->put(route('project-workflow.delivery', $project), ['delivery_status' => 'scheduled', 'delivery_items' => [['name' => '', 'qty' => 0, 'unit' => 'Unit']]])
+            ->assertSessionHasErrors(['delivery_items.0.name', 'delivery_items.0.qty']);
+        $this->actingAs($sales)->get($workspace)->assertOk()->assertSee('Rak Reagen')->assertSee('2,5 Set')
+            ->assertDontSee('Delivery Order (DO)')->assertDontSee('/delivery-order/pdf', false);
         $dom = new \DOMDocument;
         @$dom->loadHTML($this->get($workspace)->getContent());
         $summary = (new \DOMXPath($dom))->query("//section[@aria-labelledby='work-summary-title']")->item(0)->textContent;
-        $this->assertStringContainsString('Delivery Order', $summary);
+        $this->assertStringContainsString('Delivery', $summary);
         $this->assertStringContainsString('Petugas Delivery Uji', $summary);
-        $this->assertStringContainsString('DO siap dikirim', $summary);
+        $this->assertStringContainsString('Barang siap dikirim', $summary);
         $this->actingAs($delivery)->from($workspace)->put(route('project-workflow.delivery', $project), ['delivery_status' => 'completed'])
             ->assertSessionHasErrors('customer_receiver_name');
         $this->assertSame(3, $project->workflowHistory()->count());

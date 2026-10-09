@@ -161,14 +161,13 @@ class ProjectQcStagesTest extends TestCase
         $delivery = User::factory()->create(['role' => 'delivery']);
         $this->actingAs($delivery)->putJson(route('project-workflow.qc-installation', $project), ['qc_installation_target_date' => '2026-10-21', 'qc_installation_result' => 'in_progress', 'qc_installation_progress' => 25])->assertForbidden();
         $this->putJson(route('project-workflow.delivery', $project), ['delivery_status' => 'scheduling'])->assertUnprocessable();
-        $this->postJson(route('delivery-orders.store', $project), [])->assertUnprocessable();
         $project->workflow->update(['qc_completed' => true, 'qc_progress' => 100]);
         $this->put(route('project-workflow.delivery', $project), ['delivery_status' => 'scheduling'])->assertSessionHasNoErrors()->assertRedirect();
-        $this->post(route('delivery-orders.store', $project), [
-            'delivery_date' => '2026-10-08', 'delivery_address' => 'Lokasi Customer',
-            'items' => [['name' => 'Meja Laboratorium', 'qty' => 2, 'unit' => 'Unit']],
+        $this->put(route('project-workflow.delivery', $project), [
+            'delivery_status' => 'scheduling', 'delivery_items' => [['name' => 'Meja Laboratorium', 'qty' => 2, 'unit' => 'Unit']],
         ])->assertSessionHasNoErrors()->assertRedirect();
-        $this->assertNotNull($project->fresh()->deliveryOrder);
+        $this->assertSame('Meja Laboratorium', $project->workflow->fresh()->delivery_items[0]['name']);
+        $this->get(route('project-workspace.show', $project))->assertOk()->assertSee('Daftar Barang Dikirim')->assertSee('value="Meja Laboratorium"', false);
         $this->assertFalse($project->workflow->fresh()->qc_installation_completed);
     }
 
@@ -391,6 +390,48 @@ class ProjectQcStagesTest extends TestCase
         $this->assertSame(0, $xpath->query("//*[@id='qc-installation']//*[@name='qc_result']")->length);
         $this->assertSame(3, $xpath->query("//*[@id='qc-installation']//input[@name='qc_installation_result']")->length);
         $this->assertSame(1, $xpath->query("//*[@id='design-request']//details[@id='design-revisions']")->length);
+    }
+
+    public function test_migration_moves_delivery_order_items_into_delivery(): void
+    {
+        $project = $this->project();
+        $creator = User::factory()->create(['role' => 'delivery']);
+        \Illuminate\Support\Facades\DB::table('delivery_orders')->insert([
+            'project_id' => $project->id, 'code' => 'DO-LAMA-1', 'delivery_date' => '2026-10-01', 'delivery_address' => 'Gudang customer',
+            'items' => json_encode([['name' => 'Lemari Asam', 'qty' => 1, 'unit' => 'Unit']]), 'created_by' => $creator->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $migration = require database_path('migrations/2026_10_09_000300_move_delivery_order_items_to_project_workflows.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame([['name' => 'Lemari Asam', 'qty' => 1, 'unit' => 'Unit']], $project->workflow->fresh()->delivery_items);
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('delivery-orders.store'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('delivery-orders.pdf'));
+    }
+
+    public function test_design_revisions_explain_their_source_and_are_hidden_from_delivery(): void
+    {
+        $project = $this->project();
+        $administrator = User::factory()->create(['role' => 'administrator']);
+        $this->actingAs($administrator)->post(route('design-revisions.store', $project), [
+            'revision_date' => '2026-10-09', 'notes' => 'Tinggi meja diubah',
+            'revision_file' => UploadedFile::fake()->create('revisi-meja.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+        $revision = $project->designRevisions()->firstOrFail();
+
+        // Penawaran tanpa Request Gambar: dijelaskan bahwa belum ada gambar desain awal.
+        $this->get(route('project-workspace.show', $project))->assertOk()
+            ->assertSee('revisi gambar setelah project berjalan')
+            ->assertSee('tidak melalui Request Gambar, jadi belum ada gambar desain awal')
+            ->assertSee('Tinggi meja diubah');
+
+        $delivery = User::factory()->create(['role' => 'delivery']);
+        $this->actingAs($delivery)->get(route('project-workspace.show', $project))->assertOk()
+            ->assertDontSee('id="design-revisions"', false)->assertDontSee('Tinggi meja diubah');
+        $this->get(route('design-revisions.attachment', [$project, $revision]))->assertForbidden();
+
+        $production = User::factory()->create(['role' => 'production']);
+        $this->actingAs($production)->get(route('project-workspace.show', $project))->assertOk()->assertSee('Tinggi meja diubah');
     }
 
     public function test_migration_preserves_existing_qc_as_production_qc(): void

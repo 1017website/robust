@@ -20,7 +20,6 @@ class ProjectWorkspaceController extends Controller
             'quotation.designRequest.productionPic', 'quotation.designRequest.customer.primaryPic',
             'quotation.designRequest.lead', 'terms', 'activities', 'documents.uploader',
             'workflow.productionUpdater', 'workflow.qcUpdater', 'workflow.qcInstallationUpdater', 'workflow.deliveryUpdater',
-            'deliveryOrder.creator', 'deliveryOrder.updater',
             'designRevisions.creator', 'designRevisions.statusUpdater',
         ]);
         $workflow = $project->workflow ?: $project->workflow()->make();
@@ -34,7 +33,7 @@ class ProjectWorkspaceController extends Controller
             ->sortByDesc('created_at')
             ->values();
         $qcChecklistDefinition = \App\Models\ProjectWorkflow::qcChecklistDefinition($project, $showPrices);
-        $workflowHistory = $project->workflowHistory()->with('user')->orderByDesc('id')->paginate(15, ['*'], 'history_page')->withQueryString()->fragment('workflow-history');
+        $workflowHistory = $project->workflowHistory()->with('user')->orderByDesc('id')->get();
         $latestHistoryEntry = $project->workflowHistory()->with('user')->orderByDesc('id')->first();
 
         return view('projects.workspace', compact('project', 'workflow', 'fabricationDocuments', 'productionProgressDocuments', 'qcChecklistDefinition', 'showPrices', 'workflowHistory', 'latestHistoryEntry'));

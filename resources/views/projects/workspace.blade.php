@@ -14,13 +14,14 @@
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
     $canFabrication = in_array($role, ['administrator', 'drafter'], true);
     $canRevision = in_array($role, ['administrator', 'drafter', 'administration'], true);
+    // Tim delivery hanya mengirim barang; revisi gambar bukan acuan kerjanya.
+    $showRevisions = $role !== 'delivery';
     $showPrices = $showPrices ?? auth()->user()->canViewPrices();
     $productionProgressDocuments = $productionProgressDocuments ?? collect();
     $designRequest = $project->quotation?->designRequest;
     $directProduction = ! $designRequest;
     $statusLabel = \App\Models\ProjectWorkflow::productionStatuses()[$workflow->production_status] ?? $workflow->production_status;
     $deliveryStatusLabel = \App\Models\ProjectWorkflow::deliveryStatuses()[$workflow->delivery_status] ?? $workflow->delivery_status;
-    $deliveryOrder = $project->deliveryOrder;
     $purchaseOrder = $project->quotation?->purchaseOrderRequest;
     $workItems = $project->quotation?->items?->where('is_optional', false) ?? collect();
     $defaultDeliveryItems = $project->quotation?->items
@@ -28,7 +29,7 @@
         ->map(fn($item) => ['name' => trim($item->name.($item->variant ? ' - '.$item->variant : '')), 'qty' => (float) $item->qty, 'unit' => $item->unit ?: 'Unit'])
         ->values()
         ->all() ?? [];
-    $deliveryOrderItems = collect(old('items', $deliveryOrder?->items ?: $defaultDeliveryItems));
+    $deliveryItems = collect(old('delivery_items', $workflow->delivery_items ?: $defaultDeliveryItems))->values();
 @endphp
 
 @push('styles')
@@ -140,8 +141,19 @@
 
         <div class="tab-pane fade" id="design-request">
             @include('projects._design-request', ['designRequest' => $designRequest, 'quotation' => $project->quotation, 'showPrices' => $showPrices])
+        @if($showRevisions)
         <details class="workflow-card mt-3" id="design-revisions">
-            <summary class="fw-semibold mb-3">Design Revision</summary>
+            <summary class="fw-semibold mb-3">Design Revision · revisi gambar setelah project berjalan <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></summary>
+            <div class="alert alert-light border small mb-3">
+                @if($directProduction)
+                    Penawaran {{ $project->quotation?->code ?? 'project ini' }} tidak melalui Request Gambar, jadi belum ada gambar desain awal; produksi memakai item &amp; spesifikasi penawaran di atas.
+                    Gunakan bagian ini hanya bila setelah PO customer meminta gambar atau perubahan desain.
+                @else
+                    Gambar awal berasal dari Request Gambar <b>{{ $designRequest->code }}</b> pada tahap penawaran (revisi di tahap itu tercatat di <i>Riwayat Request Revisi</i> di atas).
+                    Bagian ini mencatat perubahan gambar <b>setelah project berjalan</b>, misalnya permintaan customer atau penyesuaian ukuran di lapangan.
+                @endif
+                File revisi diunggah oleh Drafter, Administration, atau Administrator.
+            </div>
             @if($canRevision)
             <div class="workflow-card mb-3">
                 <div class="card-head"><h2>Tambah Design Revision</h2></div>
@@ -184,6 +196,7 @@
                 </table>
             </div>
         </details>
+        @endif
 
         </div>
 
@@ -283,64 +296,43 @@
                         <label class="form-label">POD / Bukti Terkirim</label><input class="form-control mb-3" type="file" name="pod" accept=".pdf,image/jpeg,image/png,image/webp">
                         <label class="form-label">Nama Penerima Customer</label><input name="customer_receiver_name" value="{{ old('customer_receiver_name', $workflow->customer_receiver_name) }}" class="form-control mb-3">
                         <label class="form-label">Tanggal Diterima Customer</label><input type="datetime-local" name="customer_received_at" value="{{ old('customer_received_at', $workflow->customer_received_at?->format('Y-m-d\TH:i')) }}" class="form-control mb-3">
+                        <label class="form-label">Daftar Barang Dikirim *</label>
+                        <div class="small text-muted-2 mb-2">Otomatis terisi dari item penawaran; sesuaikan dengan barang yang benar-benar dikirim.</div>
+                        <div class="d-grid gap-2 mb-2" data-delivery-items>
+                            @foreach($deliveryItems->isNotEmpty() ? $deliveryItems : collect([['name' => '', 'qty' => 1, 'unit' => 'Unit']]) as $index => $item)
+                                <div class="row g-2 align-items-center border rounded-3 p-2 mx-0" data-delivery-item>
+                                    <div class="col-12"><input name="delivery_items[{{ $index }}][name]" value="{{ $item['name'] ?? '' }}" class="form-control" placeholder="Nama / deskripsi barang" aria-label="Nama barang" required></div>
+                                    <div class="col-4"><input type="number" step="0.01" min="0.01" name="delivery_items[{{ $index }}][qty]" value="{{ $item['qty'] ?? 1 }}" class="form-control" placeholder="Qty" aria-label="Qty" required></div>
+                                    <div class="col-5"><input name="delivery_items[{{ $index }}][unit]" value="{{ $item['unit'] ?? 'Unit' }}" class="form-control" placeholder="Satuan" aria-label="Satuan" required></div>
+                                    <div class="col-3"><button type="button" class="btn btn-soft w-100 text-danger" data-remove-delivery-item aria-label="Hapus barang"><i class="bi bi-trash"></i></button></div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <template data-delivery-item-template><div class="row g-2 align-items-center border rounded-3 p-2 mx-0" data-delivery-item>
+                                    <div class="col-12"><input name="delivery_items[__INDEX__][name]" value="" class="form-control" placeholder="Nama / deskripsi barang" aria-label="Nama barang" required></div>
+                                    <div class="col-4"><input type="number" step="0.01" min="0.01" name="delivery_items[__INDEX__][qty]" value="1" class="form-control" placeholder="Qty" aria-label="Qty" required></div>
+                                    <div class="col-5"><input name="delivery_items[__INDEX__][unit]" value="Unit" class="form-control" placeholder="Satuan" aria-label="Satuan" required></div>
+                                    <div class="col-3"><button type="button" class="btn btn-soft w-100 text-danger" data-remove-delivery-item aria-label="Hapus barang"><i class="bi bi-trash"></i></button></div>
+                                </div></template>
+                        <div class="mb-3"><button type="button" class="btn btn-sm btn-soft" data-add-delivery-item><i class="bi bi-plus-lg me-1"></i>Tambah barang</button></div>
                         <label class="form-label">Catatan Delivery</label><textarea name="delivery_note" class="form-control mb-3" rows="2">{{ old('delivery_note', $workflow->delivery_note) }}</textarea>
                         <button class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Simpan Delivery</button>
                     </form>
                     @else
                         <div class="mb-2"><span class="text-muted-2">Jadwal:</span> {{ $workflow->delivery_scheduled_at?->format('d/m/Y H:i') ?? '-' }}</div>
                         <div class="mb-2"><span class="text-muted-2">Penerima:</span> {{ $workflow->customer_receiver_name ?: '-' }}</div>
+                        <div class="text-muted-2 mt-3 mb-1">Daftar Barang Dikirim</div>
+                        @if($workflow->delivery_items)
+                            <ul class="mb-0">@foreach($workflow->delivery_items as $item)<li>{{ $item['name'] }} — {{ rtrim(rtrim(number_format((float) $item['qty'], 2, ',', '.'), '0'), ',') }} {{ $item['unit'] }}</li>@endforeach</ul>
+                        @else
+                            <div>-</div>
+                        @endif
                     @endif
                     @if($workflow->pod_path || $workflow->delivery_out_photo_path || $workflow->delivery_returned_photo_path)
                         <div class="attachment-box mt-3">
                             @if($workflow->pod_path)<div class="mb-2"><span class="small fw-semibold">POD: {{ $workflow->pod_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-pod']) }}">Lihat POD</a> - <a href="{{ route('project-workflow.attachment', [$project, 'delivery-pod', 'download' => 1]) }}">Download</a></div>@endif
                             @if($workflow->delivery_out_photo_path)<div class="mb-2"><span class="small fw-semibold">Keluar: {{ $workflow->delivery_out_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-out']) }}">Lihat foto</a></div>@endif
                             @if($workflow->delivery_returned_photo_path)<div><span class="small fw-semibold">Kembali: {{ $workflow->delivery_returned_photo_name }}</span><br><a target="_blank" href="{{ route('project-workflow.attachment', [$project, 'delivery-returned']) }}">Lihat foto</a></div>@endif
-                        </div>
-                    @endif
-                    <hr class="my-4">
-                    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                        <div><h3>Delivery Order (DO)</h3><small class="text-muted-2">Surat jalan barang untuk customer</small></div>
-                        @if($deliveryOrder)<span class="status-soft st-green">{{ $deliveryOrder->code }}</span>@endif
-                    </div>
-                    @if(!$workflow->qc_completed)
-                        <div class="alert alert-warning py-2 small">DO dapat dibuat setelah QC Produksi selesai.</div>
-                    @elseif($canDelivery)
-                        <form method="POST" action="{{ route('delivery-orders.store', $project) }}">
-                            @csrf
-                            <label class="form-label">Tanggal Pengiriman *</label>
-                            <input type="date" name="delivery_date" value="{{ old('delivery_date', $deliveryOrder?->delivery_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="form-control mb-3" required>
-                            <label class="form-label">Alamat Pengiriman *</label>
-                            <textarea name="delivery_address" class="form-control mb-3" rows="3" required>{{ old('delivery_address', $deliveryOrder?->delivery_address ?? $purchaseOrder?->delivery_address) }}</textarea>
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6"><label class="form-label">PIC Penerima</label><input name="recipient_name" value="{{ old('recipient_name', $deliveryOrder?->recipient_name ?? $purchaseOrder?->delivery_pic_name) }}" class="form-control"></div>
-                                <div class="col-md-6"><label class="form-label">Telepon PIC</label><input name="recipient_phone" value="{{ old('recipient_phone', $deliveryOrder?->recipient_phone ?? $purchaseOrder?->delivery_pic_phone) }}" class="form-control"></div>
-                                <div class="col-md-6"><label class="form-label">Nama Pengemudi</label><input name="driver_name" value="{{ old('driver_name', $deliveryOrder?->driver_name) }}" class="form-control"></div>
-                                <div class="col-md-6"><label class="form-label">Nomor Kendaraan</label><input name="vehicle_number" value="{{ old('vehicle_number', $deliveryOrder?->vehicle_number) }}" class="form-control text-uppercase"></div>
-                            </div>
-                            <label class="form-label">Daftar Barang *</label>
-                            <div class="d-grid gap-2 mb-3">
-                                @forelse($deliveryOrderItems as $index => $item)
-                                    <div class="row g-2">
-                                        <div class="col-12"><input name="items[{{ $index }}][name]" value="{{ $item['name'] ?? '' }}" class="form-control" placeholder="Nama / deskripsi barang" required></div>
-                                        <div class="col-5"><input type="number" step="0.01" min="0.01" name="items[{{ $index }}][qty]" value="{{ $item['qty'] ?? 1 }}" class="form-control" placeholder="Qty" required></div>
-                                        <div class="col-7"><input name="items[{{ $index }}][unit]" value="{{ $item['unit'] ?? 'Unit' }}" class="form-control" placeholder="Satuan" required></div>
-                                    </div>
-                                @empty
-                                    <div class="row g-2">
-                                        <div class="col-12"><input name="items[0][name]" class="form-control" placeholder="Nama / deskripsi barang" required></div>
-                                        <div class="col-5"><input type="number" step="0.01" min="0.01" name="items[0][qty]" value="1" class="form-control" placeholder="Qty" required></div>
-                                        <div class="col-7"><input name="items[0][unit]" value="Unit" class="form-control" placeholder="Satuan" required></div>
-                                    </div>
-                                @endforelse
-                            </div>
-                            <label class="form-label">Catatan DO</label>
-                            <textarea name="notes" class="form-control mb-3" rows="2">{{ old('notes', $deliveryOrder?->notes) }}</textarea>
-                            <button class="btn btn-primary w-100"><i class="bi bi-file-earmark-check me-1"></i>{{ $deliveryOrder ? 'Perbarui DO' : 'Buat DO' }}</button>
-                        </form>
-                    @endif
-                    @if($deliveryOrder)
-                        <div class="d-flex gap-2 mt-3">
-                            <a target="_blank" rel="noopener" href="{{ route('delivery-orders.pdf', $project) }}" class="btn btn-soft flex-fill"><i class="bi bi-eye me-1"></i>Preview PDF</a>
                         </div>
                     @endif
                 </section>
@@ -397,6 +389,27 @@ document.addEventListener('DOMContentLoaded', function () {
         results.forEach(input => input.addEventListener('change', syncResult));
         syncChecklist();
     });
+    document.querySelectorAll('[data-delivery-items]').forEach(list => {
+        const template = list.parentElement.querySelector('[data-delivery-item-template]');
+        const add = list.parentElement.querySelector('[data-add-delivery-item]');
+        let next = list.querySelectorAll('[data-delivery-item]').length;
+        const syncRemove = () => {
+            const rows = list.querySelectorAll('[data-delivery-item]');
+            rows.forEach(row => row.querySelector('[data-remove-delivery-item]').disabled = rows.length === 1);
+        };
+        add.addEventListener('click', () => {
+            list.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDEX__', next++));
+            syncRemove();
+            list.lastElementChild.querySelector('input').focus();
+        });
+        list.addEventListener('click', event => {
+            const button = event.target.closest('[data-remove-delivery-item]');
+            if (!button) return;
+            button.closest('[data-delivery-item]').remove();
+            syncRemove();
+        });
+        syncRemove();
+    });
     document.querySelectorAll('[data-item-progress-form]').forEach(form => {
         const items = [...form.querySelectorAll('[data-item-progress]')];
         if (!items.length) return;
@@ -427,8 +440,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
         if (requested === '#design-revisions') {
             const revisions = document.getElementById('design-revisions');
-            revisions.open = true;
-            revisions.scrollIntoView();
+            if (revisions) {
+                revisions.open = true;
+                revisions.scrollIntoView();
+            }
         }
     }
     showHashTab(true);

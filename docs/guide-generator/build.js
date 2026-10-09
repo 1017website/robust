@@ -21,7 +21,7 @@ const AKUN = [
   ['Drafter', 'drafter@robust.test', 'Mengunggah dan merevisi drawing serta dokumen desain.'],
   ['Produksi', 'production@robust.test', 'Spesifikasi teknis, HPP, Master Item, dan progres produksi.'],
   ['Quality Control', 'qc@robust.test', 'Pemeriksaan hasil produksi terhadap spesifikasi penawaran.'],
-  ['Delivery', 'delivery@robust.test', 'Jadwal kirim, bukti terima, dan Delivery Order.'],
+  ['Delivery', 'delivery@robust.test', 'Jadwal kirim, daftar barang, dan bukti terima.'],
   ['Administration', 'administration@robust.test', 'Konfirmasi pembayaran, bukti potong PPh, catatan administrasi.'],
 ];
 
@@ -39,7 +39,7 @@ const ALUR = [
   ['11', 'Administrator / Sales', 'Memproses PO di Accurate. Project terbit otomatis.'],
   ['12', 'Produksi', 'Mengerjakan produksi dan memperbarui progresnya.'],
   ['13', 'Quality Control', 'Memeriksa hasil produksi terhadap spesifikasi penawaran.'],
-  ['14', 'Delivery', 'Mengirim barang, mencatat bukti terima, menerbitkan Delivery Order.'],
+  ['14', 'Delivery', 'Mengirim barang, mencatat daftar barang dan bukti terima.'],
   ['15', 'Administration', 'Mengonfirmasi pembayaran dan bukti potong PPh.'],
   ['16', 'Administrator / Sales', 'Menerbitkan invoice dan memantau pelunasan tiap termin.'],
 ];

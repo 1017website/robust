@@ -10,11 +10,6 @@
             'progress' => $workflow->qcProgress(true), 'note' => $workflow->qc_installation_note, 'time' => $workflow->qc_installation_updated_at, 'user' => $workflow->qcInstallationUpdater, 'tab' => 'qc-installation', 'target' => $workflow->qc_installation_target_date],
     ]);
     $latestWork = $stages->filter(fn ($stage) => $stage['time'])->sortByDesc(fn ($stage) => $stage['time']->getTimestamp())->first();
-    if ($deliveryOrder && (!$latestWork || $deliveryOrder->updated_at->gt($latestWork['time']))) {
-        $latestWork = ['label' => 'Delivery Order', 'status' => $deliveryOrder->code, 'progress' => null,
-            'note' => $deliveryOrder->notes, 'time' => $deliveryOrder->updated_at,
-            'user' => $deliveryOrder->updater ?? $deliveryOrder->creator, 'tab' => 'delivery'];
-    }
     if ($latestHistoryEntry && (!$latestWork || $latestHistoryEntry->created_at->gte($latestWork['time']))) {
         $state = $latestHistoryEntry->meta['after'] ?? [];
         $latestWork = [

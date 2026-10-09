@@ -45,6 +45,7 @@ class ProjectWorkflow extends Model
         'customer_received_at' => 'datetime',
         'delivery_out_completed' => 'boolean',
         'delivery_returned_completed' => 'boolean',
+        'delivery_items' => 'array',
         'delivery_updated_at' => 'datetime',
     ];
 

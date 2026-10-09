@@ -84,6 +84,8 @@ class DesignRevisionController extends Controller
     {
         abort_unless((int) $designRevision->project_id === (int) $project->id, 404);
         abort_unless(ProjectAccess::canView($request->user(), $project), 403);
+        // Selaras dengan workspace: revisi gambar tidak ditampilkan untuk tim delivery.
+        abort_if($request->user()->isDelivery(), 403);
         abort_unless(Storage::disk('public')->exists($designRevision->file_path), 404);
 
         $absolutePath = Storage::disk('public')->path($designRevision->file_path);

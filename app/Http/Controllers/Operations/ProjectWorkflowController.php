@@ -270,6 +270,16 @@ class ProjectWorkflowController extends Controller
             'delivery_out_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
             'delivery_returned_completed' => ['nullable', 'boolean'],
             'delivery_returned_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp'],
+            // Daftar barang yang dikirim (dulu bagian Delivery Order).
+            'delivery_items' => ['sometimes', 'array', 'min:1'],
+            'delivery_items.*.name' => ['required', 'string', 'max:500'],
+            'delivery_items.*.qty' => ['required', 'numeric', 'gt:0'],
+            'delivery_items.*.unit' => ['required', 'string', 'max:50'],
+        ], [], [
+            'delivery_items' => 'daftar barang',
+            'delivery_items.*.name' => 'nama barang',
+            'delivery_items.*.qty' => 'qty barang',
+            'delivery_items.*.unit' => 'satuan barang',
         ]);
         $outCompleted = $request->boolean('delivery_out_completed');
         $returnedCompleted = $request->boolean('delivery_returned_completed');
@@ -309,6 +319,13 @@ class ProjectWorkflowController extends Controller
             'delivery_updated_by' => $request->user()->id,
             'delivery_updated_at' => now(),
         ];
+        if (isset($data['delivery_items'])) {
+            $update['delivery_items'] = collect($data['delivery_items'])->map(fn (array $item) => [
+                'name' => trim($item['name']),
+                'qty' => round((float) $item['qty'], 2),
+                'unit' => trim($item['unit']),
+            ])->values()->all();
+        }
         if ($file = $request->file('pod')) {
             $update += $this->replaceFile($workflow->pod_path, $file, "project-workflows/{$project->id}/delivery", 'pod', true);
             $attachments[] = ['path' => $update['pod_path'], 'name' => $update['pod_name']];
@@ -402,6 +419,7 @@ class ProjectWorkflowController extends Controller
                 'received_at' => $workflow->customer_received_at?->toIso8601String(),
                 'out_completed' => (bool) $workflow->delivery_out_completed,
                 'returned_completed' => (bool) $workflow->delivery_returned_completed,
+                'items' => $workflow->delivery_items ?? [],
             ];
         }
         $fields = $prefix === 'production'

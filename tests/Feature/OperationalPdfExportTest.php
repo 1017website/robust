@@ -124,10 +124,6 @@ class OperationalPdfExportTest extends TestCase
             $response = $this->get($url.'?download=1')->assertOk();
             $this->assertStringStartsWith('attachment;', $response->headers->get('Content-Disposition'));
         }
-        $project = \App\Models\Project::create(['code' => 'PRJ-PREVIEW', 'name' => 'Preview Delivery', 'quotation_id' => $quotation->id]);
-        $project->deliveryOrder()->create(['code' => 'DO-PREVIEW', 'delivery_date' => today(), 'delivery_address' => 'Jl. Contoh', 'recipient_name' => 'PIC Customer', 'created_by' => $sales->id, 'items' => [['name' => 'Cabinet', 'qty' => 1, 'unit' => 'Unit']]]);
-        $response = $this->get(route('delivery-orders.pdf', $project))->assertOk();
-        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
     }
 
     private function makeDocuments(): array

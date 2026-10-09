@@ -372,8 +372,8 @@ module.exports = {
   },
 
   delivery: {
-    intro: `Delivery mengatur pengiriman barang ke lokasi customer, mencatat bukti terima, dan menerbitkan
-      Delivery Order. Penyelesaian tahap ini adalah syarat sebelum invoice dapat diterbitkan.`,
+    intro: `Delivery mengatur pengiriman barang ke lokasi customer, mencatat daftar barang yang
+      dikirim, serta bukti terima. Penyelesaian tahap ini adalah syarat sebelum invoice dapat diterbitkan.`,
 
     'dashboard': {
       f: `Halaman awal Delivery berupa daftar project yang siap atau sedang dikirim.`,
@@ -384,7 +384,7 @@ module.exports = {
     },
 
     'workspace': {
-      f: `Mengatur jadwal kirim, mencatat penerimaan customer, dan menerbitkan Delivery Order.`,
+      f: `Mengatur jadwal kirim, daftar barang yang dikirim, dan penerimaan customer.`,
       s: [
         'Buka tab Production, QC & Delivery lalu perhatikan panel Delivery di sebelah kanan.',
         'Tentukan jadwal pengiriman.',
@@ -392,7 +392,7 @@ module.exports = {
         'Unggah foto barang keluar dan tandai DO/BA keluar.',
         'Setelah barang diterima, isi nama penerima dan tanggal penerimaan, lalu unggah POD (bukti terima).',
         'Unggah foto DO/BA kembali dan tandai selesai.',
-        'Gunakan panel Delivery Order untuk membuat dan mengunduh surat jalan.',
+        'Periksa Daftar Barang Dikirim (otomatis dari item penawaran); ubah, tambah, atau hapus barang sesuai yang benar-benar dikirim.',
         'Simpan.',
       ],
       k: [
@@ -402,6 +402,7 @@ module.exports = {
         ['Nama penerima', false, 'Orang di sisi customer yang menerima barang.'],
         ['Tanggal penerimaan', false, 'Kapan barang diterima customer.'],
         ['POD (Proof of Delivery)', false, 'Bukti terima bertanda tangan customer.'],
+        ['Daftar Barang Dikirim', true, 'Nama barang, qty, dan satuan yang dikirim. Terisi otomatis dari item penawaran.'],
         ['Catatan pengiriman', false, 'Keterangan kondisi barang atau kendala di lapangan.'],
       ],
       n: `Invoice baru dapat diterbitkan setelah status delivery mencapai <b>Selesai</b> dan penerimaan customer

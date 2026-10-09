@@ -248,7 +248,7 @@ module.exports = {
       s: [
         'Bagian Progress Desain & Produksi diisi Produksi: persentase progres, catatan, dan laporan produksi.',
         'Bagian Quality Control diisi QC: checklist otomatis per item penawaran, catatan QC, dan lampiran.',
-        'Bagian Delivery diisi tim Delivery: jadwal kirim, POD, nama penerima, dan Delivery Order.',
+        'Bagian Delivery diisi tim Delivery: jadwal kirim, daftar barang dikirim, POD, dan nama penerima.',
         'Administrator dapat melihat dan mengisi seluruh bagian.',
       ],
       n: 'Urutannya berurutan: Produksi selesai lebih dulu, baru QC, baru Delivery. Invoice baru bisa terbit setelah Delivery selesai.',
