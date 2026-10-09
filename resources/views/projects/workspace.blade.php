@@ -3,12 +3,12 @@
 
 @php
     $role = auth()->user()->role;
-    $visibleWorkTabs = auth()->user()->isQc() ? ['qc']
-        : (in_array($role, ['production', 'delivery'], true) ? [$role] : ['production', 'qc', 'delivery']);
-    $visibleQcStages = match ($role) {
-        'qc_production' => [false],
-        'qc_installation' => [true],
-        default => [false, true],
+    $visibleWorkTabs = match ($role) {
+        'qc_production' => ['qc-production'],
+        'qc_installation' => ['qc-installation'],
+        'qc' => ['qc-production', 'qc-installation'],
+        'production', 'delivery' => [$role],
+        default => ['production', 'qc-production', 'delivery', 'qc-installation'],
     };
     $canProduction = in_array($role, ['administrator', 'production'], true);
     $canDelivery = in_array($role, ['administrator', 'delivery'], true);
@@ -36,8 +36,6 @@
     .workspace-tabs { border-bottom: 1px solid #e6eaf0; gap: .35rem; }
     .workspace-tabs .nav-link { color: #667085; font-weight: 700; border: 0; border-bottom: 3px solid transparent; padding: .85rem 1rem; }
     .workspace-tabs .nav-link.active { color: #0b63ce; border-bottom-color: #0b63ce; background: transparent; }
-    .qc-stage-grid > :only-child { grid-column: 1 / -1; }
-    .qc-stage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .work-stage-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .work-stage-list > div { min-width: 0; }
     .workflow-card { border: 1px solid #e7ebf1; border-radius: 14px; padding: 1rem; background: #fff; }
@@ -63,7 +61,7 @@
     .qc-item + .qc-item { border-top: 1px solid #e7ebf1; margin-top: .75rem; padding-top: .75rem; }
     .revision-note { max-width: 430px; white-space: normal; }
     .progress-range-value { min-width: 64px; text-align: center; font-size: 1.35rem; font-weight: 800; color: #0b63ce; }
-    @media (max-width: 991px) { .qc-stage-grid, .work-stage-list { grid-template-columns: 1fr; } }
+    @media (max-width: 991px) { .work-stage-list { grid-template-columns: 1fr; } }
 </style>
 @endpush
 
@@ -76,17 +74,19 @@
 <div class="card-r p-0 overflow-hidden">
     <ul class="nav workspace-tabs px-3" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#project-info" type="button">Informasi Project</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">{{ $directProduction ? 'Spesifikasi Penawaran' : 'Design Request' }} <span class="badge text-bg-light ms-1">{{ $directProduction ? ($project->quotation?->items?->count() ?? 0) : 1 }}</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-request" type="button">Spesifikasi Penawaran <span class="badge text-bg-light ms-1">{{ $directProduction ? ($project->quotation?->items?->count() ?? 0) : 1 }}</span></button></li>
         @if(in_array('production', $visibleWorkTabs, true))
             <li class="nav-item"><button class="nav-link" id="production-tab" data-bs-toggle="tab" data-bs-target="#production" type="button" role="tab" aria-controls="production" aria-selected="false">Produksi</button></li>
         @endif
-        @if(in_array('qc', $visibleWorkTabs, true))
-            <li class="nav-item"><button class="nav-link" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc" type="button" role="tab" aria-controls="qc" aria-selected="false">{{ auth()->user()->isQc() ? ($role === 'qc' ? 'QC' : auth()->user()->roleLabel()) : 'QC' }}</button></li>
+        @if(in_array('qc-production', $visibleWorkTabs, true))
+            <li class="nav-item"><button class="nav-link" id="qc-production-tab" data-bs-toggle="tab" data-bs-target="#qc-production" type="button" role="tab" aria-controls="qc-production" aria-selected="false">QC Produksi</button></li>
         @endif
         @if(in_array('delivery', $visibleWorkTabs, true))
-            <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Delivery</button></li>
+            <li class="nav-item"><button class="nav-link" id="delivery-tab" data-bs-toggle="tab" data-bs-target="#delivery" type="button" role="tab" aria-controls="delivery" aria-selected="false">Status Delivery</button></li>
         @endif
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#design-revisions" type="button">Design Revision <span class="badge text-bg-light ms-1">{{ $project->designRevisions->count() }}</span></button></li>
+        @if(in_array('qc-installation', $visibleWorkTabs, true))
+            <li class="nav-item"><button class="nav-link" id="qc-installation-tab" data-bs-toggle="tab" data-bs-target="#qc-installation" type="button" role="tab" aria-controls="qc-installation" aria-selected="false">QC Pemasangan</button></li>
+        @endif
     </ul>
 
     <div class="tab-content p-3 p-lg-4">
@@ -140,6 +140,51 @@
 
         <div class="tab-pane fade" id="design-request">
             @include('projects._design-request', ['designRequest' => $designRequest, 'quotation' => $project->quotation, 'showPrices' => $showPrices])
+        <details class="workflow-card mt-3" id="design-revisions">
+            <summary class="fw-semibold mb-3">Design Revision</summary>
+            @if($canRevision)
+            <div class="workflow-card mb-3">
+                <div class="card-head"><h2>Tambah Design Revision</h2></div>
+                <form method="POST" action="{{ route('design-revisions.store', $project) }}" enctype="multipart/form-data" class="row g-3"
+                    data-upload-progress data-max-file-size="0" data-max-files="0" data-redirect="{{ route('project-workspace.show', $project) }}#design-revisions">@csrf
+                    <div class="col-md-3"><label class="form-label">Tanggal Revisi</label><input type="date" class="form-control" name="revision_date" value="{{ old('revision_date', now()->format('Y-m-d')) }}" required></div>
+                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required><div class="form-text">Tanpa batas ukuran. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.</div></div>
+                    <div class="col-md-5"><label class="form-label">Keterangan Perubahan</label><textarea class="form-control" name="notes" rows="2" required>{{ old('notes') }}</textarea></div>
+                    <div class="col-12"><x-upload-progress /></div>
+                    <div class="col-12"><button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Simpan Revision {{ $project->designRevisions->count() + 1 }}</button></div>
+                </form>
+            </div>
+            @endif
+
+            <div class="table-wrap">
+                <table class="table-r">
+                    <thead><tr><th>Revisi</th><th>Tanggal</th><th>Keterangan Perubahan</th><th>File</th><th>Dibuat Oleh</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @forelse($project->designRevisions as $revision)
+                        <tr>
+                            <td class="fw-bold">{{ $revision->label() }}</td>
+                            <td>{{ $revision->revision_date->translatedFormat('d M Y') }}</td>
+                            <td class="revision-note">{{ $revision->notes }}</td>
+                            <td><div class="fw-semibold">{{ $revision->original_name }}</div><div class="mt-1"><a target="_blank" href="{{ route('design-revisions.attachment', [$project, $revision]) }}">Lihat</a> · <a href="{{ route('design-revisions.attachment', [$project, $revision, 'download' => 1]) }}">Unduh</a></div></td>
+                            <td>{{ $revision->creator?->name ?? '-' }}</td>
+                            <td>
+                                @if($canRevision)
+                                <form method="POST" action="{{ route('design-revisions.status', [$project, $revision]) }}" class="d-flex gap-2">@csrf @method('PUT')
+                                    <select class="form-select form-select-sm" name="status">@foreach(\App\Models\DesignRevision::statuses() as $value => $label)<option value="{{ $value }}" @selected($revision->status === $value)>{{ $label }}</option>@endforeach</select><button class="btn btn-sm btn-soft">Simpan</button>
+                                </form>
+                                @else
+                                    <x-status-badge :status="$revision->status" :label="\App\Models\DesignRevision::statuses()[$revision->status] ?? $revision->status" />
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6"><x-empty text="Belum ada histori design revision." /></td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </details>
+
         </div>
 
         @if(in_array('production', $visibleWorkTabs, true))
@@ -219,17 +264,12 @@
 
         @endif
 
-        @if(in_array('qc', $visibleWorkTabs, true))
-        <div class="tab-pane fade" id="qc" role="tabpanel" aria-labelledby="qc-tab">
-            <div class="qc-stage-grid">
-                @foreach($visibleQcStages as $installation)
-                <section class="workflow-card">
-                    @include('projects._qc-stage', ['installation' => $installation])
-                </section>
-                @endforeach
-            </div>
+        @if(in_array('qc-production', $visibleWorkTabs, true))
+        <div class="tab-pane fade" id="qc-production" role="tabpanel" aria-labelledby="qc-production-tab">
+            <section class="workflow-card">
+                @include('projects._qc-stage', ['installation' => false])
+            </section>
         </div>
-
         @endif
 
         @if(in_array('delivery', $visibleWorkTabs, true))
@@ -308,49 +348,13 @@
 
         @endif
 
-        <div class="tab-pane fade" id="design-revisions">
-            @if($canRevision)
-            <div class="workflow-card mb-3">
-                <div class="card-head"><h2>Tambah Design Revision</h2></div>
-                <form method="POST" action="{{ route('design-revisions.store', $project) }}" enctype="multipart/form-data" class="row g-3"
-                    data-upload-progress data-max-file-size="0" data-max-files="0" data-redirect="{{ route('project-workspace.show', $project) }}#design-revisions">@csrf
-                    <div class="col-md-3"><label class="form-label">Tanggal Revisi</label><input type="date" class="form-control" name="revision_date" value="{{ old('revision_date', now()->format('Y-m-d')) }}" required></div>
-                    <div class="col-md-4"><label class="form-label">File Revisi</label><input type="file" class="form-control" name="revision_file" accept=".pdf,.dwg,.dxf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.rar" required><div class="form-text">Tanpa batas ukuran. Format PDF, DWG, DXF, DOC/DOCX, XLS/XLSX, JPG, PNG, ZIP, atau RAR.</div></div>
-                    <div class="col-md-5"><label class="form-label">Keterangan Perubahan</label><textarea class="form-control" name="notes" rows="2" required>{{ old('notes') }}</textarea></div>
-                    <div class="col-12"><x-upload-progress /></div>
-                    <div class="col-12"><button class="btn btn-primary"><i class="bi bi-cloud-arrow-up me-1"></i>Simpan Revision {{ $project->designRevisions->count() + 1 }}</button></div>
-                </form>
-            </div>
-            @endif
-
-            <div class="table-wrap">
-                <table class="table-r">
-                    <thead><tr><th>Revisi</th><th>Tanggal</th><th>Keterangan Perubahan</th><th>File</th><th>Dibuat Oleh</th><th>Status</th></tr></thead>
-                    <tbody>
-                    @forelse($project->designRevisions as $revision)
-                        <tr>
-                            <td class="fw-bold">{{ $revision->label() }}</td>
-                            <td>{{ $revision->revision_date->translatedFormat('d M Y') }}</td>
-                            <td class="revision-note">{{ $revision->notes }}</td>
-                            <td><div class="fw-semibold">{{ $revision->original_name }}</div><div class="mt-1"><a target="_blank" href="{{ route('design-revisions.attachment', [$project, $revision]) }}">Lihat</a> · <a href="{{ route('design-revisions.attachment', [$project, $revision, 'download' => 1]) }}">Unduh</a></div></td>
-                            <td>{{ $revision->creator?->name ?? '-' }}</td>
-                            <td>
-                                @if($canRevision)
-                                <form method="POST" action="{{ route('design-revisions.status', [$project, $revision]) }}" class="d-flex gap-2">@csrf @method('PUT')
-                                    <select class="form-select form-select-sm" name="status">@foreach(\App\Models\DesignRevision::statuses() as $value => $label)<option value="{{ $value }}" @selected($revision->status === $value)>{{ $label }}</option>@endforeach</select><button class="btn btn-sm btn-soft">Simpan</button>
-                                </form>
-                                @else
-                                    <x-status-badge :status="$revision->status" :label="\App\Models\DesignRevision::statuses()[$revision->status] ?? $revision->status" />
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6"><x-empty text="Belum ada histori design revision." /></td></tr>
-                    @endforelse
-                    </tbody>
-                </table>
-            </div>
+        @if(in_array('qc-installation', $visibleWorkTabs, true))
+        <div class="tab-pane fade" id="qc-installation" role="tabpanel" aria-labelledby="qc-installation-tab">
+            <section class="workflow-card">
+                @include('projects._qc-stage', ['installation' => true])
+            </section>
         </div>
+        @endif
     </div>
 </div>
 @endsection
@@ -401,19 +405,27 @@ document.addEventListener('DOMContentLoaded', function () {
         items.forEach(input => input.addEventListener('input', syncItems));
         syncItems();
     });
-    const legacyTab = @json(auth()->user()->isQc() ? '#qc' : ($role === 'delivery' ? '#delivery' : '#production'));
+    const legacyTab = @json(auth()->user()->isQc() ? ($role === 'qc_installation' ? '#qc-installation' : '#qc-production') : ($role === 'delivery' ? '#delivery' : '#production'));
     const errorFields = @json($errors->keys());
     const errorTab = errorFields.some(key => key.startsWith('production_') || key.startsWith('progress_files') || ['file', 'documentable_id'].includes(key)) ? '#production'
-        : errorFields.some(key => key.startsWith('qc_')) ? '#qc'
+        : errorFields.some(key => key.startsWith('qc_installation_')) ? '#qc-installation'
+        : errorFields.some(key => key.startsWith('qc_')) ? '#qc-production'
         : errorFields.some(key => ['revision_file', 'revision_date', 'status'].includes(key)) ? '#design-revisions'
         : errorFields.some(key => /^(delivery_|customer_|recipient_|items|pod|driver_name|vehicle_number)/.test(key)) ? '#delivery' : '';
     function showHashTab(preferErrors = false) {
         const requested = preferErrors && errorTab ? errorTab : location.hash;
         const hash = requested === '#operations' ? legacyTab
+            : requested === '#qc' ? @json($role === 'qc_installation' ? '#qc-installation' : '#qc-production')
+            : requested === '#design-revisions' ? '#design-request'
             : (requested === '#workflow-history' ? '#project-info' : requested);
         const trigger = Array.from(document.querySelectorAll('.workspace-tabs [data-bs-target]'))
             .find(button => button.dataset.bsTarget === hash);
         if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+        if (requested === '#design-revisions') {
+            const revisions = document.getElementById('design-revisions');
+            revisions.open = true;
+            revisions.scrollIntoView();
+        }
     }
     showHashTab(true);
     window.addEventListener('hashchange', () => showHashTab());

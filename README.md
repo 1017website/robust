@@ -76,3 +76,5 @@ QC Produksi dan QC Pemasangan otomatis dikunci setelah hasil Selesai dan lolos Q
 Urutan operasional: Produksi → QC Produksi → Delivery → QC Pemasangan di customer. QC Pemasangan hanya terbuka setelah QC Produksi lolos dan Delivery berstatus Terkirim, Diterima Customer, atau Selesai. Setiap penyimpanan Produksi, QC Produksi, dan QC Pemasangan wajib mengisi tanggal target selesai tahap tersebut. Jalankan migrasi untuk kolom target tahap. Project selesai setelah Delivery selesai dan QC Pemasangan lolos.
 
 Tanggal target tiap tahap dapat digeser melalui menu Ubah tanggal target selesai, termasuk setelah QC lolos. Perubahan tanggal mencatat tanggal lama/baru, pengguna, waktu, dan alasan opsional di Riwayat Pekerjaan. Hasil QC yang sudah lolos tetap terkunci.
+
+Tab Request Process dipisahkan menjadi Informasi Project, Spesifikasi Penawaran, Produksi, QC Produksi, Status Delivery, dan QC Pemasangan. Design Revision berada di dalam tab Spesifikasi Penawaran. Link lama #qc tetap diarahkan ke QC sesuai akun pengguna.

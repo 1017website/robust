@@ -3,11 +3,11 @@
         ['label' => 'Produksi', 'status' => $statusLabel, 'progress' => (int) $workflow->production_progress,
             'note' => $workflow->production_note, 'time' => $workflow->production_updated_at, 'user' => $workflow->productionUpdater, 'tab' => 'production', 'target' => $workflow->production_target_date],
         ['label' => 'QC Produksi', 'status' => $workflow->qcStatusLabel(),
-            'progress' => $workflow->qcProgress(), 'note' => $workflow->qc_note, 'time' => $workflow->qc_updated_at, 'user' => $workflow->qcUpdater, 'tab' => 'qc', 'target' => $workflow->qc_target_date],
+            'progress' => $workflow->qcProgress(), 'note' => $workflow->qc_note, 'time' => $workflow->qc_updated_at, 'user' => $workflow->qcUpdater, 'tab' => 'qc-production', 'target' => $workflow->qc_target_date],
         ['label' => 'Delivery', 'status' => $deliveryStatusLabel, 'progress' => null,
             'note' => $workflow->delivery_note, 'time' => $workflow->delivery_updated_at, 'user' => $workflow->deliveryUpdater, 'tab' => 'delivery'],
         ['label' => 'QC Pemasangan', 'status' => $workflow->qcStatusLabel(true),
-            'progress' => $workflow->qcProgress(true), 'note' => $workflow->qc_installation_note, 'time' => $workflow->qc_installation_updated_at, 'user' => $workflow->qcInstallationUpdater, 'tab' => 'qc', 'target' => $workflow->qc_installation_target_date],
+            'progress' => $workflow->qcProgress(true), 'note' => $workflow->qc_installation_note, 'time' => $workflow->qc_installation_updated_at, 'user' => $workflow->qcInstallationUpdater, 'tab' => 'qc-installation', 'target' => $workflow->qc_installation_target_date],
     ]);
     $latestWork = $stages->filter(fn ($stage) => $stage['time'])->sortByDesc(fn ($stage) => $stage['time']->getTimestamp())->first();
     if ($deliveryOrder && (!$latestWork || $deliveryOrder->updated_at->gt($latestWork['time']))) {
@@ -46,7 +46,7 @@
     <div class="work-stage-list">
         @foreach($stages as $stage)
             <div>
-                @if(in_array($stage['tab'], $visibleWorkTabs, true) && ($stage['tab'] !== 'qc' || in_array($stage['label'] === 'QC Pemasangan', $visibleQcStages, true)))
+                @if(in_array($stage['tab'], $visibleWorkTabs, true))
                     <a class="fw-semibold" href="#{{ $stage['tab'] }}">{{ $stage['label'] }}</a>
                 @else
                     <span class="fw-semibold">{{ $stage['label'] }}</span>

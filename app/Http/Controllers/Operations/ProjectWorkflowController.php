@@ -51,7 +51,7 @@ class ProjectWorkflowController extends Controller
             }
 
             return back()->with('success', 'Tanggal target selesai tersimpan. Setiap perubahan tanggal dicatat dalam riwayat.')
-                ->withFragment($prefix === 'production' ? 'production' : 'qc');
+                ->withFragment(match ($prefix) { 'production' => 'production', 'qc' => 'qc-production', default => 'qc-installation' });
         });
     }
 
@@ -233,7 +233,7 @@ class ProjectWorkflowController extends Controller
             default => "Progres {$label} berhasil disimpan. Pemeriksaan dapat dilanjutkan nanti.",
         };
 
-        return back()->with('success', $message)->withFragment('qc');
+        return back()->with('success', $message)->withFragment($installation ? 'qc-installation' : 'qc-production');
     }
 
     public function updateDelivery(Request $request, Project $project)

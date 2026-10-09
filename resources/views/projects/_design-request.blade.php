@@ -23,28 +23,6 @@
         </div>
     </section>
 
-    <section class="workflow-card">
-        <div class="card-head"><h2>Dokumen Penawaran</h2></div>
-        <div class="table-wrap">
-            <table class="table-r compact">
-                <thead><tr><th>Dokumen</th><th>Jenis</th><th>Ukuran</th><th>Uploader</th><th>Tanggal</th><th>Aksi</th></tr></thead>
-                <tbody>
-                @forelse($quotation?->documents ?? collect() as $document)
-                    <tr>
-                        <td class="fw-semibold">{{ $document->name }}.{{ $document->file_type }}</td>
-                        <td>{{ str($document->category)->headline() }}</td>
-                        <td>{{ $document->humanSize() }}</td>
-                        <td>{{ $document->uploader?->name ?? '-' }}</td>
-                        <td>{{ $document->created_at?->translatedFormat('d M Y H:i') ?? '-' }}</td>
-                        <td><a href="{{ route('documents.download', $document) }}" class="btn btn-sm btn-soft"><i class="bi bi-download"></i></a></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="6">Tidak ada dokumen tambahan pada penawaran.</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
-    </section>
 @else
     @php
         $designRequestStatus = \App\Models\DesignRequest::statuses()[$designRequest->status]

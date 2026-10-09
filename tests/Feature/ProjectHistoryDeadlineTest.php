@@ -188,8 +188,8 @@ class ProjectHistoryDeadlineTest extends TestCase
             $dom = new \DOMDocument;
             @$dom->loadHTML($response->getContent());
             $xpath = new \DOMXPath($dom);
-            foreach (['production', 'qc', 'delivery'] as $stage) {
-                $visible = in_array($role, ['administrator', 'sales'], true) || $role === $stage;
+            foreach (['production', 'qc-production', 'delivery', 'qc-installation'] as $stage) {
+                $visible = in_array($role, ['administrator', 'sales'], true) || $role === $stage || ($role === 'qc' && str_starts_with($stage, 'qc-'));
                 $this->assertSame($visible ? 1 : 0, $xpath->query("//*[@id='{$stage}']")->length);
                 $this->assertSame($visible ? 1 : 0, $xpath->query("//button[@data-bs-target='#{$stage}']")->length);
                 if (!$visible) {
@@ -200,7 +200,8 @@ class ProjectHistoryDeadlineTest extends TestCase
             $this->assertSame(1, $xpath->query("//*[@id='project-info']//*[@id='workflow-history']")->length);
             $this->assertSame(0, $xpath->query("//*[@id='operations']")->length);
             if (in_array($role, ['production', 'qc', 'delivery'], true)) {
-                $this->assertSame($role === 'delivery' ? 2 : 1, $xpath->query("//*[@id='{$role}']//form[not(@data-target-date-form) and contains(@action,'/{$role}')]")->length);
+                $workPane = $role === 'qc' ? 'qc-installation' : $role;
+                $this->assertSame($role === 'delivery' ? 2 : 1, $xpath->query("//*[@id='{$workPane}']//form[not(@data-target-date-form) and contains(@action,'/{$role}')]")->length);
             }
         }
     }
@@ -262,7 +263,7 @@ class ProjectHistoryDeadlineTest extends TestCase
             $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('drafter.projects.index'));
             $response = $this->get(route('drafter.projects.index'))->assertOk()
                 ->assertSee('Pekerjaan '.$label)->assertSee('Pembaruan Terakhir')->assertSee('Barang sedang dikirim ke customer.')
-                ->assertSee(route('project-workspace.show', $project).'#'.$role)
+                ->assertSee(route('project-workspace.show', $project).'#'.($role === 'qc' ? 'qc-production' : $role))
                 ->assertSee(route('project-workspace.show', $project).'#project-info')
                 ->assertSee(route('project-workspace.show', $project).'#workflow-history')
                 ->assertDontSee('61%')->assertDontSee('QC Attachment')->assertDontSee('Delivery Monitoring');

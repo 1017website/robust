@@ -374,6 +374,25 @@ class ProjectQcStagesTest extends TestCase
         $this->assertSame(100, $project->fresh()->progress);
     }
 
+    public function test_workspace_tabs_follow_operational_order_and_qc_forms_are_separate(): void
+    {
+        $project = $this->project();
+        $this->actingAs(User::factory()->create(['role' => 'administrator']));
+        $response = $this->get(route('project-workspace.show', $project))->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $tabs = $xpath->query("//ul[@role='tablist']//button");
+        $this->assertSame(['#project-info', '#design-request', '#production', '#qc-production', '#delivery', '#qc-installation'],
+            array_map(fn ($node) => $node->getAttribute('data-bs-target'), iterator_to_array($tabs)));
+        $this->assertSame('Status Delivery', trim($tabs->item(4)->textContent));
+        $this->assertSame(1, $xpath->query("//*[@id='qc-production']//form[@data-qc-stage]//input[@name='qc_result']")->length > 0 ? 1 : 0);
+        $this->assertSame(0, $xpath->query("//*[@id='qc-production']//*[@name='qc_installation_result']")->length);
+        $this->assertSame(0, $xpath->query("//*[@id='qc-installation']//*[@name='qc_result']")->length);
+        $this->assertSame(3, $xpath->query("//*[@id='qc-installation']//input[@name='qc_installation_result']")->length);
+        $this->assertSame(1, $xpath->query("//*[@id='design-request']//details[@id='design-revisions']")->length);
+    }
+
     public function test_migration_preserves_existing_qc_as_production_qc(): void
     {
         $project = $this->project();

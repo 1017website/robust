@@ -6,9 +6,9 @@
     $workRole = auth()->user()->role;
     $workView = match ($workRole) {
         'production' => ['label' => 'Produksi', 'description' => 'Pantau status produksi, progres pekerjaan, deadline, dan dokumen produksi.', 'tab' => 'production', 'action' => 'Buka Produksi'],
-        'qc_production' => ['label' => 'QC Produksi', 'description' => 'Pantau pemeriksaan hasil produksi, checklist, dan deadline proyek.', 'tab' => 'qc', 'action' => 'Buka QC Produksi'],
-        'qc_installation' => ['label' => 'QC Pemasangan', 'description' => 'Pantau pemeriksaan hasil pemasangan, checklist, dan deadline proyek.', 'tab' => 'qc', 'action' => 'Buka QC Pemasangan'],
-        'qc' => ['label' => 'QC', 'description' => 'Pantau QC Produksi dan QC Pemasangan, checklist pemeriksaan, serta deadline proyek.', 'tab' => 'qc', 'action' => 'Buka Pemeriksaan QC'],
+        'qc_production' => ['label' => 'QC Produksi', 'description' => 'Pantau pemeriksaan hasil produksi, checklist, dan deadline proyek.', 'tab' => 'qc-production', 'action' => 'Buka QC Produksi'],
+        'qc_installation' => ['label' => 'QC Pemasangan', 'description' => 'Pantau pemeriksaan hasil pemasangan, checklist, dan deadline proyek.', 'tab' => 'qc-installation', 'action' => 'Buka QC Pemasangan'],
+        'qc' => ['label' => 'QC', 'description' => 'Pantau QC Produksi dan QC Pemasangan, checklist pemeriksaan, serta deadline proyek.', 'tab' => 'qc-production', 'action' => 'Buka Pemeriksaan QC'],
         'delivery' => ['label' => 'Delivery', 'description' => 'Pantau jadwal pengiriman, status Delivery, DO/BA, dan bukti penerimaan customer.', 'tab' => 'delivery', 'action' => 'Buka Delivery / DO'],
         default => null,
     };
